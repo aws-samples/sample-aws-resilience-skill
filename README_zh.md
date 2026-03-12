@@ -1,22 +1,22 @@
 中文 | [**English**](README.md)
 
-# AWS 韧性评估技能集
+# AWS 韧性评估Skill集
 
-一组 AI 驱动的自定义技能，用于全面的 AWS 系统韧性分析与风险评估，基于 2025 年最新业界最佳实践构建。兼容任何支持 skill/prompt 框架的 AI 编程助手。
+一组 AI 驱动的自定义Skill，用于全面的 AWS 系统韧性分析与风险评估，基于 2025 年最新业界最佳实践构建。兼容任何支持 skill/prompt 框架的 AI 编程助手。
 
-## 技能列表
+## Skill列表
 
-本项目包含两个互补的技能：
+本项目包含两个互补的Skill：
 
 ### 1. AWS 韧性评估 (`aws-resilience-assessment`)
 
-全面的 AWS 基础设施韧性分析技能。它能够映射系统组件、识别故障模式、执行风险优先级评估，并生成包含可操作缓解策略的详细报告。
+全面的 AWS 基础设施韧性分析Skill。它能够映射系统组件、识别故障模式、执行风险优先级评估，并生成包含可操作缓解策略的详细报告。
 
 **调用方式：** `/aws-resilience-assessment` 或在对话中提及 "AWS 韧性分析"、"系统风险评估" 等关键词。
 
 ### 2. RMA 评估助手 (`aws-rma-assessment`)
 
-交互式的可靠性、可维护性与可用性 (RMA) 评估技能。通过基于 AWS Well-Architected Framework 的引导式问答，评估应用程序的韧性成熟度，并生成评估报告与改进路线图。
+交互式的可靠性、可维护性与可用性 (RMA) 评估Skill。通过基于 AWS Well-Architected Framework 的引导式问答，评估应用程序的韧性成熟度，并生成评估报告与改进路线图。
 
 **调用方式：** `/rma-assessment-assistant` 或在对话中提及 "RMA 评估" 等关键词。
 
@@ -77,30 +77,30 @@
 
 ### 1. AI 编程助手
 
-任何支持自定义技能的 AI 编程助手（即支持 skill/prompt 框架的 AI 工具）。
+任何支持自定义Skill的 AI 编程助手（即支持 skill/prompt 框架的 AI 工具）。
 
 ### 2. 安装
 
-克隆本仓库并将技能添加到你的项目中：
+克隆本仓库并将Skill添加到你的项目中：
 
 ```bash
 git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
 ```
 
-将技能目录复制到项目的技能文件夹中，或直接引用。
+将Skill目录复制到项目的Skill文件夹中，或直接引用。
 
 ### 3. AWS 访问权限（推荐）
 
 - 具有只读访问权限的 AWS 账户，用于自动化资源扫描
 - 已配置适当凭证的 AWS CLI
-- 可选：MCP 服务器以增强自动化能力（参见各技能目录下的 `MCP_SETUP_GUIDE.md`）
+- 可选：MCP 服务器以增强自动化能力（参见各Skill目录下的 `MCP_SETUP_GUIDE.md`）
 
 ## 项目结构
 
 ```
 .
-├── aws-resilience-assessment/        # 全面韧性分析技能
-│   ├── SKILL.md                      # 技能定义
+├── aws-resilience-assessment/        # 全面韧性分析Skill
+│   ├── SKILL.md                      # Skill定义
 │   ├── README.md                     # 详细使用指南
 │   ├── resilience-framework.md       # AWS 最佳实践参考 (2025)
 │   ├── MCP_SETUP_GUIDE.md            # MCP 服务器配置
@@ -108,8 +108,8 @@ git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
 │   ├── HTML-TEMPLATE-USAGE.md        # HTML 报告指南
 │   ├── example-report-template.md    # Markdown 报告示例
 │   └── generate-html-report.py       # HTML 报告生成脚本
-├── aws-rma-assessment/               # RMA 评估技能
-│   ├── SKILL.md                      # 技能定义
+├── aws-rma-assessment/               # RMA 评估Skill
+│   ├── SKILL.md                      # Skill定义
 │   ├── README.md                     # 详细使用指南
 │   ├── resilience-framework.md       # AWS 最佳实践参考 (2025)
 │   ├── MCP_SETUP_GUIDE.md            # MCP 服务器配置

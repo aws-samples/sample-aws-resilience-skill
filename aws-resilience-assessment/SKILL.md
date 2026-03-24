@@ -44,72 +44,65 @@ model: sonnet
 
 ## ⚙️ MCP 服务器要求（推荐配置）
 
-为了实现自动化 AWS 资源扫描和分析，本 Skill 推荐使用 AWS 官方 [awslabs.core-mcp-server](https://github.com/awslabs/mcp/tree/main/src/core-mcp-server)。
+为了实现自动化 AWS 资源扫描和分析，本 Skill 推荐使用以下 MCP 服务器：
 
-### 推荐 MCP 配置（awslabs.core-mcp-server）
+### 核心 MCP 服务器（已配置）
 
-通过基于角色的环境变量，一个配置即可覆盖韧性评估所需的全部能力：
+✅ **aws-manager** (mcp-aws-manager)
+- EC2 实例管理和清单
+- Lambda 函数操作
+- SSM (Systems Manager) 操作
+- 适用于：计算资源的韧性分析
 
-| 角色环境变量 | 说明 | 包含的子服务器 | 韧性评估用途 |
-|-------------|------|---------------|-------------|
-| `aws-foundation` | AWS 知识和 API | aws-knowledge-server, aws-api-server | 查询 AWS 文档和 API |
-| `monitoring-observability` | 监控与可观测性 | cloudwatch-server, cloudtrail-server | 分析告警、指标、日志 |
-| `solutions-architect` | 解决方案架构 | diagram-server, pricing-server, cost-explorer-server | 架构图、成本分析 |
-| `security-identity` | 安全与身份 | iam-server, well-architected-security-server | IAM 审计、Well-Architected 评估 |
+✅ **aws-core** (@imazhar101/mcp-aws-server)
+- DynamoDB 表操作
+- Lambda 函数管理
+- API Gateway 管理
+- 适用于：无服务器架构的韧性分析
 
-> **最小推荐组合**：`aws-foundation` + `monitoring-observability` + `solutions-architect`
+✅ **aws-sso** (@aashari/mcp-server-aws-sso)
+- AWS SSO 设备认证流程
+- 多账户/多角色管理
+- 安全执行 AWS CLI 命令
+- 适用于：多账户环境的韧性分析
 
-#### 只读安全说明
+### 扩展服务支持
 
-韧性评估只需要只读访问。上述角色中的子服务器（cloudwatch-server、cloudtrail-server、iam-server 等）默认均为只读操作（仅 Describe/Get/List），不会对 AWS 资源做任何变更。
+对于以下 AWS 服务，通过 `aws-sso` MCP 的 AWS CLI 命令支持：
 
-#### Kiro 配置示例
-
-编辑 `.kiro/settings/mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "awslabs-core-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.core-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": "default",
-        "AWS_REGION": "us-east-1",
-        "aws-foundation": "true",
-        "monitoring-observability": "true",
-        "solutions-architect": "true",
-        "security-identity": "true"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
+📊 **Amazon CloudWatch**
+```bash
+aws cloudwatch describe-alarms
+aws logs describe-log-groups
+aws cloudwatch get-metric-statistics
 ```
 
-#### Claude Code 配置示例
-
+🚢 **Amazon EKS**
 ```bash
-claude mcp add awslabs-core-mcp-server \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -e AWS_PROFILE=default \
-  -e AWS_REGION=us-east-1 \
-  -e aws-foundation=true \
-  -e monitoring-observability=true \
-  -e solutions-architect=true \
-  -e security-identity=true \
-  -- uvx awslabs.core-mcp-server@latest
+aws eks list-clusters
+aws eks describe-cluster --name <cluster-name>
+aws eks list-nodegroups --cluster-name <cluster-name>
+```
+
+🗄️ **Amazon RDS**
+```bash
+aws rds describe-db-instances
+aws rds describe-db-clusters
+```
+
+🌐 **Elastic Load Balancing**
+```bash
+aws elbv2 describe-load-balancers
+aws elbv2 describe-target-groups
 ```
 
 ### 配置检查
 
 **在开始评估前，请确认：**
 
-1. ✅ MCP 服务器已配置并运行（Kiro: 功能面板 → MCP Server 视图 / Claude Code: `/mcp`）
+1. ✅ Claude Desktop 配置文件存在：`~/.config/claude/claude_desktop_config.json`
 2. ✅ AWS 凭证已配置：`~/.aws/credentials` 或环境变量
-3. ✅ Python 3.12+ 和 [uv](https://github.com/astral-sh/uv) 已安装
+3. ✅ Claude Desktop 已重启（配置生效）
 
 **如果 MCP 未配置**，Skill 将自动切换到以下备用方式：
 - 📄 分析 IaC 代码（Terraform/CloudFormation）
@@ -118,7 +111,7 @@ claude mcp add awslabs-core-mcp-server \
 
 ### MCP 配置帮助
 
-如需详细配置指南，请参考：[MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
+如需配置 MCP 服务器，请参考：`~/.claude/skills/aws-resilience-assessment/MCP_SETUP_GUIDE.md`
 
 ---
 
@@ -144,10 +137,17 @@ claude mcp add awslabs-core-mcp-server \
    - 预算和资源约束
 
 4. **期望输出**：
-   - 需要详细程度（执行摘要 vs 技术深度报告）
-   - 是否需要故障注入测试计划
-   - 是否需要实施路线图
-   - 报告交付格式（Markdown、PDF、演示文稿）
+   - 需要哪种报告类型？向用户解释以下选项的区别：
+
+     | 报告类型 | 适合人群 | 内容深度 | 篇幅 | 包含内容 |
+     |---------|---------|---------|------|---------|
+     | **执行摘要** | CTO、VP、管理层决策者 | 业务视角，聚焦风险影响和投资回报 | 3-5 页 | Top 5 风险、总体评分、成本估算、优先建议（不含 CLI 命令和详细配置） |
+     | **技术深度报告** | 架构师、SRE、DevOps 工程师 | 技术细节，包含具体配置和修复命令 | 20-40 页 | 完整资源清单、每个风险的 AWS CLI 修复命令、架构图、详细评分矩阵、监控告警配置 YAML |
+     | **完整报告（两者兼具）** | 需要向上汇报同时需要落地执行的团队 | 先总后分，开头执行摘要 + 后续技术详情 | 25-45 页 | 以上两者的合并，适合既要给领导看也要给工程师执行 |
+
+   - 是否需要故障注入测试计划（混沌工程实验方案，含 AWS FIS 配置）
+   - 是否需要实施路线图（分阶段的改进计划，含 Gantt 图）
+   - 报告交付格式（Markdown、HTML 交互式报告、或两者都要）
 
 ## 分析任务
 
@@ -199,10 +199,6 @@ claude mcp add awslabs-core-mcp-server \
 **参考资源**：
 - AWS Prescriptive Guidance - Resilience Analysis Framework
 - 详见 [resilience-framework.md](resilience-framework.md)
-- **AWS 常见服务风险参考**：详见 [common-risks-reference.md](common-risks-reference.md)
-  - 包含存储（EBS/S3/EFS/FSx）、数据库（RDS/Aurora/ElastiCache/DynamoDB）、容器（EKS）、计算（EC2）、网络（Direct Connect/VPN/ALB/NLB/NAT Gateway）五大类 50+ 个常见风险点
-  - 评估时应逐项对照检查清单，识别客户环境中是否存在这些已知风险
-  - 每个风险点都包含具体的风险原因和改进建议，可直接引用到评估报告中
 
 **识别以下故障模式类别**：
 
@@ -222,13 +218,12 @@ claude mcp add awslabs-core-mcp-server \
 - 业务影响评估
 
 **风险分类**：
-- 存储（EBS、S3、EFS、FSx、DataSync）— 参考 common-risks-reference.md 第 1 节
-- 数据库（RDS、Aurora、ElastiCache、MemoryDB、DocumentDB、DynamoDB）— 参考第 2 节
-- 容器平台（EKS、ECS、Fargate）— 参考第 3 节
-- 计算（EC2、Auto Scaling、Spot）— 参考第 4 节
-- 网络（Direct Connect、VPN、NAT Gateway、ALB、NLB、GWLB、Route 53）— 参考第 5 节
+- 基础设施（EC2、ELB、EBS、S3）
+- 中间件/数据库（RDS、ElastiCache、MSK）
+- 容器平台（EKS、ECS、Fargate）
+- 网络（VPC、Transit Gateway、Route 53）
+- 数据（备份、复制、归档）
 - 安全与合规（IAM、KMS、CloudTrail）
-- 数据保护（备份、复制、归档）
 
 ### 任务 3: 韧性评估（5 星评分系统）
 
@@ -662,143 +657,229 @@ RDS 连接数达到最大值（500），应用无法创建新连接。
 - 技术术语表
 - 参考文档链接
 
-## 故障注入测试计划（单独文件）
+## 混沌工程测试计划（Chaos Engineering Ready Data）
 
-针对优先级前 10 的风险，创建详细的混沌工程实验计划。
+> **当用户选择需要"混沌工程测试计划"时**，按照本节规范输出结构化数据。该数据格式遵循 `assessment-output-spec.md` 规范，供下游 `chaos-engineering-on-aws` skill 直接消费。
+>
+> **完整规范文件**：参见同目录下的 `assessment-output-spec.md`
 
-**输出文件**：`resilience-testing.md`
+### 输出方式（两种，默认推荐方式 1）
 
-**包含内容**：
+1. **嵌入模式（推荐）**：在评估报告末尾添加 `## Chaos Engineering Ready Data` 附录章节，一份报告人机共读
+2. **独立文件模式**：单独生成 `{project}-chaos-input-{date}.md`
 
-对每个可测试的风险提供：
+### 必须包含的结构化章节
 
-1. **风险描述**
-   - 风险 ID 和名称
-   - 故障场景
-   - 预期影响
+按照 `assessment-output-spec.md` 规范，混沌工程数据必须包含以下章节（**表头和字段名固定，内容按实际环境填写**）：
 
-2. **实验设计**
-   - 实验目标
-   - 稳态假设（正常状态定义）
-   - 成功标准（系统应如何响应）
-   - 停止条件（何时中止实验）
+#### 1. 项目元数据
 
-3. **稳态假设详细定义**
-   ```yaml
-   稳态指标:
-     - 请求成功率: > 99.9%
-     - P95 延迟: < 200ms
-     - 数据库连接: < 80% 最大值
-     - CPU 利用率: < 70%
+| 字段 | 必填 | 格式 | 说明 |
+|------|------|------|------|
+| 项目名称 | ✅ | 自由文本 | 客户系统名称 |
+| 评估日期 | ✅ | YYYY-MM-DD | — |
+| AWS 账户 | ✅ | 12 位数字 | 可多个，逗号分隔 |
+| 主要区域 | ✅ | AWS region code | 如 `us-east-1`、`ap-northeast-1` |
+| 其他区域 | ❌ | 逗号分隔 | 多区域架构时填写 |
+| 环境类型 | ✅ | `production` / `staging` / `development` | — |
+| 架构模式 | ✅ | 枚举值 | `EKS 微服务` / `ECS 容器化` / `Serverless` / `传统 EC2` / `多区域` / `混合` |
+| 整体韧性评分 | ✅ | X.X / 5.0 | 1.0-5.0 |
 
-   观测方式:
-     - CloudWatch Metrics
-     - Application Logs
-     - Distributed Tracing (X-Ray)
+#### 2. AWS 资源清单（含完整 ARN）
 
-   假设:
-     - 单 AZ 故障后，流量自动转移到其他 AZ
-     - 请求成功率下降不超过 0.1%
-     - 延迟增加不超过 50ms
-     - 无需人工干预即可恢复
-   ```
+> **核心输入——没有 ARN 就无法创建 FIS 实验。**
 
-4. **实验配置**
+**固定表头**：
 
-**使用 AWS FIS 的示例**：
-```json
-{
-  "description": "模拟 EC2 实例故障",
-  "targets": {
-    "ec2-instances": {
-      "resourceType": "aws:ec2:instance",
-      "resourceTags": {
-        "Environment": "staging"
-      },
-      "filters": [
-        {
-          "path": "State.Name",
-          "values": ["running"]
-        }
-      ],
-      "selectionMode": "COUNT(2)"
-    }
-  },
-  "actions": {
-    "terminate-instances": {
-      "actionId": "aws:ec2:terminate-instances",
-      "parameters": {},
-      "targets": {
-        "Instances": "ec2-instances"
-      }
-    }
-  },
-  "stopConditions": [
-    {
-      "source": "aws:cloudwatch:alarm",
-      "value": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:high-error-rate"
-    }
-  ],
-  "roleArn": "arn:aws:iam::123456789012:role/FISRole"
-}
-```
+| 资源 ID | 类型 | ARN | 名称 | 可用区 | 状态 | 备注 |
+|---------|------|-----|------|--------|------|------|
 
-5. **测试前提条件**
-   - 环境要求（Staging 优先，生产需批准）
-   - 监控就绪检查
-   - 团队准备（On-call 待命）
-   - 回滚计划
+**资源类型标准名**：
 
-6. **执行步骤**
-   ```markdown
-   1. **准备阶段**（T-30 分钟）
-      - 通知 On-call 团队
-      - 验证监控系统正常
-      - 确认稳态指标基线
-      - 准备回滚脚本
+| 类别 | 标准名 |
+|------|--------|
+| 计算 | `EC2 实例` / `EKS 集群` / `EKS 节点组` / `ECS 集群` / `ECS 服务` / `Fargate 任务` / `Lambda 函数` / `Auto Scaling 组` |
+| 网络 | `ALB` / `NLB` / `目标组` / `CloudFront` / `API Gateway` / `NAT 网关` / `VPC` / `子网` / `安全组` / `Route53 托管区` / `Transit Gateway` |
+| 数据库 | `RDS 集群` / `RDS 实例` / `Aurora Global Database` / `DynamoDB 表` / `ElastiCache 集群` / `MemoryDB 集群` / `Neptune 集群` |
+| 存储 | `S3 存储桶` / `EBS 卷` / `EFS 文件系统` |
+| 消息 | `SQS 队列` / `SNS 主题` / `Kinesis 数据流` / `EventBridge 规则` |
+| 其他 | `Step Functions 状态机` / `Cognito 用户池` / `Secrets Manager` |
 
-   2. **执行阶段**（T=0）
-      - 启动 AWS FIS 实验
-      - 持续观测关键指标
-      - 记录系统行为
+#### 3. 关键业务功能与依赖链
 
-   3. **观察阶段**（T+0 到 T+60 分钟）
-      - 监控稳态指标偏差
-      - 验证自动恢复机制
-      - 记录意外行为
+**固定表头**：
 
-   4. **恢复阶段**（T+60 分钟）
-      - 停止实验
-      - 验证系统恢复到稳态
-      - 如需人工干预，执行恢复脚本
+| 业务功能 | 重要性 | 依赖链（资源 ID） | 当前 RTO | 目标 RTO | 当前 RPO | 目标 RPO |
+|---------|--------|------------------|---------|---------|---------|---------|
 
-   5. **复盘阶段**（T+24 小时）
-      - 分析实验结果
-      - 更新假设
-      - 识别改进项
-   ```
+**字段规范**：
+- 重要性：`🔴 核心` / `🟠 重要` / `🟡 一般` / `🟢 低`
+- 依赖链：资源 ID 用 `→` 连接，引用资源清单中的 ID
+- RTO/RPO：数字 + `s`（秒）或 `未知` 或 `不适用`，**单位统一为秒**
 
-7. **成功标准**
-   - ✅ 系统保持在稳态范围内
-   - ✅ 自动恢复无需人工干预
-   - ✅ 无数据丢失或损坏
-   - ✅ 用户体验影响 < 1%
+#### 4. 风险清单（含可实验性标记）
 
-8. **回滚和安全措施**
-   - 自动停止条件（CloudWatch Alarm）
-   - 手动停止按钮
-   - 爆炸半径限制（仅影响部分实例）
-   - 生产环境流量镜像（先在镜像流量上测试）
+> 在现有风险清单基础上**增加两列**：`可实验` 和 `建议注入方式`
 
-**混沌实验优先级**：
+**固定表头**：
 
-| 实验 | 风险 ID | 类型 | 环境 | 频率 | 优先级 |
-|------|---------|------|------|------|--------|
-| EC2 实例终止 | R-001 | AWS FIS | Staging | 每周 | 🔴 高 |
-| RDS 故障转移 | R-002 | AWS FIS | Staging | 每月 | 🔴 高 |
-| AZ 网络延迟 | R-003 | AWS FIS | Staging | 每月 | 🟡 中 |
-| ECS 任务故障 | R-004 | AWS FIS | Staging | 每周 | 🟡 中 |
-| 负载突增 | R-005 | 负载测试 | Staging | 每月 | 🟢 低 |
+| 风险 ID | 风险描述 | 故障类别 | 严重度 | 概率 | 影响 | 检测难度 | 修复复杂度 | 风险得分 | 可实验 | 建议注入方式 |
+|---------|---------|---------|--------|------|------|---------|-----------|---------|--------|-----------|
+
+**字段枚举值**：
+
+| 字段 | 取值 |
+|------|------|
+| 故障类别 | `SPOF` / `过度负载` / `过度延迟` / `错误配置` / `共享命运` / `其他: {自定义}` |
+| 严重度 | `🔴 严重` / `🟠 高` / `🟡 中` / `🟢 低` |
+| 可实验 | `✅ 是` / `❌ 否（原因）` / `⚠️ 有前提` |
+| 建议注入方式 | `FIS: {action}` / `ChaosMesh: {CRD}` / `手动` / `—` |
+
+#### 5. 风险详情（可实验风险补充信息）
+
+> 对每个 `可实验 = ✅/⚠️` 的风险，在详细分析中增加以下子表格：
+
+**涉及资源表**：
+
+| 资源 ID | 类型 | ARN | 在实验中的角色 |
+|---------|------|-----|-------------|
+| *(ID)* | *(类型)* | *(ARN)* | `注入目标` / `观测对象` / `影响对象` |
+
+**建议实验表**：
+
+| 注入工具 | Action | 目标资源 | 说明 | 前提条件 |
+|---------|--------|---------|------|---------|
+| FIS / ChaosMesh | *(action ID 或 CRD 类型)* | *(资源 ID)* | *(一句话说明)* | `无` 或具体前提 |
+
+**其他必须字段**：
+- **影响的业务功能**：引用"关键业务功能与依赖链"中的功能名称
+- **现有缓解措施**：列表或 `无`
+
+#### 6. 监控就绪度
+
+> **混沌工程必须有监控才能定义稳态假设和停止条件。**
+
+**整体就绪状态**: `🟢 就绪` / `🟡 部分就绪` / `🔴 未就绪`
+
+**现有 CloudWatch 告警表**：
+
+| 告警 ARN | 指标 | 阈值 | 周期 | 可作为 FIS Stop Condition |
+|---------|------|------|------|------------------------|
+
+**可用 CloudWatch 指标表**：
+
+| 资源 | Namespace | 可用指标 | 说明 |
+|------|-----------|---------|------|
+
+**监控缺口**：列出缺失的关键监控
+
+**就绪状态判断标准**：
+
+| 状态 | 条件 | 混沌工程建议 |
+|------|------|------------|
+| 🟢 就绪 | 核心业务功能有告警覆盖，有可用的 Stop Condition | 可直接开始实验 |
+| 🟡 部分就绪 | 有部分告警但核心功能未完全覆盖 | 补充关键告警后可实验 |
+| 🔴 未就绪 | 无告警或严重缺失 | **必须先建立基础监控** |
+
+#### 7. 韧性评分（9 维度，固定）
+
+| 维度 | 评分 | 当前状态（一句话） |
+|------|------|-----------------|
+| 冗余设计 | ⭐ X/5 | *(描述)* |
+| AZ 容错 | ⭐ X/5 | *(描述)* |
+| 超时与重试 | ⭐ X/5 | *(描述)* |
+| 断路器 | ⭐ X/5 | *(描述)* |
+| 自动扩展 | ⭐ X/5 | *(描述)* |
+| 配置防护 | ⭐ X/5 | *(描述)* |
+| 故障隔离 | ⭐ X/5 | *(描述)* |
+| 备份恢复 | ⭐ X/5 | *(描述)* |
+| 最佳实践 | ⭐ X/5 | *(描述)* |
+
+> **维度名称固定为以上 9 个**，不可更改或增减。
+
+#### 8. 约束和偏好（可选）
+
+| 约束项 | 值 | 说明 |
+|--------|-----|------|
+| 首选实验环境 | staging / production / development | — |
+| 允许生产实验 | 是 / 否 | — |
+| 维护窗口 | *(描述或 cron)* | — |
+| 最大爆炸半径 | 单资源 / 单 AZ / 多 AZ / 区域 | — |
+| Chaos Mesh 已安装 | 是 / 否 | — |
+| FIS IAM Role 已创建 | 是 / 否 | — |
+| 通知渠道 | *(渠道)* | — |
+
+### 可实验性判断指南
+
+供判断每个风险是否适合混沌实验：
+
+| 条件 | 可实验 | 说明 |
+|------|--------|------|
+| 有对应的 FIS action 可注入 | ✅ 是 | 如 EC2 终止、RDS 故障转移、Lambda 延迟注入 |
+| 有对应的 Chaos Mesh CRD | ✅ 是 | 如 Pod Kill、网络延迟、HTTP 故障 |
+| 属于配置问题，无运行时故障可注入 | ❌ 否 | 如"EBS 未加密"、"日志未启用"、"缺少告警" |
+| 需要先修复或配置才能测试 | ⚠️ 有前提 | 如"DynamoDB 需先启用 PITR 才能测试恢复" |
+| 涉及安全/合规（非韧性） | ❌ 否 | 如"IAM 权限过宽"、"无 WAF" |
+| 影响不可逆 | ❌ 否 | 如"删除无备份的唯一数据表" |
+| 缺乏监控无法观测结果 | ⚠️ 有前提 | 前提：先建立基础监控 |
+
+### 建议注入方式速查表
+
+| 风险模式 | 推荐工具 | 推荐 Action |
+|---------|---------|------------|
+| EC2 单点故障 | FIS | `aws:ec2:terminate-instances` 或 `aws:ec2:stop-instances` |
+| AZ 级故障 | FIS | `aws:network:disrupt-connectivity` |
+| RDS/Aurora 故障转移 | FIS | `aws:rds:failover-db-cluster` |
+| RDS 实例故障 | FIS | `aws:rds:reboot-db-instances` |
+| DynamoDB 跨区域复制 | FIS | `aws:dynamodb:global-table-pause-replication` |
+| Lambda 延迟 | FIS | `aws:lambda:invocation-add-delay` |
+| Lambda 错误 | FIS | `aws:lambda:invocation-error` |
+| EKS 节点故障 | FIS | `aws:eks:terminate-nodegroup-instances` |
+| ECS 任务故障 | FIS | `aws:ecs:stop-task` |
+| EBS 存储故障 | FIS | `aws:ebs:pause-volume-io` |
+| ElastiCache AZ 故障 | FIS | `aws:elasticache:interrupt-cluster-az-power` |
+| Spot 实例中断 | FIS | `aws:ec2:send-spot-instance-interruptions` |
+| API 限流 | FIS | `aws:fis:inject-api-throttle-error` |
+| S3 跨区域复制 | FIS | `aws:s3:bucket-pause-replication` |
+| K8s Pod 故障 | Chaos Mesh | PodChaos: `pod-kill` / `pod-failure` |
+| 微服务网络劣化 | Chaos Mesh | NetworkChaos: `delay` / `loss` / `partition` |
+| HTTP 层故障 | Chaos Mesh | HTTPChaos: `abort` / `delay` |
+| 资源竞争 | Chaos Mesh | StressChaos: `cpu` / `memory` |
+| DNS 故障 | Chaos Mesh | DNSChaos: `error` / `random` |
+| 文件 IO 故障 | Chaos Mesh | IOChaos: `latency` / `fault` |
+
+### 输出检查清单
+
+混沌工程数据生成后，对照以下清单确认完整性：
+
+- [ ] **项目元数据**完整（账号 ID、区域、环境类型、**架构模式**、韧性评分）
+- [ ] **AWS 资源清单**包含所有涉及资源的 **完整 ARN**
+- [ ] **业务功能表**列出依赖链和 RTO/RPO（单位：秒）
+- [ ] **风险清单**包含 `可实验` 和 `建议注入方式` 两列
+- [ ] 所有 `可实验 = ✅/⚠️` 的风险详情中包含**涉及资源表**和**建议实验表**
+- [ ] **监控就绪度**章节完整（就绪状态 + 现有告警 + 可用指标 + 缺口）
+- [ ] **韧性评分** 9 维度表格完整，维度名称未更改
+- [ ] **约束和偏好**已记录（如用户在评估过程中提到）
+- [ ] **开放发现**章节已记录（超出模板框架的新发现）
+
+### 开放发现（鼓励超越模板）
+
+> ⚠️ **本规范定义的是最低要求，不是能力上限。** 以下三个开放章节鼓励记录超出模板框架的发现。
+
+**额外发现的风险**：
+
+| 风险 ID | 风险描述 | 自定义类别 | 为什么现有分类不适用 | 建议的验证方式（自由文本） |
+|---------|---------|-----------|-------------------|----------------------|
+
+**自定义实验建议**（非 FIS / 非 Chaos Mesh 方式）：
+
+| 风险 ID | 验证方法 | 工具/脚本 | 说明 | 安全风险 |
+|---------|---------|----------|------|---------|
+
+**架构层面的开放观察**：
+- 架构反模式（但不确定是否构成风险）
+- 潜在的改进机会（非风险但值得关注）
+- 与行业最佳实践的差距（非直接风险）
 
 ## 特别注意事项
 
@@ -857,13 +938,6 @@ RDS 连接数达到最大值（500），应用无法创建新连接。
 - 在分析过程中，如发现关键信息缺失，主动询问用户
 - 提供中间结果供用户反馈
 - 根据用户反馈调整分析深度和重点
-
-### 9. 常见风险参考
-- 在进行故障模式识别时，**必须参考** [common-risks-reference.md](common-risks-reference.md) 中的常见风险点
-- 根据客户使用的 AWS 服务，逐项对照检查清单（文档第 6 节）
-- 对于识别到的风险，直接引用参考文档中的风险编号、原因和改进建议
-- 如果客户环境中存在参考文档未覆盖的风险，也应记录并分析
-- 风险参考覆盖五大类：存储、数据库、容器（EKS）、计算（EC2）、网络
 
 ## 开始分析
 
@@ -1081,26 +1155,41 @@ pandoc {报告文件}.md \
   -o {报告文件}-basic.html
 ```
 
-3. **生成混沌工程测试计划（独立文件）**
+3. **生成混沌工程数据（当用户选择需要时）**
 
-如果分析中识别了可测试的风险，生成单独的测试计划文件：
+如果用户选择需要混沌工程测试计划，按照 `assessment-output-spec.md` 规范生成结构化数据：
 
+**方式 1：嵌入模式（推荐）**
+在评估报告（Markdown 和 HTML）末尾添加 `## Chaos Engineering Ready Data` 附录章节，一份报告人机共读。
+
+**方式 2：独立文件模式**
 ```markdown
-文件名：{项目名称}-resilience-testing-{日期}.md
-例如：ecommerce-resilience-testing-2026-02-28.md
+文件名：{项目名称}-chaos-input-{日期}.md
+例如：ecommerce-chaos-input-2026-02-28.md
 
-内容：按照"故障注入测试计划"部分的要求生成
+内容：按照"混沌工程测试计划"部分的规范结构生成，
+包含：项目元数据、AWS 资源清单（含 ARN）、业务功能依赖链、
+风险清单（含可实验性标记和建议注入方式）、风险详情、
+监控就绪度、韧性评分（9 维度）、约束和偏好、开放发现
 ```
+
+**HTML 报告中的混沌工程数据**：
+当用户选择混沌工程测试计划时，HTML 报告中也必须包含对应的可视化章节：
+- **可实验风险卡片**：风险卡片增加 `可实验` 标记和 `建议注入方式` 标签
+- **监控就绪度仪表盘**：用甜甜圈图显示就绪状态（就绪/部分就绪/未就绪）
+- **注入方式分布图**：用柱状图显示 FIS / Chaos Mesh / 手动 / 不可实验的分布
+- **资源 ARN 清单表**：可折叠的完整资源清单，含复制按钮
+- **实验优先级矩阵**：散点图显示可实验风险的概率 vs 影响
 
 4. **报告文件位置**
 
 所有生成的报告文件应保存在当前工作目录：
 
 ```
-/Users/txuelei/claudecode/first-test/
-├── ecommerce-resilience-assessment-2026-02-28.md   (主报告 Markdown)
-├── ecommerce-resilience-assessment-2026-02-28.html  (主报告 HTML)
-└── ecommerce-resilience-testing-2026-02-28.md       (测试计划，可选)
+{当前工作目录}/
+├── {项目名称}-resilience-assessment-{日期}.md    (主报告 Markdown)
+├── {项目名称}-resilience-assessment-{日期}.html   (主报告 HTML，含交互式图表)
+└── {项目名称}-chaos-input-{日期}.md              (混沌工程数据，独立文件模式时生成，可选)
 ```
 
 ### 报告质量检查清单
@@ -1124,6 +1213,7 @@ pandoc {报告文件}.md \
 
 📄 **Markdown 格式**：`{文件名}.md`
 🌐 **交互式HTML格式**：`{文件名}.html`
+🧪 **混沌工程数据**：`{文件名}-chaos-input.md`（如用户选择了混沌工程测试计划）
 
 **HTML报告特性**：
 ✨ AWS品牌风格设计（橙色主题）
@@ -1133,6 +1223,7 @@ pandoc {报告文件}.md \
 🖨️ 打印友好样式
 ⏱️ 时间轴可视化实施路线图
 🏗️ Mermaid架构图支持
+🧪 混沌工程数据可视化（可实验风险标记、监控就绪度、注入方式分布图，如适用）
 
 **关键发现**：
 1. {关键风险 1}
@@ -1152,6 +1243,7 @@ pandoc {报告文件}.md \
 - 使用Markdown编辑器编辑和自定义报告
 - 从浏览器打印或导出为PDF用于分享
 - 与团队成员共享HTML文件（无需额外依赖）
+- 将混沌工程数据文件直接传递给 chaos-engineering-on-aws skill 使用（如适用）
 ```
 
 ### 工具安装检查

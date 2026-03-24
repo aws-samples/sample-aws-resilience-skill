@@ -1,0 +1,351 @@
+{
+  "metadata": {
+    "total_questions": 80,
+    "priority_breakdown": {
+      "P0": 12,
+      "P1": 24,
+      "P2": 28,
+      "P3": 16
+    },
+    "version": "1.0",
+    "last_updated": "2026-03-01"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "priority": "P0",
+      "category": "恢复目标",
+      "category_en": "Recovery Objectives",
+      "question_zh": "问题 1：如何定义应用程序的恢复目标？（目标包括但不限于：恢复点目标 (RPO)、恢复时间目标 (RTO)、平均恢复时间 (MTTR)",
+      "question_en": "How do you define recovery objectives for your application? (Including RPO, RTO, MTTR)",
+      "image": "image.png",
+      "why_important": "恢复目标是所有韧性投资决策的基础，直接影响架构设计和资源分配",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定义或未正式记录恢复目标",
+          "description_en": "Recovery objectives not defined or documented"
+        },
+        {
+          "level": 2,
+          "description_zh": "已定义恢复目标，但未定期审查或验证",
+          "description_en": "Recovery objectives defined but not regularly reviewed"
+        },
+        {
+          "level": 3,
+          "description_zh": "已定义明确的恢复目标（RTO<15分钟，RPO接近零），定期测试和验证，并与业务SLA对齐",
+          "description_en": "Clear recovery objectives defined (RTO<15min, near-zero RPO), regularly tested and aligned with business SLAs"
+        }
+      ],
+      "aws_best_practice": "根据业务影响分析确定每个应用程序的 RTO 和 RPO。对于关键任务应用，建议 RTO 15分钟，RPO 接近零。使用 AWS Resilience Hub 自动评估和跟踪恢复目标。"
+    },
+    {
+      "id": 2,
+      "priority": "P0",
+      "category": "服务级别目标",
+      "category_en": "Service Level Objectives",
+      "question_zh": "问题 2：如何为应用程序定义正常运行时间和延迟的服务级别目标 (SLO)？",
+      "question_en": "How do you define Service Level Objectives (SLOs) for uptime and latency?",
+      "image": "image.png",
+      "why_important": "SLO是衡量服务质量的核心指标，用于错误预算管理和优先级决策",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定义SLO或仅有模糊的可用性目标",
+          "description_en": "No SLOs defined or only vague availability targets"
+        },
+        {
+          "level": 2,
+          "description_zh": "定义了基本的SLO（如99.9%可用性），但未定期审查或调整",
+          "description_en": "Basic SLOs defined (e.g., 99.9% availability) but not regularly reviewed"
+        },
+        {
+          "level": 3,
+          "description_zh": "定义了详细的SLO（正常运行时间99.99%，延迟<100ms），与RTO/RPO对齐，定期审查并基于实际性能数据调整",
+          "description_en": "Detailed SLOs defined (99.99% uptime, <100ms latency), aligned with RTO/RPO, regularly reviewed based on actual performance"
+        }
+      ],
+      "aws_best_practice": "使用 Google SRE 方法定义 SLI/SLO。关键任务应用建议 99.99% 正常运行时间，P95 延迟 <100ms。使用 CloudWatch 跟踪 SLI，并设置错误预算策略。"
+    },
+    {
+      "id": 3,
+      "priority": "P0",
+      "category": "重要性标准文档",
+      "category_en": "Criticality Criteria",
+      "question_zh": "问题 3：如何确定或衡量应用程序的关键程度？",
+      "question_en": "How do you determine or measure application criticality?",
+      "image": "image.png",
+      "why_important": "关键程度决定韧性投资的优先级和资源分配",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未正式评估应用程序关键性",
+          "description_en": "Application criticality not formally assessed"
+        },
+        {
+          "level": 2,
+          "description_zh": "基于主观判断或单一维度（如收入）评估关键性",
+          "description_en": "Criticality assessed based on subjective judgment or single dimension (e.g., revenue)"
+        },
+        {
+          "level": 3,
+          "description_zh": "基于多维度评估关键性（业务影响、财务成本、合规要求、客户影响），有明确的分类标准和文档",
+          "description_en": "Multi-dimensional criticality assessment (business impact, financial cost, compliance, customer impact) with clear classification criteria and documentation"
+        }
+      ],
+      "aws_best_practice": "评估应用程序关键性需考虑：停机时间成本、风险级别、战略重要性、基础设施成本。使用业务影响分析（BIA）方法，将应用分为关键任务、重要和非关键三类。"
+    },
+    {
+      "id": 27,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 27：您使用什么标准来选择应用程序的灾难恢复策略？",
+      "question_en": "What criteria do you use to select disaster recovery strategy for your application?",
+      "image": "image(1).png",
+      "why_important": "DR策略直接决定RTO/RPO能否满足业务要求",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "DR 策略由企业规定",
+          "description_en": "DR strategies are prescribed by the business"
+        },
+        {
+          "level": 2,
+          "description_zh": "DR 策略由应用程序团队制定",
+          "description_en": "DR strategies are developed by the application team"
+        },
+        {
+          "level": 3,
+          "description_zh": "DR 策略由应用程序团队针对特定场景制定",
+          "description_en": "DR strategies are developed by the application team for specific scenarios"
+        }
+      ],
+      "aws_best_practice": "DR策略应与RTO/RPO对齐。AWS提供4种策略：备份和恢复（小时级RTO）、导航灯（分钟级RTO）、温备用（秒级RTO）、主动-主动（无RTO）。使用 AWS Resilience Hub 评估并推荐合适的策略。"
+    },
+    {
+      "id": 30,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 30：您使用什么方法来验证您的数据恢复策略，以确保它们符合您的 RPO 和 RTO 目标？",
+      "question_en": "What methods do you use to validate data recovery strategies meet RPO and RTO goals?",
+      "image": "image.png",
+      "why_important": "未经测试的DR计划等于没有DR计划",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未测试数据恢复策略",
+          "description_en": "Data recovery strategies not tested"
+        },
+        {
+          "level": 2,
+          "description_zh": "定期测试数据恢复（年度），验证恢复流程",
+          "description_en": "Regular testing of data recovery (annually), validating recovery process"
+        },
+        {
+          "level": 3,
+          "description_zh": "定期测试数据恢复（季度或更频繁），自动化测试，验证RTO/RPO目标，包括配置漂移检测",
+          "description_en": "Regular automated testing (quarterly or more), validating RTO/RPO goals, including configuration drift detection"
+        }
+      ],
+      "aws_best_practice": "建议至少季度进行 DR 演练。使用 AWS Backup 自动化备份，AWS CloudFormation 检测配置漂移。测试应包括：完全恢复时间测量、数据完整性验证、故障转移流程测试。"
+    },
+    {
+      "id": 34,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 34：您的故障转移策略测试频率是多少？",
+      "question_en": "What is the frequency of testing your failover strategy?",
+      "image": "image.png",
+      "why_important": "定期测试是确保故障转移可靠性的唯一方法",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "从不或很少测试故障转移（年度或更少）",
+          "description_en": "Never or rarely test failover (annually or less)"
+        },
+        {
+          "level": 2,
+          "description_zh": "定期测试故障转移（年度），但仅在非生产环境",
+          "description_en": "Regular failover testing (annually), but only in non-production"
+        },
+        {
+          "level": 3,
+          "description_zh": "频繁测试故障转移（季度或月度），包括生产环境的受控故障转移",
+          "description_en": "Frequent failover testing (quarterly or monthly), including controlled production failover"
+        }
+      ],
+      "aws_best_practice": "建议至少季度测试故障转移。复杂或关键的恢复路径应在生产中定期执行。使用 Route 53 健康检查和故障转移路由策略。考虑使用 AWS FIS 进行故障注入测试。"
+    },
+    {
+      "id": 35,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 35：您如何规划硬依赖故障？",
+      "question_en": "How do you plan for hard dependency failures?",
+      "image": "image.png",
+      "why_important": "硬依赖故障是导致级联故障的主要原因",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未识别或规划硬依赖故障",
+          "description_en": "Hard dependency failures not identified or planned for"
+        },
+        {
+          "level": 2,
+          "description_zh": "识别了硬依赖，有基本的降级策略",
+          "description_en": "Hard dependencies identified with basic degradation strategies"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的硬依赖管理：优雅降级、断路器模式、缓存回退、超时和重试策略",
+          "description_en": "Complete hard dependency management: graceful degradation, circuit breaker, cache fallback, timeout and retry strategies"
+        }
+      ],
+      "aws_best_practice": "实施优雅降级，将硬依赖转换为软依赖。使用断路器模式（如 AWS App Mesh 的断路器功能），在参数存储不可用时缓存合理默认值。对监控等非功能性依赖，即使无法发送遥测也应继续业务功能。"
+    },
+    {
+      "id": 36,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 36：您是如何定义和实现故障隔离边界的？",
+      "question_en": "How do you define and implement fault isolation boundaries?",
+      "image": "image.png",
+      "why_important": "故障隔离是AWS架构韧性的核心原则",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "单AZ部署，无故障隔离",
+          "description_en": "Single AZ deployment, no fault isolation"
+        },
+        {
+          "level": 2,
+          "description_zh": "多AZ部署，但未完全利用隔离边界（如控制平面依赖）",
+          "description_en": "Multi-AZ deployment but not fully utilizing isolation boundaries (e.g., control plane dependencies)"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的故障隔离：多AZ/多区域、控制平面与数据平面分离、单元化架构（如适用）",
+          "description_en": "Complete fault isolation: Multi-AZ/Region, control/data plane separation, cell-based architecture (if applicable)"
+        }
+      ],
+      "aws_best_practice": "充分利用 AWS 故障隔离边界：可用区（AZ）、区域（Region）、控制平面与数据平面。关键应用应跨至少2个AZ部署。对于全球服务，考虑多区域主动-主动架构。了解依赖的 AWS 服务的隔离边界设计。"
+    },
+    {
+      "id": 38,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 38：应在什么情况下评估已实施的高可用性 (HA) 控制措施的有效性？",
+      "question_en": "Under what circumstances should you evaluate effectiveness of HA controls?",
+      "image": "image.png",
+      "why_important": "需要数学证明HA设计能达到预期可用性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定期评估HA控制有效性",
+          "description_en": "HA control effectiveness not regularly evaluated"
+        },
+        {
+          "level": 2,
+          "description_zh": "在重大变更或事故后评估HA有效性",
+          "description_en": "Evaluate HA effectiveness after major changes or incidents"
+        },
+        {
+          "level": 3,
+          "description_zh": "持续监控和评估HA有效性，包括部分故障模式（受影响用户百分比、延迟百分位数），可数学证明达到所需可用性水平",
+          "description_en": "Continuous monitoring and evaluation of HA effectiveness, including partial failure modes (affected user %, latency percentiles), with mathematical proof of achieving required availability"
+        }
+      ],
+      "aws_best_practice": "可用性不应仅测量为二元状态（正常/宕机），应测量部分故障模式：受影响用户百分比、受影响位置百分比、延迟百分位数。使用 CloudWatch 和 CloudWatch Synthetics 持续监控可用性指标。"
+    },
+    {
+      "id": 40,
+      "priority": "P0",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 40：您如何评估代码部署方法？",
+      "question_en": "How do you evaluate code deployment methods?",
+      "image": "image.png",
+      "why_important": "部署方法直接影响变更风险和恢复能力",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "所有实施的手动变更管理流程",
+          "description_en": "Manual change management process for all implementations"
+        },
+        {
+          "level": 2,
+          "description_zh": "某些实现采用自动部署",
+          "description_en": "Automated deployment is utilized for certain implementations"
+        },
+        {
+          "level": 3,
+          "description_zh": "手动变更管理仅用于关键实施，并实施自动漂移检测",
+          "description_en": "Manual change management reserved solely for critical implementations, with automated drift detection"
+        }
+      ],
+      "aws_best_practice": "使用 CI/CD 自动化部署，采用蓝绿或金丝雀部署策略。关键指标：操作员干预次数、每个版本的变更数量、部署频率。使用 AWS CodePipeline、CodeDeploy 实现自动化部署。"
+    },
+    {
+      "id": 48,
+      "priority": "P0",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 48：你如何计划对事件的应对？",
+      "question_en": "How do you plan for incident response?",
+      "image": "image.png",
+      "why_important": "事件响应计划是事故管理的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式的事件响应计划",
+          "description_en": "No formal incident response plan"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的事件响应计划，但未定期演练",
+          "description_en": "Basic incident response plan exists but not regularly practiced"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细的事件管理计划，包括角色职责、沟通计划、响应阶段、严重程度定义，定期演练和更新",
+          "description_en": "Detailed incident management plan with roles, communication plan, response phases, severity definitions, regularly practiced and updated"
+        }
+      ],
+      "aws_best_practice": "制定详细的事件管理计划，包括：事件响应团队概述、利益相关者角色、带外沟通渠道、响应阶段（检测、分析、遏制、根除、恢复）、严重程度定义和升级程序。使用 AWS Systems Manager Incident Manager 自动化事件响应。"
+    },
+    {
+      "id": 51,
+      "priority": "P0",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 51：一个人将事件升级的程序是什么？",
+      "question_en": "What is the procedure for escalating an incident?",
+      "image": "image.png",
+      "why_important": "明确的升级程序确保快速响应",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无明确的升级程序",
+          "description_en": "No clear escalation procedure"
+        },
+        {
+          "level": 2,
+          "description_zh": "有升级路径，但未明确何时升级的标准",
+          "description_en": "Escalation path exists but criteria for escalation not clear"
+        },
+        {
+          "level": 3,
+          "description_zh": "明确的升级路径、升级触发条件、每一步的所有者、预先批准的缓解措施、定期培训",
+          "description_en": "Clear escalation path, escalation triggers, owners at each step, pre-approved mitigations, regular training"
+        }
+      ],
+      "aws_best_practice": "明确升级路径，提供联系方式。设置 CloudWatch 警报在 Systems Manager Incident Manager 中创建事件。预先批准预期情景的缓解措施。定期进行事件响应演习。"
+    }
+  ]
+}

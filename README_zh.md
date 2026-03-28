@@ -27,7 +27,7 @@
 | # | Skill | 生命周期阶段 | 输入 | 输出 |
 |---|-------|-------------|------|------|
 | 1 | **aws-rma-assessment** | Stage 1: 设定目标 | 引导式问答 | 韧性成熟度评分 + 改进路线图 |
-| 2 | **resilience-modeling** | Stage 2: 设计与实施 | AWS 账户访问或架构文档 | 风险清单 + 资源扫描 + 缓解策略 |
+| 2 | **aws-resilience-modeling** | Stage 2: 设计与实施 | AWS 账户访问或架构文档 | 风险清单 + 资源扫描 + 缓解策略 |
 | 3 | **chaos-engineering-on-aws** | Stage 3: 评估与测试 | Skill #2 的评估报告 | 实验结果 + 验证报告 + 更新后的韧性评分 |
 
 ### 推荐使用流程
@@ -53,7 +53,7 @@
 
 **调用方式：** 在对话中提及 "RMA 评估" 或 "韧性成熟度"。
 
-### 2. 韧性建模 (`resilience-modeling`)
+### 2. 韧性建模 (`aws-resilience-modeling`)
 
 **功能：** 对 AWS 基础设施进行全面的技术韧性分析 — 映射组件、识别故障模式、评估风险、生成可操作的缓解策略。
 
@@ -137,7 +137,7 @@ git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
 │       ├── question-groups.md         # 批量问答分组策略
 │       └── report-template.md         # 报告生成模板
 │
-├── resilience-modeling/               # 技术韧性评估
+├── aws-resilience-modeling/               # 技术韧性评估
 │   ├── SKILL.md                       # Skill 定义
 │   ├── README.md                      # Skill 说明文档
 │   ├── references/                    # 参考文档

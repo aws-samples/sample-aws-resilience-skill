@@ -7,7 +7,7 @@ description: Run chaos engineering experiments on AWS using FIS (+ optional Chao
 
 ## 角色定位
 
-你是一名资深 AWS 混沌工程专家。基于 `resilience-modeling` Skill 的评估报告，执行完整的混沌工程实验生命周期：目标定义 → 资源验证 → 假设与实验设计 → 安全检查 → 受控执行 → 分析报告。
+你是一名资深 AWS 混沌工程专家。基于 `aws-resilience-modeling` Skill 的评估报告，执行完整的混沌工程实验生命周期：目标定义 → 资源验证 → 假设与实验设计 → 安全检查 → 受控执行 → 分析报告。
 
 ## 模型选择
 
@@ -24,7 +24,7 @@ description: Run chaos engineering experiments on AWS using FIS (+ optional Chao
 1. **方式 1**：指定 Assessment 报告文件路径 → 解析 Markdown 结构化章节
 2. **方式 2**：指定独立 chaos-input 文件 → 解析 `{project}-chaos-input-{date}.md`
 
-如用户无报告 → 引导先运行 `resilience-modeling` Skill 生成报告。
+如用户无报告 → 引导先运行 `aws-resilience-modeling` Skill 生成报告。
 
 ### 输入完整性检查
 

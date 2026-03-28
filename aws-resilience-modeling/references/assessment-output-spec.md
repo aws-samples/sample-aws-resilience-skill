@@ -1,7 +1,7 @@
 # Chaos Engineering 输入规范模板
 
 > **用途**：本文件定义 `chaos-engineering-on-aws` skill 所需的结构化输入格式。  
-> 请 `resilience-modeling` skill 在生成韧性评估报告时，按照本规范的结构组织报告内容，确保混沌工程阶段可直接消费。  
+> 请 `aws-resilience-modeling` skill 在生成韧性评估报告时，按照本规范的结构组织报告内容，确保混沌工程阶段可直接消费。  
 >
 > **两种输出方式（任选）**：
 > 1. **嵌入模式**：在现有评估报告末尾添加 `## Chaos Engineering Ready Data` 附录章节
@@ -467,5 +467,5 @@ Assessment 完成后，对照以下清单确认输出完整性：
 
 ---
 
-*本规范由 `chaos-engineering-on-aws` skill 定义，反馈给 `resilience-modeling` skill 设计者*  
+*本规范由 `chaos-engineering-on-aws` skill 定义，反馈给 `aws-resilience-modeling` skill 设计者*  
 *版本：1.2 | 日期：2026-03-23*

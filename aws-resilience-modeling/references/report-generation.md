@@ -306,7 +306,7 @@ pandoc {报告文件}.md \
 
 ```bash
 # 检查HTML模板文件是否存在
-TEMPLATE_PATH="$HOME/.claude/skills/resilience-modeling/assets/html-report-template.html"
+TEMPLATE_PATH="$HOME/.claude/skills/aws-resilience-modeling/assets/html-report-template.html"
 
 if [ -f "$TEMPLATE_PATH" ]; then
     echo "✅ 找到美观的HTML模板"

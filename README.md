@@ -28,7 +28,7 @@ These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.am
 | # | Skill | Lifecycle Stage | Input | Output |
 |---|-------|----------------|-------|--------|
 | 1 | **aws-rma-assessment** | Stage 1: Set Objectives | Guided Q&A with stakeholders | Resilience maturity score + improvement roadmap |
-| 2 | **resilience-modeling** | Stage 2: Design & Implement | AWS account access or architecture docs | Risk inventory + resource scan + mitigation strategies |
+| 2 | **aws-resilience-modeling** | Stage 2: Design & Implement | AWS account access or architecture docs | Risk inventory + resource scan + mitigation strategies |
 | 3 | **chaos-engineering-on-aws** | Stage 3: Evaluate & Test | Assessment report from Skill #2 | Experiment results + validation report + updated resilience score |
 
 ### Recommended Workflow
@@ -54,7 +54,7 @@ These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.am
 
 **Invoke:** Mention "RMA assessment" or "resilience maturity" in conversation.
 
-### 2. Resilience Modeling (`resilience-modeling`)
+### 2. Resilience Modeling (`aws-resilience-modeling`)
 
 **What it does:** Comprehensive technical resilience analysis of AWS infrastructure — maps components, identifies failure modes, rates risks, and generates actionable mitigation strategies.
 
@@ -138,7 +138,7 @@ Copy the skill directories into your project's skills folder, or reference them 
 │       ├── question-groups.md         # Batch Q&A grouping strategy
 │       └── report-template.md         # Report generation template
 │
-├── resilience-modeling/               # Technical Resilience Assessment
+├── aws-resilience-modeling/               # Technical Resilience Assessment
 │   ├── SKILL.md                       # Skill definition
 │   ├── README.md                      # Skill documentation
 │   ├── references/                    # Reference documents

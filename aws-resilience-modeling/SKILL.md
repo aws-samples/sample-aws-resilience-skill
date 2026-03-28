@@ -1,5 +1,5 @@
 ---
-name: resilience-modeling
+name: aws-resilience-modeling
 description: >-
   Conduct comprehensive AWS system resilience analysis and risk assessment.
   Use when the user wants to evaluate AWS infrastructure resilience, identify

@@ -37,7 +37,7 @@ AWS Resilience Assessment Skill现在支持生成**美观的交互式HTML报告*
 ### 核心文件
 
 ```
-resilience-modeling/
+aws-resilience-modeling/
 ├── SKILL.md                                    # Skill 主配置
 ├── README.md                                   # Skill 说明文档
 ├── references/
@@ -154,7 +154,7 @@ assessment_data = {
 
 ```bash
 # 方式A：使用Python模块
-cd ~/.claude/skills/resilience-modeling
+cd ~/.claude/skills/aws-resilience-modeling
 python3 -c "
 import sys; sys.path.insert(0, 'scripts')
 from generate_html_report import generate_html_report
@@ -219,7 +219,7 @@ from pathlib import Path
 import sys
 
 # 添加scripts目录到Python路径
-skill_dir = Path.home() / '.claude' / 'skills' / 'resilience-modeling'
+skill_dir = Path.home() / '.claude' / 'skills' / 'aws-resilience-modeling'
 sys.path.insert(0, str(skill_dir / 'scripts'))
 
 from generate_html_report import generate_html_report

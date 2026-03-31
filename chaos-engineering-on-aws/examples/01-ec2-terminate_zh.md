@@ -1,20 +1,20 @@
-# Example 1: EC2 Instance Termination — Auto Scaling Recovery Validation
+# 示例 1: EC2 实例终止 — Auto Scaling 恢复验证
 
-**Architecture pattern**: Traditional EC2 + ALB + Auto Scaling Group
-**FIS Action**: `aws:ec2:terminate-instances`
-**Validation target**: ASG automatically launches replacement instances, ALB health check passes, requests uninterrupted
+**架构模式**：传统 EC2 + ALB + Auto Scaling Group
+**FIS Action**：`aws:ec2:terminate-instances`
+**验证点**：ASG 自动启动替代实例、ALB 健康检查通过、请求不中断
 
 ---
 
-## Steady-State Hypothesis
+## 稳态假设
 
-After terminating 1 EC2 instance in the ASG:
-- ALB request success rate >= 99.5% (5min window)
-- P99 latency <= 500ms
-- ASG replenishes a new instance and passes health check within 300s
-- Zero data loss
+当终止 ASG 中 1 个 EC2 实例后：
+- ALB 请求成功率 >= 99.5%（5 分钟窗口）
+- P99 延迟 <= 500ms
+- ASG 在 300s 内补充新实例并通过健康检查
+- 无数据丢失
 
-## Stop Conditions
+## 停止条件
 
 ```json
 {
@@ -27,7 +27,7 @@ After terminating 1 EC2 instance in the ASG:
 }
 ```
 
-Corresponding CloudWatch Alarm:
+对应 CloudWatch Alarm：
 ```bash
 aws cloudwatch put-metric-alarm \
   --alarm-name "chaos-stop-5xx-rate" \
@@ -41,7 +41,7 @@ aws cloudwatch put-metric-alarm \
   --alarm-actions "arn:aws:sns:{region}:{account}:chaos-alerts"
 ```
 
-## FIS Experiment Template
+## FIS 实验模板
 
 ```json
 {
@@ -78,37 +78,37 @@ aws cloudwatch put-metric-alarm \
 }
 ```
 
-## Execution Commands
+## 执行命令
 
 ```bash
-# Create template
+# 创建模板
 aws fis create-experiment-template \
   --cli-input-json file://examples/ec2-terminate-template.json
 
-# Start experiment
+# 启动实验
 aws fis start-experiment --experiment-template-id <template-id>
 
-# Monitor experiment status
+# 监控实验状态
 aws fis get-experiment --id <experiment-id> \
   --query 'experiment.state.status'
 ```
 
-## Observation Metrics
+## 观测指标
 
-| Metric | Namespace | MetricName | Dimensions |
+| 指标 | Namespace | MetricName | 维度 |
 |------|-----------|------------|------|
-| 5xx error count | AWS/ApplicationELB | HTTPCode_Target_5XX_Count | LoadBalancer, TargetGroup |
-| Request count | AWS/ApplicationELB | RequestCount | LoadBalancer |
-| Healthy host count | AWS/ApplicationELB | HealthyHostCount | TargetGroup |
-| ASG instance count | AWS/AutoScaling | GroupInServiceInstances | AutoScalingGroupName |
+| 5xx 错误数 | AWS/ApplicationELB | HTTPCode_Target_5XX_Count | LoadBalancer, TargetGroup |
+| 请求数 | AWS/ApplicationELB | RequestCount | LoadBalancer |
+| 健康主机数 | AWS/ApplicationELB | HealthyHostCount | TargetGroup |
+| ASG 实例数 | AWS/AutoScaling | GroupInServiceInstances | AutoScalingGroupName |
 
-## Expected Results
+## 预期结果
 
-| Phase | Time | Expected |
+| 阶段 | 时间 | 预期 |
 |------|------|------|
-| Injection | T+0s | Target instance terminated |
-| Detection | T+10-30s | ALB health check detects instance unavailable |
-| ASG Response | T+30-60s | ASG launches new instance |
-| Recovery | T+180-300s | New instance passes health check, traffic restored |
+| 注入 | T+0s | 目标实例被终止 |
+| 检测 | T+10-30s | ALB 检测到实例不可用 |
+| ASG 响应 | T+30-60s | ASG 启动新实例 |
+| 恢复 | T+180-300s | 新实例通过健康检查，流量恢复 |
 
-**If failed**: Indicates ASG configuration issues (min capacity, health check interval, launch template). Check ASG policies and Launch Template.
+**如果失败**：说明 ASG 配置有问题（最小容量、健康检查间隔、启动模板），需检查 ASG 策略和 Launch Template。

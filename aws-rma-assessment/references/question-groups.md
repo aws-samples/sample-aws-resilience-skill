@@ -1,247 +1,247 @@
-# 批量交互式问答分组详情
+# Batch Interactive Q&A Group Details
 
-> 本文件包含 RMA 评估中批量问答的详细分组策略和问题列表。
-> 主流程概述见 [SKILL.md](../SKILL.md) 的"第四步"章节。
-
----
-
-## 简约版（P0+P1，36题）-> 8-12次交互
-
-### 第1组 - 恢复目标与SLO（P0: 3题） - 1次交互
-- Q1: 如何定义恢复目标（RTO/RPO/MTTR）？
-- Q2: 如何定义SLO（正常运行时间和延迟）？
-- Q3: 如何确定应用程序关键程度？
-- **为什么一起问**：这三个问题都关于业务要求定义，用户通常在同一文档中定义
-
-### 第2组 - 灾难恢复策略与测试（P0: 3题 + P1: 4题） - 2次交互
-- 交互1（P0核心）：
-  - Q27: DR策略选择标准？
-  - Q30: 如何验证数据恢复策略？
-  - Q34: 故障转移测试频率？
-- 交互2（P1细节）：
-  - Q28: 事故通信协议？
-  - Q29: 数据恢复是否自动化？
-  - Q31: DR计划详细程度？
-  - Q32: 如何管理主辅站点偏差？
-
-### 第3组 - 高可用性设计（P0: 3题 + P1: 2题） - 2次交互
-- 交互1（P0核心）：
-  - Q35: 如何规划硬依赖故障？
-  - Q36: 如何定义故障隔离边界？
-  - Q38: 何时评估HA控制有效性？
-- 交互2（P1细节）：
-  - Q37: 如何疏散故障隔离边界？
-  - Q39: 如何避免AWS服务限制？
-
-### 第4组 - 变更管理与部署（P0: 1题 + P1: 6题） - 2次交互
-- 交互1（部署流程）：
-  - Q40: 如何评估代码部署方法？[P0]
-  - Q41: 使用什么环境测试？
-  - Q42: 生产部署频率？
-  - Q43: 自动化集成程度？
-- 交互2（质量保障）：
-  - Q44: 如何回滚失败部署？
-  - Q45: 如何验证变更成功？
-  - Q46: 如何管理版本控制？
-
-### 第5组 - 事件管理（P0: 2题 + P1: 6题） - 2次交互
-- 交互1（P0核心）：
-  - Q48: 如何计划事件响应？
-  - Q51: 事件升级程序？
-- 交互2（P1细节）：
-  - Q49: 事件手册是否自动化？
-  - Q50: 团队培训方法？
-  - Q52: 事件报告详细程度？
-  - Q54: 如何应用事件洞察？
-  - Q55: 如何通知客户？
-  - Q56: 团队是否拥有流程？
-
-### 第6组 - 可观察性（P1: 6题） - 2次交互
-- 交互1（监控基础）：
-  - Q13: 如何建立指标（日志/指标/跟踪/警报）？
-  - Q14: 如何确保日志可访问？
-  - Q16: 如何利用跟踪数据？
-- 交互2（监控进阶）：
-  - Q18: 如何将指标与故障域对齐？
-  - Q19: 如何跟踪可用性和延迟？
-  - Q21: 如何跟踪依赖关系？
+> This file contains the detailed grouping strategy and question lists for RMA assessment batch Q&A.
+> See [SKILL_EN.md](../SKILL_EN.md) Step 4 for the main workflow overview.
 
 ---
 
-## 完整版（+P2+P3，44题）-> 额外7-8次交互
+## Compact Version (P0+P1, 36 Qs) -> 8-12 interactions
 
-### 简约版分组扩展（+9题，分散到现有组中）
+### Group 1 - Recovery Objectives & SLOs (P0: 3 Qs) - 1 interaction
+- Q1: How do you define recovery objectives (RTO/RPO/MTTR)?
+- Q2: How do you define SLOs (uptime and latency)?
+- Q3: How do you determine application criticality?
+- **Why grouped**: These three questions all relate to business requirement definitions; users typically define them in the same document
 
-完整版评估时，以下 P2/P3 问题追加到简约版的对应分组中（不增加独立交互，合并到现有组的尾部）：
+### Group 2 - DR Strategy & Testing (P0: 3 Qs + P1: 4 Qs) - 2 interactions
+- Interaction 1 (P0 core):
+  - Q27: DR strategy selection criteria?
+  - Q30: How do you validate data recovery strategies?
+  - Q34: Failover testing frequency?
+- Interaction 2 (P1 details):
+  - Q28: Incident communication protocol?
+  - Q29: Is data recovery automated?
+  - Q31: How detailed is the DR plan?
+  - Q32: How do you manage primary-secondary site drift?
 
-| 追加到 | 追加问题 | 优先级 | 说明 |
-|-------|---------|--------|------|
-| 第1组（恢复目标） | Q4: 弹性要求限制？Q5: 控制措施选择？ | P2 | 恢复目标深入 |
-| 第1组（恢复目标） | Q6: 弹性学习 vs 新功能优先级？ | P3 | 组织层面 |
-| 第1组（恢复目标） | Q11: 高负载性能预测？Q12: 负载变化准备？ | P2 | 弹性容量 |
-| 第2组（灾难恢复） | Q33: 故障转移站点服务限制？ | P3 | DR 补充 |
-| 第4组（变更管理） | Q47: 代码组织标准合规？ | P2 | 变更管理补充 |
-| 第5组（事件管理） | Q53: 报告存储库使用？Q57: 响应小组授权？ | P2 | 事件管理补充 |
+### Group 3 - High Availability Design (P0: 3 Qs + P1: 2 Qs) - 2 interactions
+- Interaction 1 (P0 core):
+  - Q35: How do you plan for hard dependency failures?
+  - Q36: How do you define fault isolation boundaries?
+  - Q38: When do you evaluate HA control effectiveness?
+- Interaction 2 (P1 details):
+  - Q37: How do you evacuate fault isolation boundaries?
+  - Q39: How do you avoid AWS service limits?
 
-### 第7组 - 弹性分析（P2: 6题） - 2次交互
+### Group 4 - Change Management & Deployment (P0: 1 Q + P1: 6 Qs) - 2 interactions
+- Interaction 1 (Deployment process):
+  - Q40: How do you evaluate code deployment methods? [P0]
+  - Q41: What environments are used for testing?
+  - Q42: Production deployment frequency?
+  - Q43: Automation integration level?
+- Interaction 2 (Quality assurance):
+  - Q44: How do you roll back failed deployments?
+  - Q45: How do you verify change success?
+  - Q46: How do you manage version control?
 
-- 交互1（要求与建模）：
-  - Q4: 记录在案的弹性要求限制有哪些？
-  - Q5: 如何考虑可能性、影响和成本选择控制措施？
-  - Q10: 使用哪种方法对故障情景进行建模？
-- 交互2（依赖与清单）：
-  - Q7: 依赖关系文档有多全面？
-  - Q8: 如何解决与依赖关系的耦合问题？
-  - Q9: 如何创建和利用清单？
-- **为什么一起问**：都关于系统韧性的前期分析——需求定义、风险建模和依赖管理
+### Group 5 - Incident Management (P0: 2 Qs + P1: 6 Qs) - 2 interactions
+- Interaction 1 (P0 core):
+  - Q48: How do you plan for incident response?
+  - Q51: Incident escalation procedure?
+- Interaction 2 (P1 details):
+  - Q49: Are incident playbooks automated?
+  - Q50: Team training methods?
+  - Q52: How detailed are incident reports?
+  - Q54: How do you apply incident insights?
+  - Q55: How do you notify customers?
+  - Q56: Do teams own their incident processes?
 
-### 第8组 - 可观察性进阶（P2: 8题） - 2次交互
-
-- 交互1（日志与合成监控）：
-  - Q15: 如何设置从日志中检索数据？
-  - Q17: 如何使用合成流量监控应用程序？
-  - Q20: 指标在哪些领域提供报告？
-  - Q22: 指标何时提供有关故障场景的信息？
-- 交互2（告警策略）：
-  - Q23: 选择警报的策略是什么？
-  - Q24: 警报阈值的适应性如何？
-  - Q25: 使用什么方法来中继警报通知？
-  - Q26: 如何自动响应警报？
-- **为什么一起问**：交互1 关注数据采集和分析，交互2 关注告警设计和响应自动化
-
-### 第9组 - 混沌工程（P2: 7题 + P3: 5题） - 2次交互
-
-- 交互1（P2 核心实验能力）：
-  - Q62: 实验负载在多大程度上反映生产流量？
-  - Q63: 混沌实验条件有多现实？
-  - Q64: 混沌实验在哪个环境中进行？
-  - Q65: 混沌实验的可重复性如何？
-  - Q66: 混沌实验多久进行一次？
-  - Q67: 如何测试故障隔离边界？
-  - Q68: 正在进行哪些类型的测试？
-- 交互2（P3 组织成熟度）：
-  - Q69: 是否保留了实验目录？
-  - Q70: 为应用团队提供了哪些混沌工程指导？
-  - Q71: 如何在实验期间实施监测？
-  - Q72: 实验如何集成到SDLC中？
-  - Q73: 组织如何从个别团队实验中学习？
-- **为什么一起问**：交互1 评估混沌工程的技术实践，交互2 评估组织级推广和成熟度
-
-### 第10组 - 运营评审、游戏日与组织学习（P2: 4题 + P3: 7题） - 2次交互
-
-- 交互1（运营评审 + 游戏日）：
-  - Q58: 谁参加运营审查？
-  - Q59: 运营审查多久进行一次？
-  - Q60: 运营审查有多彻底？
-  - Q61: 如何监控运营绩效？
-  - Q74: Game Days 对实际环境的模拟程度？
-  - Q75: 游戏日的场景有多逼真？
-- 交互2（游戏日续 + 组织学习）：
-  - Q76: 游戏日的重现性如何？
-  - Q77: 如何培育支持韧性的社区？
-  - Q78: 如何定义韧性的角色和责任？
-  - Q79: 如何让团队了解弹性概念的最新情况？
-  - Q80: 如何根据独特情况定制韧性训练？
-- **为什么一起问**：交互1 关注运营过程中的评审和演练实践，交互2 关注组织文化和持续学习
+### Group 6 - Observability (P1: 6 Qs) - 2 interactions
+- Interaction 1 (Monitoring fundamentals):
+  - Q13: How do you establish instrumentation (logs/metrics/traces/alerts)?
+  - Q14: How do you ensure log accessibility?
+  - Q16: How do you leverage tracing data?
+- Interaction 2 (Advanced monitoring):
+  - Q18: How do you align metrics with fault domains?
+  - Q19: How do you track availability and latency?
+  - Q21: How do you track dependencies?
 
 ---
 
-## 批量提问格式
+## Full Version (+P2+P3, 44 Qs) -> additional 7-8 interactions
 
-每组问题使用对话格式（不使用AskUserQuestion工具，减少交互复杂度）：
+### Compact Version Group Extensions (+9 Qs, distributed into existing groups)
+
+In full assessment, the following P2/P3 questions are appended to corresponding compact version groups (no additional standalone interactions; merged at the end of existing groups):
+
+| Append To | Added Questions | Priority | Notes |
+|-----------|-----------------|----------|-------|
+| Group 1 (Recovery Objectives) | Q4: Resilience requirement constraints? Q5: Control selection? | P2 | Recovery objectives deep-dive |
+| Group 1 (Recovery Objectives) | Q6: Resilience learning vs. new features? | P3 | Organizational level |
+| Group 1 (Recovery Objectives) | Q11: High-load performance prediction? Q12: Load change readiness? | P2 | Resilience capacity |
+| Group 2 (DR) | Q33: Failover site service limits? | P3 | DR supplement |
+| Group 4 (Change Mgmt) | Q47: Code organizational standards compliance? | P2 | Change management supplement |
+| Group 5 (Incident Mgmt) | Q53: Report repository usage? Q57: Response team authorization? | P2 | Incident management supplement |
+
+### Group 7 - Resilience Analysis (P2: 6 Qs) - 2 interactions
+
+- Interaction 1 (Requirements & modeling):
+  - Q4: What are the documented resilience requirement constraints?
+  - Q5: How do you consider likelihood, impact, and cost for control selection?
+  - Q10: What methods do you use to model failure scenarios?
+- Interaction 2 (Dependencies & inventories):
+  - Q7: How comprehensive is dependency documentation?
+  - Q8: How do you address coupling with dependencies?
+  - Q9: How do you create and leverage inventories?
+- **Why grouped**: All about pre-analysis of system resilience -- requirement definition, risk modeling, and dependency management
+
+### Group 8 - Advanced Observability (P2: 8 Qs) - 2 interactions
+
+- Interaction 1 (Logs & synthetic monitoring):
+  - Q15: How do you set up log data retrieval?
+  - Q17: How do you use synthetic traffic monitoring?
+  - Q20: In what areas do metrics provide reporting?
+  - Q22: When do metrics provide failure scenario info?
+- Interaction 2 (Alert strategy):
+  - Q23: What is the alert selection strategy?
+  - Q24: How adaptive are alert thresholds?
+  - Q25: What methods relay alert notifications?
+  - Q26: How do you automate alert responses?
+- **Why grouped**: Interaction 1 focuses on data collection and analysis; Interaction 2 focuses on alert design and response automation
+
+### Group 9 - Chaos Engineering (P2: 7 Qs + P3: 5 Qs) - 2 interactions
+
+- Interaction 1 (P2 core experiment capabilities):
+  - Q62: How well does experiment load reflect production traffic?
+  - Q63: How realistic are chaos experiment conditions?
+  - Q64: In what environment are chaos experiments conducted?
+  - Q65: How repeatable are chaos experiments?
+  - Q66: How frequently are chaos experiments conducted?
+  - Q67: How do you test fault isolation boundaries?
+  - Q68: What types of testing are being conducted?
+- Interaction 2 (P3 organizational maturity):
+  - Q69: Is an experiment catalog maintained?
+  - Q70: What chaos engineering guidance is provided?
+  - Q71: How is monitoring implemented during experiments?
+  - Q72: How are experiments integrated into the SDLC?
+  - Q73: How does the organization learn from team experiments?
+- **Why grouped**: Interaction 1 evaluates chaos engineering technical practices; Interaction 2 evaluates organization-level adoption and maturity
+
+### Group 10 - Ops Reviews, Game Days & Org Learning (P2: 4 Qs + P3: 7 Qs) - 2 interactions
+
+- Interaction 1 (Ops reviews + Game Days):
+  - Q58: Who participates in operational reviews?
+  - Q59: How frequently are operational reviews conducted?
+  - Q60: How thorough are operational reviews?
+  - Q61: How do you monitor operational performance?
+  - Q74: How well do Game Days simulate real environments?
+  - Q75: How realistic are Game Day scenarios?
+- Interaction 2 (Game Days continued + Org learning):
+  - Q76: How reproducible are Game Days?
+  - Q77: How do you foster a resilience community?
+  - Q78: How do you define resilience roles and responsibilities?
+  - Q79: How do you keep teams up to date on resilience concepts?
+  - Q80: How do you customize resilience training?
+- **Why grouped**: Interaction 1 covers operational review and drill practices; Interaction 2 covers organizational culture and continuous learning
+
+---
+
+## Batch Question Format
+
+Each group uses conversational format (not using AskUserQuestion tool, reducing interaction complexity):
 
 ```markdown
-## 第N组：{组名}（{优先级}，{题数}个问题）
+## Group N: {Group Name} ({Priority}, {Count} questions)
 
-**本组覆盖**：{简要说明这组问题的主题}
-
----
-
-### 问题 X [P0/P1/P2/P3]：{问题标题}
-
-**问题**：{完整问题描述}
-
-**为什么重要**：{简要说明}
-
-**AWS最佳实践**：{建议}
-
-**智能推荐**：基于您的架构分析，建议选择【级别2】- {推荐理由}
-
-**请选择成熟度级别（1-3）：**
-- 【级别1】{描述}
-- 【级别2】{描述}  <- 推荐
-- 【级别3】{描述}
-
-**您的回答**：级别 ___ （可补充说明：___）
+**This group covers**: {Brief topic description}
 
 ---
 
-**请一次性回答本组所有问题**，格式示例：
-Q1: 级别2 - 已定义RTO/RPO但未定期测试
-Q2: 级别3 - 99.99%可用性，<100ms延迟
-Q3: 级别2 - 基于收入评估关键性
+### Question X [P0/P1/P2/P3]: {Question title}
+
+**Question**: {Full question description}
+
+**Why it matters**: {Brief explanation}
+
+**AWS Best Practice**: {Recommendation}
+
+**Smart Recommendation**: Based on your architecture analysis, suggesting [Level 2] - {reason}
+
+**Please select maturity level (1-3):**
+- [Level 1] {description}
+- [Level 2] {description}  <- Recommended
+- [Level 3] {description}
+
+**Your answer**: Level ___ (optional notes: ___)
+
+---
+
+**Please answer all questions in this group at once**, example format:
+Q1: Level 2 - RTO/RPO defined but not regularly tested
+Q2: Level 3 - 99.99% availability, <100ms latency
+Q3: Level 2 - Criticality assessed based on revenue
 ```
 
 ---
 
-## 批量问答优化技巧
+## Batch Q&A Optimization Tips
 
-1. **预填充推荐答案**：基于自动分析结果，为每个问题预填充建议级别
-2. **允许快速确认**：用户可以直接回复"同意推荐"来接受所有推荐答案
-3. **支持部分回答**：用户可以只回答部分问题，其余采用推荐答案
-4. **实时反馈**：每组回答后立即显示该组的评分和关键发现
-
----
-
-## 效率提升对比
-
-| 方式 | 简约版（36题） | 完整版（80题） |
-|------|---------------|---------------|
-| **传统方式** | 36次交互，2小时 | 80次交互，3.5小时 |
-| **AI批量方式** | 8-12次交互，20-30分钟 | 15-20次交互，40-60分钟 |
-| **效率提升** | 节省85%时间 | 节省75%时间 |
+1. **Pre-fill recommended answers**: Pre-fill suggested levels based on auto-analysis results
+2. **Allow quick confirmation**: Users can reply "accept recommendations" to accept all suggestions
+3. **Support partial answers**: Users can answer only some questions; the rest use recommended answers
+4. **Real-time feedback**: Show group scores and key findings immediately after each group
 
 ---
 
-## 问题分组总览（按主题领域）
+## Efficiency Comparison
 
-1. **恢复目标**（Recovery Objectives）
-   - P0: 问题 1, 2, 3
-   - P2: 问题 4, 5
+| Mode | Compact (36 Qs) | Full (80 Qs) |
+|------|-----------------|--------------|
+| **Traditional** | 36 interactions, 2 hours | 80 interactions, 3.5 hours |
+| **AI Batch** | 8-12 interactions, 20-30 min | 15-20 interactions, 40-60 min |
+| **Efficiency Gain** | 85% time saved | 75% time saved |
 
-2. **可观察性**（Observability）
-   - P1: 问题 13, 14, 16, 18, 19, 21
-   - P2: 问题 15, 17, 20, 22, 23, 24, 25, 26
+---
 
-3. **灾难恢复**（Disaster Recovery）
-   - P0: 问题 27, 30, 34
-   - P1: 问题 28, 29, 31, 32
-   - P3: 问题 33
+## Question Group Overview (by Topic Domain)
 
-4. **高可用性**（High Availability）
-   - P0: 问题 35, 36, 38
-   - P1: 问题 37, 39
+1. **Recovery Objectives**
+   - P0: Questions 1, 2, 3
+   - P2: Questions 4, 5
 
-5. **变更管理**（Change Management）
-   - P0: 问题 40
-   - P1: 问题 41, 42, 43, 44, 45, 46
-   - P2: 问题 47
+2. **Observability**
+   - P1: Questions 13, 14, 16, 18, 19, 21
+   - P2: Questions 15, 17, 20, 22, 23, 24, 25, 26
 
-6. **事件管理**（Incident Management）
-   - P0: 问题 48, 51
-   - P1: 问题 49, 50, 52, 54, 55, 56
-   - P2: 问题 53, 57
+3. **Disaster Recovery**
+   - P0: Questions 27, 30, 34
+   - P1: Questions 28, 29, 31, 32
+   - P3: Question 33
 
-7. **运营评审**（Operational Reviews）
-   - P2: 问题 58, 59, 60, 61
+4. **High Availability**
+   - P0: Questions 35, 36, 38
+   - P1: Questions 37, 39
 
-8. **混沌工程**（Chaos Engineering）
-   - P2: 问题 62, 63, 64, 65, 66, 67, 68
-   - P3: 问题 69, 70, 71, 72, 73
+5. **Change Management**
+   - P0: Question 40
+   - P1: Questions 41, 42, 43, 44, 45, 46
+   - P2: Question 47
 
-9. **游戏日**（Game Days）
-   - P3: 问题 74, 75, 76
+6. **Incident Management**
+   - P0: Questions 48, 51
+   - P1: Questions 49, 50, 52, 54, 55, 56
+   - P2: Questions 53, 57
 
-10. **组织学习**（Organizational Learning）
-    - P2: 问题 6, 11, 12
-    - P3: 问题 77, 78, 79, 80
+7. **Operations Reviews**
+   - P2: Questions 58, 59, 60, 61
+
+8. **Chaos Engineering**
+   - P2: Questions 62, 63, 64, 65, 66, 67, 68
+   - P3: Questions 69, 70, 71, 72, 73
+
+9. **Game Days**
+   - P3: Questions 74, 75, 76
+
+10. **Organizational Learning**
+    - P2: Questions 6, 11, 12
+    - P3: Questions 77, 78, 79, 80

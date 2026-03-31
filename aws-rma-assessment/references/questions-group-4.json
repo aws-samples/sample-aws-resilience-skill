@@ -1,0 +1,160 @@
+{
+  "metadata": {
+    "group": 4,
+    "name_en": "High Availability",
+    "name_zh": "高可用",
+    "question_count": 5
+  },
+  "questions": [
+    {
+      "id": 35,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 35：您如何规划硬依赖故障？",
+      "question_en": "How do you plan for hard dependency failures?",
+      "image": "image.png",
+      "why_important": "硬依赖故障是导致级联故障的主要原因",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未识别或规划硬依赖故障",
+          "description_en": "Hard dependency failures not identified or planned for"
+        },
+        {
+          "level": 2,
+          "description_zh": "识别了硬依赖，有基本的降级策略",
+          "description_en": "Hard dependencies identified with basic degradation strategies"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的硬依赖管理：优雅降级、断路器模式、缓存回退、超时和重试策略",
+          "description_en": "Complete hard dependency management: graceful degradation, circuit breaker, cache fallback, timeout and retry strategies"
+        }
+      ],
+      "aws_best_practice": "实施优雅降级，将硬依赖转换为软依赖。使用断路器模式（如 AWS App Mesh 的断路器功能），在参数存储不可用时缓存合理默认值。对监控等非功能性依赖，即使无法发送遥测也应继续业务功能。",
+      "why_important_en": "Hard dependency failures are a primary cause of cascading failures",
+      "aws_best_practice_en": "Implement graceful degradation, converting hard dependencies to soft dependencies. Use circuit breaker pattern (e.g., AWS App Mesh circuit breaker functionality), cache reasonable defaults when parameter store is unavailable. For non-functional dependencies like monitoring, continue business functions even if telemetry cannot be sent."
+    },
+    {
+      "id": 36,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 36：您是如何定义和实现故障隔离边界的？",
+      "question_en": "How do you define and implement fault isolation boundaries?",
+      "image": "image.png",
+      "why_important": "故障隔离是AWS架构韧性的核心原则",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "单AZ部署，无故障隔离",
+          "description_en": "Single AZ deployment, no fault isolation"
+        },
+        {
+          "level": 2,
+          "description_zh": "多AZ部署，但未完全利用隔离边界（如控制平面依赖）",
+          "description_en": "Multi-AZ deployment but not fully utilizing isolation boundaries (e.g., control plane dependencies)"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的故障隔离：多AZ/多区域、控制平面与数据平面分离、单元化架构（如适用）",
+          "description_en": "Complete fault isolation: Multi-AZ/Region, control/data plane separation, cell-based architecture (if applicable)"
+        }
+      ],
+      "aws_best_practice": "充分利用 AWS 故障隔离边界：可用区（AZ）、区域（Region）、控制平面与数据平面。关键应用应跨至少2个AZ部署。对于全球服务，考虑多区域主动-主动架构。了解依赖的 AWS 服务的隔离边界设计。",
+      "why_important_en": "Fault isolation is a core principle of AWS architecture resilience",
+      "aws_best_practice_en": "Fully utilize AWS fault isolation boundaries: Availability Zones (AZ), Regions, control plane vs. data plane. Critical applications should be deployed across at least 2 AZs. For global services, consider multi-Region active-active architecture. Understand the isolation boundary design of dependent AWS services."
+    },
+    {
+      "id": 37,
+      "priority": "P1",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 37：如何疏散故障隔离边界？",
+      "question_en": "How do you evacuate a fault isolation boundary?",
+      "image": "image.png",
+      "why_important": "能够快速疏散故障域是应对AZ/Region故障的关键能力",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无故障域疏散能力或完全依赖AWS自动故障转移",
+          "description_en": "No fault domain evacuation capability or fully relying on AWS automatic failover"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的疏散流程，但需要手动操作或时间较长",
+          "description_en": "Basic evacuation process exists but requires manual operations or takes considerable time"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动化疏散能力：监控触发、自动流量迁移、验证机制、回退策略",
+          "description_en": "Automated evacuation capability: monitoring triggers, automatic traffic migration, verification mechanisms, rollback strategies"
+        }
+      ],
+      "aws_best_practice": "使用 Route 53 健康检查和故障转移路由实现自动疏散。对于计算，使用 Auto Scaling 跨多个AZ。使用 Application Load Balancer 自动路由到健康目标。对于数据库，使用 Aurora Global Database 或 RDS Multi-AZ 快速故障转移。",
+      "why_important_en": "The ability to quickly evacuate fault domains is critical for responding to AZ/Region failures",
+      "aws_best_practice_en": "Use Route 53 health checks and failover routing for automatic evacuation. For compute, use Auto Scaling across multiple AZs. Use Application Load Balancer to automatically route to healthy targets. For databases, use Aurora Global Database or RDS Multi-AZ for fast failover."
+    },
+    {
+      "id": 38,
+      "priority": "P0",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 38：应在什么情况下评估已实施的高可用性 (HA) 控制措施的有效性？",
+      "question_en": "Under what circumstances should you evaluate effectiveness of HA controls?",
+      "image": "image.png",
+      "why_important": "需要数学证明HA设计能达到预期可用性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定期评估HA控制有效性",
+          "description_en": "HA control effectiveness not regularly evaluated"
+        },
+        {
+          "level": 2,
+          "description_zh": "在重大变更或事故后评估HA有效性",
+          "description_en": "Evaluate HA effectiveness after major changes or incidents"
+        },
+        {
+          "level": 3,
+          "description_zh": "持续监控和评估HA有效性，包括部分故障模式（受影响用户百分比、延迟百分位数），可数学证明达到所需可用性水平",
+          "description_en": "Continuous monitoring and evaluation of HA effectiveness, including partial failure modes (affected user %, latency percentiles), with mathematical proof of achieving required availability"
+        }
+      ],
+      "aws_best_practice": "可用性不应仅测量为二元状态（正常/宕机），应测量部分故障模式：受影响用户百分比、受影响位置百分比、延迟百分位数。使用 CloudWatch 和 CloudWatch Synthetics 持续监控可用性指标。",
+      "why_important_en": "Mathematical proof is needed that HA design achieves expected availability",
+      "aws_best_practice_en": "Availability should not be measured as binary (up/down) only; measure partial failure modes: affected user percentage, affected location percentage, latency percentiles. Use CloudWatch and CloudWatch Synthetics to continuously monitor availability metrics."
+    },
+    {
+      "id": 39,
+      "priority": "P1",
+      "category": "高可用性",
+      "category_en": "High Availability",
+      "question_zh": "问题 39：如何避免达到AWS服务限制？",
+      "question_en": "How do you avoid reaching AWS service limits?",
+      "image": "image.png",
+      "why_important": "服务限制可能在故障转移或扩展时导致系统不可用",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未跟踪或管理AWS服务限制",
+          "description_en": "No tracking or management of AWS service limits"
+        },
+        {
+          "level": 2,
+          "description_zh": "了解关键服务限制，但未主动监控或提前请求提升",
+          "description_en": "Aware of critical service limits but no proactive monitoring or advance increase requests"
+        },
+        {
+          "level": 3,
+          "description_zh": "主动管理：监控使用率、提前请求限制提升、告警机制、容量规划包含限制分析",
+          "description_en": "Proactive management: monitor utilization, advance limit increase requests, alerting mechanisms, capacity planning includes limit analysis"
+        }
+      ],
+      "aws_best_practice": "使用 AWS Trusted Advisor 和 Service Quotas 控制台监控服务限制。为关键指标（如EC2实例、EIP、VPC）设置使用率告警（达到70%时）。提前规划DR和扩展场景的限制需求。使用 Service Quotas API 自动化限制管理。",
+      "why_important_en": "Service limits can cause system unavailability during failover or scaling",
+      "aws_best_practice_en": "Use AWS Trusted Advisor and Service Quotas console to monitor service limits. Set usage alerts for critical metrics (e.g., EC2 instances, EIPs, VPCs) at 70% utilization. Plan ahead for DR and scaling scenario limit requirements. Automate limit management with Service Quotas API."
+    }
+  ]
+}

@@ -1,59 +1,64 @@
-# HTML报告模板使用指南
+# HTML Report Template Usage Guide
 
-## 概述
+## Overview
 
-AWS Resilience Assessment Skill现在支持生成**美观的交互式HTML报告**，包含以下特性：
+The AWS Resilience Assessment Skill now supports generating **interactive HTML reports** with the following features:
 
-✨ **视觉设计**
-- AWS品牌风格（橙色#ff9900主题）
-- 渐变色标题和现代化UI
-- 响应式设计，支持移动端和桌面端
-- 打印友好样式
+**Visual Design**
+- AWS brand style (orange #ff9900 theme)
+- Gradient headers and modern UI
+- Responsive design supporting mobile and desktop
+- Print-friendly styles
 
-📊 **交互式可视化**
-- Chart.js图表库（v4.4.0）
-  - 雷达图：9个韧性维度评分
-  - 甜甜圈图：风险分布统计
-  - 柱状图：风险优先级排序
-  - 散点图：成本vs收益分析
-- Mermaid架构图（v10）
-  - 系统架构总览
-  - 依赖关系图
-  - 改进后架构对比
+**Interactive Visualizations**
+- Chart.js library (v4.4.0)
+  - Radar chart: 9 resilience dimension scores
+  - Doughnut chart: Risk distribution statistics
+  - Bar chart: Risk priority ranking
+  - Scatter chart: Cost vs. benefit analysis
+- Mermaid architecture diagrams (v10)
+  - System architecture overview
+  - Dependency diagrams
+  - Improved architecture comparison
 
-🎨 **风险可视化**
-- 颜色编码风险卡片
-  - 🔴 严重 (Critical)
-  - 🟠 高 (High)
-  - 🟡 中 (Medium)
-  - 🟢 低 (Low)
-- 实施路线图时间轴
-- 统计仪表板
+**Risk Visualization**
+- Color-coded risk cards
+  - Red: Critical
+  - Orange: High
+  - Yellow: Medium
+  - Green: Low
+- Implementation roadmap timeline
+- Statistics dashboard
 
 ---
 
-## 文件说明
+## File Description
 
-### 核心文件
+### Core Files
 
 ```
 aws-resilience-modeling/
-├── SKILL.md                                    # Skill 主配置
-├── README.md                                   # Skill 说明文档
+├── SKILL.md                                    # Skill main configuration (Chinese)
+├── SKILL_EN.md                                 # Skill main configuration (English)
+├── README.md                                   # Skill documentation (Chinese)
+├── README_EN.md                                # Skill documentation (English)
 ├── references/
-│   ├── resilience-framework.md                 # 评估框架
-│   ├── report-generation.md                    # 报告生成流程
-│   └── ...                                     # 其他参考文件
+│   ├── resilience-framework.md                 # Assessment framework (Chinese)
+│   ├── resilience-framework_en.md              # Assessment framework (English)
+│   ├── report-generation.md                    # Report generation workflow (Chinese)
+│   ├── report-generation_en.md                 # Report generation workflow (English)
+│   └── ...                                     # Other reference files
 ├── scripts/
-│   └── generate-html-report.py                 # Python 报告生成器
+│   └── generate-html-report.py                 # Python report generator
 └── assets/
-    ├── html-report-template.html               # HTML 交互式报告模板
-    └── example-report-template.md              # Markdown 报告示例
+    ├── html-report-template.html               # HTML interactive report template
+    ├── example-report-template.md              # Markdown report example (Chinese)
+    └── example-report-template_en.md           # Markdown report example (English)
 ```
 
-### 模板文件结构
+### Template File Structure
 
-**assets/html-report-template.html** 包含：
+**assets/html-report-template.html** contains:
 
 ```html
 <!DOCTYPE html>
@@ -61,57 +66,57 @@ aws-resilience-modeling/
 <head>
     <!-- Chart.js 4.4.0 -->
     <!-- Mermaid 10 -->
-    <!-- 自定义CSS样式 -->
+    <!-- Custom CSS styles -->
 </head>
 <body>
-    <!-- 占位符标记 -->
-    {{PROJECT_NAME}}           # 项目名称
-    {{ASSESSMENT_DATE}}        # 评估日期
-    {{OVERALL_SCORE}}          # 总体评分
-    {{TOTAL_RISKS}}            # 风险总数
-    {{CRITICAL_RISKS}}         # 严重风险数
-    {{CURRENT_RTO}}            # 当前RTO
-    {{ESTIMATED_COST}}         # 预估成本
-    {{RESILIENCE_DATA}}        # 韧性维度数据（JSON数组）
-    {{RISK_DISTRIBUTION_DATA}} # 风险分布数据（JSON数组）
-    {{RISK_CARDS}}             # 风险卡片HTML
-    {{ARCHITECTURE_DIAGRAM}}   # Mermaid架构图代码
-    {{DEPENDENCY_DIAGRAM}}     # Mermaid依赖图代码
+    <!-- Placeholder markers -->
+    {{PROJECT_NAME}}           # Project name
+    {{ASSESSMENT_DATE}}        # Assessment date
+    {{OVERALL_SCORE}}          # Overall score
+    {{TOTAL_RISKS}}            # Total risk count
+    {{CRITICAL_RISKS}}         # Critical risk count
+    {{CURRENT_RTO}}            # Current RTO
+    {{ESTIMATED_COST}}         # Estimated cost
+    {{RESILIENCE_DATA}}        # Resilience dimension data (JSON array)
+    {{RISK_DISTRIBUTION_DATA}} # Risk distribution data (JSON array)
+    {{RISK_CARDS}}             # Risk card HTML
+    {{ARCHITECTURE_DIAGRAM}}   # Mermaid architecture diagram code
+    {{DEPENDENCY_DIAGRAM}}     # Mermaid dependency diagram code
 </body>
 </html>
 ```
 
 ---
 
-## 使用方法
+## Usage Methods
 
-### 方法1：使用Python脚本（推荐）
+### Method 1: Using Python Script (Recommended)
 
-**步骤1：准备评估数据**
+**Step 1: Prepare Assessment Data**
 
 ```python
 assessment_data = {
-    "projectName": "电商系统",
+    "projectName": "E-Commerce System",
     "assessmentDate": "2026-03-03",
-    "overallScore": 4.2,  # 1-5评分
+    "overallScore": 4.2,  # 1-5 score
 
     "stats": {
         "totalRisks": 15,
         "criticalRisks": 3,
-        "currentRTO": "15分钟",
-        "estimatedCost": 2500  # 月度成本（美元）
+        "currentRTO": "15 minutes",
+        "estimatedCost": 2500  # Monthly cost (USD)
     },
 
     "resilienceDimensions": {
-        "redundancy": 4,           # 冗余设计: 1-5
-        "azFaultTolerance": 3,     # AZ容错: 1-5
-        "timeoutRetry": 4,         # 超时重试: 1-5
-        "circuitBreaker": 3,       # 断路器: 1-5
-        "autoScaling": 4,          # 自动扩展: 1-5
-        "configProtection": 5,     # 配置防护: 1-5
-        "faultIsolation": 3,       # 故障隔离: 1-5
-        "backupRecovery": 4,       # 备份恢复: 1-5
-        "bestPractices": 4         # 最佳实践: 1-5
+        "redundancy": 4,           # Redundancy Design: 1-5
+        "azFaultTolerance": 3,     # AZ Fault Tolerance: 1-5
+        "timeoutRetry": 4,         # Timeout & Retry: 1-5
+        "circuitBreaker": 3,       # Circuit Breaker: 1-5
+        "autoScaling": 4,          # Auto Scaling: 1-5
+        "configProtection": 5,     # Configuration Safeguards: 1-5
+        "faultIsolation": 3,       # Fault Isolation: 1-5
+        "backupRecovery": 4,       # Backup & Recovery: 1-5
+        "bestPractices": 4         # Best Practices: 1-5
     },
 
     "riskDistribution": {
@@ -124,18 +129,18 @@ assessment_data = {
     "risks": [
         {
             "id": "R-001",
-            "title": "RDS单区域部署",
-            "category": "单点故障",
+            "title": "RDS Single-Region Deployment",
+            "category": "Single Point of Failure",
             "severity": "critical",  # critical/high/medium/low
             "probability": 3,        # 1-5
             "impact": 5,            # 1-5
             "riskScore": 15.0,
-            "currentState": "主数据库仅部署在us-east-1",
-            "recommendation": "实施Aurora Global Database",
-            "estimatedCost": "$800/月",
-            "implementation": "3-4周"
+            "currentState": "Primary database deployed only in us-east-1",
+            "recommendation": "Implement Aurora Global Database",
+            "estimatedCost": "$800/month",
+            "implementation": "3-4 weeks"
         }
-        # ... 更多风险
+        # ... more risks
     ],
 
     "architectureDiagram": """
@@ -150,98 +155,98 @@ assessment_data = {
 }
 ```
 
-**步骤2：生成HTML报告**
+**Step 2: Generate HTML Report**
 
 ```bash
-# 方式A：使用Python模块
+# Method A: Using Python module
 cd ~/.claude/skills/aws-resilience-modeling
 python3 -c "
 import sys; sys.path.insert(0, 'scripts')
 from generate_html_report import generate_html_report
 import json
 
-# 从分析结果加载数据
+# Load data from analysis results
 with open('assessment-data.json', 'r') as f:
     data = json.load(f)
 
 output = generate_html_report(data)
-print(f'✅ 报告已生成: {output}')
+print(f'Report generated: {output}')
 "
 
-# 方式B：直接运行脚本（使用示例数据）
+# Method B: Run script directly (using sample data)
 python3 scripts/generate-html-report.py
 ```
 
-**步骤3：查看报告**
+**Step 3: View Report**
 
 ```bash
-# 在默认浏览器中打开
+# Open in default browser
 open project-resilience-assessment-2026-03-03.html
 
-# 或使用特定浏览器
+# Or use a specific browser
 google-chrome project-resilience-assessment-2026-03-03.html
 firefox project-resilience-assessment-2026-03-03.html
 ```
 
 ---
 
-### 方法2：手动填充模板
+### Method 2: Manual Template Population
 
-如果不使用Python脚本，可以手动编辑HTML模板：
+If not using the Python script, you can manually edit the HTML template:
 
 ```bash
-# 1. 复制模板
+# 1. Copy template
 cp assets/html-report-template.html my-project-report.html
 
-# 2. 使用sed替换占位符
-sed -i '' 's/{{PROJECT_NAME}}/我的项目/g' my-project-report.html
+# 2. Use sed to replace placeholders
+sed -i '' 's/{{PROJECT_NAME}}/My Project/g' my-project-report.html
 sed -i '' 's/{{ASSESSMENT_DATE}}/2026-03-03/g' my-project-report.html
 sed -i '' 's/{{OVERALL_SCORE}}/4.2/g' my-project-report.html
 
-# 3. 替换Chart.js数据（需要JSON格式）
+# 3. Replace Chart.js data (requires JSON format)
 # resilienceData = [4, 3, 4, 3, 4, 5, 3, 4, 4]
 sed -i '' 's/{{RESILIENCE_DATA}}/[4, 3, 4, 3, 4, 5, 3, 4, 4]/g' my-project-report.html
 
-# 4. 在文本编辑器中打开，手动添加风险卡片和Mermaid图表
+# 4. Open in text editor, manually add risk cards and Mermaid diagrams
 ```
 
 ---
 
-## 集成到Skill工作流
+## Integration into Skill Workflow
 
-在SKILL.md中使用新的HTML模板：
+Using the new HTML template in SKILL.md:
 
-### 评估完成后自动生成报告
+### Auto-Generate Report After Assessment Completion
 
 ```python
-# 在分析任务完成后，调用报告生成函数
+# After analysis tasks complete, call report generation function
 from pathlib import Path
 import sys
 
-# 添加scripts目录到Python路径
+# Add scripts directory to Python path
 skill_dir = Path.home() / '.claude' / 'skills' / 'aws-resilience-modeling'
 sys.path.insert(0, str(skill_dir / 'scripts'))
 
 from generate_html_report import generate_html_report
 
-# 从分析结果构建数据
+# Build data from analysis results
 assessment_data = {
     "projectName": project_name,
     "assessmentDate": current_date,
-    # ... 填充所有分析结果
+    # ... populate all analysis results
 }
 
-# 生成HTML报告
+# Generate HTML report
 html_file = generate_html_report(assessment_data)
-print(f"✅ 交互式HTML报告: {html_file}")
+print(f"Interactive HTML report: {html_file}")
 ```
 
-### 报告文件命名约定
+### Report File Naming Convention
 
 ```
-{项目名称}-resilience-assessment-{日期}.html
+{project-name}-resilience-assessment-{date}.html
 
-示例：
+Examples:
 - ecommerce-resilience-assessment-2026-03-03.html
 - payment-system-resilience-assessment-2026-03-03.html
 - order-service-resilience-assessment-2026-03-03.html
@@ -249,34 +254,34 @@ print(f"✅ 交互式HTML报告: {html_file}")
 
 ---
 
-## 自定义和扩展
+## Customization and Extension
 
-### 修改配色方案
+### Modify Color Scheme
 
-在 `assets/html-report-template.html` 中修改CSS变量：
+In `assets/html-report-template.html`, modify CSS variables:
 
 ```css
 :root {
-    --primary-color: #ff9900;      /* AWS橙色 */
-    --secondary-color: #232f3e;    /* AWS深蓝 */
+    --primary-color: #ff9900;      /* AWS orange */
+    --secondary-color: #232f3e;    /* AWS dark blue */
     --success-color: #28a745;
     --warning-color: #ffc107;
     --danger-color: #dc3545;
 }
 ```
 
-### 添加自定义图表
+### Add Custom Charts
 
-在模板中添加新的Chart.js图表：
+Add new Chart.js charts in the template:
 
 ```javascript
-// 示例：添加成本趋势折线图
+// Example: Add cost trend line chart
 const costTrendChart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: ['Q1', 'Q2', 'Q3', 'Q4'],
         datasets: [{
-            label: '预估成本趋势',
+            label: 'Estimated Cost Trend',
             data: [1000, 1500, 2000, 2500],
             borderColor: '#ff9900',
             tension: 0.4
@@ -285,19 +290,19 @@ const costTrendChart = new Chart(ctx, {
 });
 ```
 
-### 添加自定义风险字段
+### Add Custom Risk Fields
 
-在 `scripts/generate-html-report.py` 中扩展风险数据结构：
+Extend the risk data structure in `scripts/generate-html-report.py`:
 
 ```python
 risk_cards_html += f"""
     <div class="risk-card {severity_class}">
-        <!-- 现有字段 -->
+        <!-- Existing fields -->
         <div class="custom-field">
-            <strong>负责团队:</strong> {risk.get('owner', 'N/A')}
+            <strong>Owner Team:</strong> {risk.get('owner', 'N/A')}
         </div>
         <div class="custom-field">
-            <strong>截止日期:</strong> {risk.get('deadline', 'N/A')}
+            <strong>Due Date:</strong> {risk.get('deadline', 'N/A')}
         </div>
     </div>
 """
@@ -305,178 +310,178 @@ risk_cards_html += f"""
 
 ---
 
-## 故障排查
+## Troubleshooting
 
-### 问题1：HTML文件无法显示图表
+### Issue 1: HTML File Cannot Display Charts
 
-**原因**：Chart.js或Mermaid CDN加载失败
+**Cause**: Chart.js or Mermaid CDN loading failure
 
-**解决方案**：
+**Solution**:
 ```bash
-# 下载Chart.js到本地
+# Download Chart.js locally
 curl -o chart.min.js https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js
 
-# 修改HTML模板引用本地文件
+# Modify HTML template to reference local file
 <script src="./chart.min.js"></script>
 ```
 
-### 问题2：中文显示乱码
+### Issue 2: Character Encoding Issues
 
-**原因**：文件编码不是UTF-8
+**Cause**: File encoding is not UTF-8
 
-**解决方案**：
+**Solution**:
 ```python
-# 确保以UTF-8编码保存
+# Ensure saving with UTF-8 encoding
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write(html_output)
 ```
 
-### 问题3：Mermaid图表不渲染
+### Issue 3: Mermaid Diagrams Not Rendering
 
-**原因**：Mermaid语法错误
+**Cause**: Mermaid syntax errors
 
-**解决方案**：
+**Solution**:
 ```bash
-# 在Mermaid Live Editor中验证语法
+# Validate syntax in Mermaid Live Editor
 # https://mermaid.live/
 
-# 检查常见错误：
-# - 缺少换行符
-# - 引号未转义
-# - 特殊字符未处理
+# Check common errors:
+# - Missing line breaks
+# - Unescaped quotes
+# - Unhandled special characters
 ```
 
 ---
 
-## 性能优化
+## Performance Optimization
 
-### 减少报告文件大小
+### Reduce Report File Size
 
 ```python
-# 只包含Top 10风险（而非全部）
+# Only include Top 10 risks (not all)
 for risk in risks[:10]:
-    # 生成风险卡片
+    # Generate risk cards
 
-# 压缩Mermaid图表（移除多余空格和注释）
+# Compress Mermaid diagrams (remove extra spaces and comments)
 diagram = re.sub(r'\s+', ' ', diagram).strip()
 ```
 
-### 加快加载速度
+### Speed Up Loading
 
 ```html
-<!-- 使用CDN缓存 -->
+<!-- Use CDN caching -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!-- 或使用本地文件 -->
+<!-- Or use local files -->
 <script src="./assets/chart.min.js"></script>
 ```
 
 ---
 
-## 对比：新旧报告方式
+## Comparison: Old vs. New Report Methods
 
-| 特性 | 旧方式（基础HTML） | 新方式（交互式模板） |
-|------|------------------|---------------------|
-| 生成方式 | Pandoc/Python markdown | 自定义模板 + Python |
-| 可视化 | 静态文本 | Chart.js交互图表 |
-| 风险展示 | 表格 | 彩色卡片 + 评分 |
-| 架构图 | Mermaid文本 | 可渲染Mermaid图 |
-| 设计风格 | GitHub Markdown CSS | AWS品牌风格 |
-| 响应式 | 基础 | 完全响应式 |
-| 打印支持 | 有限 | 优化的打印样式 |
-| 文件大小 | ~50KB | ~80KB |
-| 浏览器兼容 | 所有现代浏览器 | 所有现代浏览器 |
-
----
-
-## 最佳实践
-
-### 1. 数据准确性
-
-- 在生成报告前验证所有数据字段
-- 使用明确的评分标准（1-5星）
-- 确保风险优先级排序正确
-
-### 2. 报告可读性
-
-- 限制显示的风险数量（Top 10-15）
-- 使用简洁的风险描述
-- 提供清晰的改进建议
-
-### 3. 版本管理
-
-- 在文件名中包含日期
-- 保存历史评估报告以跟踪改进
-- 在报告末尾标注版本信息
-
-### 4. 分享和展示
-
-- 将HTML文件与团队共享（无需额外依赖）
-- 从浏览器打印或导出为PDF
-- 在评审会议中使用交互式图表
+| Feature | Old Method (Basic HTML) | New Method (Interactive Template) |
+|---------|------------------------|----------------------------------|
+| Generation | Pandoc/Python markdown | Custom template + Python |
+| Visualization | Static text | Chart.js interactive charts |
+| Risk Display | Tables | Color-coded cards + scores |
+| Architecture Diagrams | Mermaid text | Renderable Mermaid diagrams |
+| Design Style | GitHub Markdown CSS | AWS brand style |
+| Responsive | Basic | Fully responsive |
+| Print Support | Limited | Optimized print styles |
+| File Size | ~50KB | ~80KB |
+| Browser Compatibility | All modern browsers | All modern browsers |
 
 ---
 
-## 示例输出
+## Best Practices
 
-生成的HTML报告将包含：
+### 1. Data Accuracy
 
-### 1. 头部信息
-```
-项目名称：电商系统
-评估日期：2026-03-03
-总体评分：4.2/5.0 ⭐⭐⭐⭐
-```
+- Validate all data fields before generating the report
+- Use clear scoring criteria (1-5 stars)
+- Ensure risk priority ranking is correct
 
-### 2. 统计仪表板
-```
-[15]        [3]         [15分钟]    [$2,500]
-风险总数    严重风险    当前RTO     预估成本/月
-```
+### 2. Report Readability
 
-### 3. 交互式图表
-- 雷达图：9维度韧性评估
-- 甜甜圈图：风险分类分布
-- 柱状图：Top 10风险优先级
-- 散点图：成本vs收益分析
+- Limit the number of displayed risks (Top 10-15)
+- Use concise risk descriptions
+- Provide clear improvement recommendations
 
-### 4. 风险清单
-- 颜色编码卡片（红/橙/黄/绿）
-- 风险评分和优先级
-- 当前状态和改进建议
-- 预估成本和实施时间
+### 3. Version Management
 
-### 5. 架构可视化
-- 当前架构Mermaid图
-- 依赖关系图
-- 改进后架构对比
+- Include date in filename
+- Save historical assessment reports to track improvements
+- Note version information at the end of reports
+
+### 4. Sharing and Presentation
+
+- Share HTML files with the team (no additional dependencies needed)
+- Print or export to PDF from browser
+- Use interactive charts in review meetings
 
 ---
 
-## 更新日志
+## Example Output
+
+The generated HTML report will contain:
+
+### 1. Header Information
+```
+Project Name: E-Commerce System
+Assessment Date: 2026-03-03
+Overall Score: 4.2/5.0
+```
+
+### 2. Statistics Dashboard
+```
+[15]        [3]         [15 min]    [$2,500]
+Total Risks Critical    Current RTO  Est. Cost/mo
+```
+
+### 3. Interactive Charts
+- Radar chart: 9-dimension resilience assessment
+- Doughnut chart: Risk category distribution
+- Bar chart: Top 10 risk priorities
+- Scatter chart: Cost vs. benefit analysis
+
+### 4. Risk Inventory
+- Color-coded cards (red/orange/yellow/green)
+- Risk scores and priorities
+- Current state and improvement recommendations
+- Estimated cost and implementation timeline
+
+### 5. Architecture Visualization
+- Current architecture Mermaid diagram
+- Dependency diagram
+- Improved architecture comparison
+
+---
+
+## Changelog
 
 ### v1.0.0 (2026-03-03)
-- ✅ 创建美观的HTML报告模板
-- ✅ 集成Chart.js 4.4.0交互式图表
-- ✅ 添加Mermaid 10架构图支持
-- ✅ 实现风险卡片颜色编码
-- ✅ 创建Python报告生成器
-- ✅ 更新SKILL.md报告生成流程
-- ✅ 添加响应式设计和打印样式
+- Created interactive HTML report template
+- Integrated Chart.js 4.4.0 interactive charts
+- Added Mermaid 10 architecture diagram support
+- Implemented color-coded risk cards
+- Created Python report generator
+- Updated SKILL.md report generation workflow
+- Added responsive design and print styles
 
 ---
 
-## 支持和反馈
+## Support and Feedback
 
-如有问题或建议：
+For questions or suggestions:
 
-1. 查看 `SKILL.md` 了解完整工作流程
-2. 查看 `README.md` 了解Skill基础信息
-3. 查看 `resilience-framework.md` 了解评估框架
-4. 运行 `python3 scripts/generate-html-report.py` 查看示例报告
+1. See `SKILL.md` / `SKILL_EN.md` for the complete workflow
+2. See `README.md` / `README_EN.md` for Skill basic information
+3. See `resilience-framework.md` / `resilience-framework_en.md` for the assessment framework
+4. Run `python3 scripts/generate-html-report.py` to see an example report
 
 ---
 
-**创建日期**: 2026-03-03
-**版本**: 1.0.0
-**维护者**: AWS Resilience Assessment Skill
+**Created**: 2026-03-03
+**Version**: 1.0.0
+**Maintainer**: AWS Resilience Assessment Skill

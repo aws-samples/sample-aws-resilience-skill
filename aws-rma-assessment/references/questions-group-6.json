@@ -1,0 +1,340 @@
+{
+  "metadata": {
+    "group": 6,
+    "name_en": "Incident Management",
+    "name_zh": "事件管理",
+    "question_count": 11
+  },
+  "questions": [
+    {
+      "id": 48,
+      "priority": "P0",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 48：你如何计划对事件的应对？",
+      "question_en": "How do you plan for incident response?",
+      "image": "image.png",
+      "why_important": "事件响应计划是事故管理的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式的事件响应计划",
+          "description_en": "No formal incident response plan"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的事件响应计划，但未定期演练",
+          "description_en": "Basic incident response plan exists but not regularly practiced"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细的事件管理计划，包括角色职责、沟通计划、响应阶段、严重程度定义，定期演练和更新",
+          "description_en": "Detailed incident management plan with roles, communication plan, response phases, severity definitions, regularly practiced and updated"
+        }
+      ],
+      "aws_best_practice": "制定详细的事件管理计划，包括：事件响应团队概述、利益相关者角色、带外沟通渠道、响应阶段（检测、分析、遏制、根除、恢复）、严重程度定义和升级程序。使用 AWS Systems Manager Incident Manager 自动化事件响应。",
+      "why_important_en": "Incident response planning is the foundation of incident management",
+      "aws_best_practice_en": "Develop a detailed incident management plan including: incident response team overview, stakeholder roles, out-of-band communication channels, response phases (detection, analysis, containment, eradication, recovery), severity definitions, and escalation procedures. Use AWS Systems Manager Incident Manager to automate incident response."
+    },
+    {
+      "id": 49,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 49：事件手册是否自动化？",
+      "question_en": "Are incident playbooks automated?",
+      "image": "image.png",
+      "why_important": "自动化runbook减少响应时间和人为错误",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式的事件手册或完全依赖手动操作",
+          "description_en": "No formal incident playbooks or fully relying on manual operations"
+        },
+        {
+          "level": 2,
+          "description_zh": "有文档化的runbook，但执行是手动的",
+          "description_en": "Have documented runbooks but execution is manual"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动化runbook：Systems Manager Automation，一键执行常见修复操作，自动诊断工具",
+          "description_en": "Automated runbooks: Systems Manager Automation, one-click execution of common remediation operations, automated diagnostic tools"
+        }
+      ],
+      "aws_best_practice": "使用 AWS Systems Manager Automation 自动化常见事件响应任务。创建自动化文档（runbook）处理常见问题（如重启实例、清理磁盘、扩容）。集成到 Incident Manager 实现一键执行。定期测试和更新runbook。",
+      "why_important_en": "Automated runbooks reduce response time and human error",
+      "aws_best_practice_en": "Use AWS Systems Manager Automation to automate common incident response tasks. Create automation documents (runbooks) for common issues (e.g., restart instances, clean disk, scale up). Integrate with Incident Manager for one-click execution. Regularly test and update runbooks."
+    },
+    {
+      "id": 50,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 50：对团队进行事件管理培训的方法是什么？",
+      "question_en": "What methods are used to train teams on incident management?",
+      "image": "image.png",
+      "why_important": "训练有素的团队可以更有效地处理事件",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式培训，主要依赖经验积累",
+          "description_en": "No formal training, mainly relying on experience accumulation"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本培训（如新员工培训），但缺少定期演练或情景模拟",
+          "description_en": "Basic training exists (e.g., onboarding) but lacking regular drills or scenario simulations"
+        },
+        {
+          "level": 3,
+          "description_zh": "系统化培训：定期演练、游戏日、事后复盘学习、轮岗on-call、文档化最佳实践",
+          "description_en": "Systematic training: regular drills, game days, post-incident learning, on-call rotation, documented best practices"
+        }
+      ],
+      "aws_best_practice": "建立系统化培训计划：1) 新员工培训（事件流程、工具使用）；2) 定期事件响应演练（模拟真实场景）；3) Game Days（全面灾难恢复演练）；4) 事后复盘学习会；5) on-call轮岗培养能力；6) 文档化经验教训。",
+      "why_important_en": "Well-trained teams can handle incidents more effectively",
+      "aws_best_practice_en": "Establish systematic training plans: 1) New hire training (incident processes, tools); 2) Regular incident response drills (simulating real scenarios); 3) Game Days (full disaster recovery drills); 4) Post-incident learning sessions; 5) On-call rotation to build capability; 6) Document lessons learned."
+    },
+    {
+      "id": 51,
+      "priority": "P0",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 51：一个人将事件升级的程序是什么？",
+      "question_en": "What is the procedure for escalating an incident?",
+      "image": "image.png",
+      "why_important": "明确的升级程序确保快速响应",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无明确的升级程序",
+          "description_en": "No clear escalation procedure"
+        },
+        {
+          "level": 2,
+          "description_zh": "有升级路径，但未明确何时升级的标准",
+          "description_en": "Escalation path exists but criteria for escalation not clear"
+        },
+        {
+          "level": 3,
+          "description_zh": "明确的升级路径、升级触发条件、每一步的所有者、预先批准的缓解措施、定期培训",
+          "description_en": "Clear escalation path, escalation triggers, owners at each step, pre-approved mitigations, regular training"
+        }
+      ],
+      "aws_best_practice": "明确升级路径，提供联系方式。设置 CloudWatch 警报在 Systems Manager Incident Manager 中创建事件。预先批准预期情景的缓解措施。定期进行事件响应演习。",
+      "why_important_en": "Clear escalation procedures ensure rapid response",
+      "aws_best_practice_en": "Define clear escalation paths with contact information. Set up CloudWatch alarms to create incidents in Systems Manager Incident Manager. Pre-approve mitigations for expected scenarios. Regularly conduct incident response exercises."
+    },
+    {
+      "id": 52,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 52：事件报告有多详细？",
+      "question_en": "How detailed are incident reports?",
+      "image": "image.png",
+      "why_important": "详细的事件报告是持续改进的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式事件报告或仅记录简单描述",
+          "description_en": "No formal incident reports or only brief descriptions recorded"
+        },
+        {
+          "level": 2,
+          "description_zh": "基本事件报告，但缺少根本原因分析或改进行动项",
+          "description_en": "Basic incident reports but lacking root cause analysis or improvement action items"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细事件报告：时间线、影响范围、根本原因（5 Why）、改进行动项、跟踪状态",
+          "description_en": "Detailed incident reports: timeline, impact scope, root cause (5 Why), improvement action items, tracking status"
+        }
+      ],
+      "aws_best_practice": "事件报告应包含：事件摘要、时间线（检测、响应、恢复）、影响分析（用户、业务）、根本原因分析（5 Why法）、改进行动项（具体、可衡量、有Owner）。使用 Incident Manager 记录和跟踪。定期审查行动项完成情况。",
+      "why_important_en": "Detailed incident reports are the foundation for continuous improvement",
+      "aws_best_practice_en": "Incident reports should include: incident summary, timeline (detection, response, recovery), impact analysis (users, business), root cause analysis (5 Whys method), improvement action items (specific, measurable, with owners). Use Incident Manager for recording and tracking. Regularly review action item completion."
+    },
+    {
+      "id": 53,
+      "priority": "P2",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 53：是否跟踪团队如何使用报告存储库？",
+      "question_en": "Do you track how teams use the report repository?",
+      "image": "image.png",
+      "why_important": "跟踪报告使用情况确保知识传播",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "不跟踪事件报告的使用情况",
+          "description_en": "No tracking of incident report usage"
+        },
+        {
+          "level": 2,
+          "description_zh": "知道报告存在，但不知道是否被阅读或应用",
+          "description_en": "Reports exist but unknown if read or applied"
+        },
+        {
+          "level": 3,
+          "description_zh": "主动跟踪报告使用：阅读统计、反馈收集、知识应用验证、定期分享会",
+          "description_en": "Proactive report usage tracking: reading statistics, feedback collection, knowledge application verification, regular sharing sessions"
+        }
+      ],
+      "aws_best_practice": "建立事件知识管理：1) 使用wiki存储报告（Confluence/Notion）；2) 跟踪阅读数和评论；3) 定期全员分享会（月度）；4) 提取经验教训到培训材料；5) 验证改进措施执行情况。",
+      "why_important_en": "Tracking report usage ensures knowledge dissemination",
+      "aws_best_practice_en": "Establish incident knowledge management: 1) Use wiki for report storage (Confluence/Notion); 2) Track read counts and comments; 3) Regular all-hands sharing sessions (monthly); 4) Extract lessons learned into training materials; 5) Verify improvement measure execution."
+    },
+    {
+      "id": 54,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 54：如何应用从事件中获得的见解？",
+      "question_en": "How do you apply insights gained from incidents?",
+      "image": "image.png",
+      "why_important": "将事件转化为改进是提升韧性的关键",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "事件后很少或不进行系统性改进",
+          "description_en": "Rarely or no systematic improvements after incidents"
+        },
+        {
+          "level": 2,
+          "description_zh": "有改进计划，但执行不一致或缺少跟踪",
+          "description_en": "Have improvement plans but inconsistent execution or lacking tracking"
+        },
+        {
+          "level": 3,
+          "description_zh": "系统化改进流程：分配Owner、设置截止日期、跟踪进度、验证有效性、分享经验教训",
+          "description_en": "Systematic improvement process: assign owners, set deadlines, track progress, validate effectiveness, share lessons learned"
+        }
+      ],
+      "aws_best_practice": "建立闭环改进流程：1) 事后复盘会议（无责备文化）；2) 识别改进机会（技术、流程、人员）；3) 创建行动项（Jira/GitHub Issues）；4) 分配Owner和截止日期；5) 定期review进度；6) 验证改进有效性；7) 分享到团队wiki或all-hands。",
+      "why_important_en": "Turning incidents into improvements is key to enhancing resilience",
+      "aws_best_practice_en": "Establish a closed-loop improvement process: 1) Post-incident review meeting (blameless culture); 2) Identify improvement opportunities (technical, process, people); 3) Create action items (Jira/GitHub Issues); 4) Assign owners and deadlines; 5) Regularly review progress; 6) Validate improvement effectiveness; 7) Share to team wiki or all-hands."
+    },
+    {
+      "id": 55,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 55：如何通知客户和相关第三方事件？",
+      "question_en": "How do you notify customers and relevant third parties about incidents?",
+      "image": "image.png",
+      "why_important": "及时透明的沟通维护客户信任",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式的客户通知流程或事后才通知",
+          "description_en": "No formal customer notification process or only notify after the fact"
+        },
+        {
+          "level": 2,
+          "description_zh": "有通知机制，但不及时或缺少状态更新",
+          "description_en": "Notification mechanism exists but not timely or lacking status updates"
+        },
+        {
+          "level": 3,
+          "description_zh": "主动通知流程：状态页面、自动通知、定时更新、事后报告、多渠道沟通",
+          "description_en": "Proactive notification process: status page, automatic notifications, regular updates, post-incident reports, multi-channel communication"
+        }
+      ],
+      "aws_best_practice": "建立多层通知机制：1) 状态页面（如StatusPage.io）实时更新；2) 邮件/SMS自动通知受影响客户；3) 定时更新（如每30分钟）；4) 事后发布详细报告；5) 社交媒体同步。使用 Amazon SNS 实现多渠道通知。准备通信模板加快响应速度。",
+      "why_important_en": "Timely and transparent communication maintains customer trust",
+      "aws_best_practice_en": "Establish multi-tier notification mechanisms: 1) Status page (e.g., StatusPage.io) for real-time updates; 2) Email/SMS auto-notification to affected customers; 3) Regular updates (e.g., every 30 minutes); 4) Post-incident detailed reports; 5) Social media sync. Use Amazon SNS for multi-channel notifications. Prepare communication templates to speed up response."
+    },
+    {
+      "id": 56,
+      "priority": "P1",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 56：团队是否拥有他们使用的事件管理流程？",
+      "question_en": "Do teams own the incident management processes they use?",
+      "image": "image.png",
+      "why_important": "团队自主权提高流程适应性和改进积极性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "流程由外部强制规定，团队无修改权限",
+          "description_en": "Processes mandated externally, teams have no modification authority"
+        },
+        {
+          "level": 2,
+          "description_zh": "团队有一定自主权，但需要审批才能修改流程",
+          "description_en": "Teams have some autonomy but require approval to modify processes"
+        },
+        {
+          "level": 3,
+          "description_zh": "团队完全拥有流程：可自主优化、定期review和改进、共享最佳实践",
+          "description_en": "Teams fully own processes: can autonomously optimize, regularly review and improve, share best practices"
+        }
+      ],
+      "aws_best_practice": "遵循 DevOps 文化，团队拥有其运维流程。提供基础框架（如Incident Manager）但允许团队定制。鼓励团队定期review和改进流程。建立跨团队论坛分享最佳实践。平衡自主权与一致性（核心原则统一，细节允许差异）。",
+      "why_important_en": "Team autonomy improves process adaptability and motivation for improvement",
+      "aws_best_practice_en": "Follow DevOps culture where teams own their operational processes. Provide foundational frameworks (e.g., Incident Manager) but allow teams to customize. Encourage teams to regularly review and improve processes. Establish cross-team forums to share best practices. Balance autonomy with consistency (unified core principles, flexible details)."
+    },
+    {
+      "id": 57,
+      "priority": "P2",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 57：响应小组是否有权采取行动？",
+      "question_en": "Does the response team have authority to take action?",
+      "image": "image.png",
+      "why_important": "团队授权加快事件响应速度",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "响应团队缺少执行权限，需要层层审批",
+          "description_en": "Response team lacks execution authority, requiring multi-level approvals"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本权限，但关键操作仍需审批",
+          "description_en": "Basic permissions exist but critical operations still require approval"
+        },
+        {
+          "level": 3,
+          "description_zh": "充分授权：预先批准的应急操作、清晰的权限边界、事后审查机制",
+          "description_en": "Full authorization: pre-approved emergency operations, clear permission boundaries, post-incident review mechanisms"
+        }
+      ],
+      "aws_best_practice": "实施分级授权：1) 预先批准常见缓解措施（重启、扩展）；2) 定义紧急权限（break-glass）；3) 使用IAM角色和策略管理权限；4) 记录所有操作（CloudTrail）；5) 事后审查权限使用。",
+      "why_important_en": "Team authorization accelerates incident response speed",
+      "aws_best_practice_en": "Implement tiered authorization: 1) Pre-approve common mitigations (restart, scale); 2) Define emergency permissions (break-glass); 3) Use IAM roles and policies to manage permissions; 4) Log all operations (CloudTrail); 5) Post-incident permission usage review."
+    },
+    {
+      "id": 82,
+      "priority": "P2",
+      "category": "事件管理",
+      "category_en": "Incident Management",
+      "question_zh": "问题 82：您如何确保审计日志保留满足合规要求？",
+      "question_en": "How do you ensure audit log retention meets compliance requirements?",
+      "image": "image.png",
+      "why_important": "审计日志是合规审查和事后分析的关键证据，保留期限不足可能导致合规违规",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无明确的日志保留策略，或使用默认保留期限而未评估合规需求",
+          "description_en": "No explicit log retention policy, or using default retention periods without evaluating compliance needs"
+        },
+        {
+          "level": 2,
+          "description_zh": "有日志保留策略，保留期限考虑了部分合规要求，但未全面覆盖或定期审查",
+          "description_en": "Log retention policy exists, retention periods consider some compliance requirements, but not comprehensive or regularly reviewed"
+        },
+        {
+          "level": 3,
+          "description_zh": "完善的日志保留管理：满足所有适用合规框架要求、自动化生命周期管理、定期审计验证、不可变日志存储",
+          "description_en": "Comprehensive log retention management: meets all applicable compliance frameworks, automated lifecycle management, regular audit verification, immutable log storage"
+        }
+      ],
+      "aws_best_practice": "1) 使用CloudWatch Logs保留策略设置合适的保留期限（如SOC2建议1年，金融行业7年）；2) 使用S3 Glacier进行长期日志归档；3) 启用CloudTrail日志文件完整性验证；4) 使用S3 Object Lock实现不可变日志存储；5) 使用AWS Config规则自动检查日志保留合规性；6) 定期审计日志保留策略是否满足最新法规要求。",
+      "why_important_en": "Audit logs are critical evidence for compliance reviews and post-incident analysis; insufficient retention periods may lead to compliance violations",
+      "aws_best_practice_en": "1) Use CloudWatch Logs retention policies with appropriate periods (e.g., SOC2 recommends 1 year, finance industry 7 years); 2) Use S3 Glacier for long-term log archival; 3) Enable CloudTrail log file integrity validation; 4) Use S3 Object Lock for immutable log storage; 5) Use AWS Config rules to automatically check log retention compliance; 6) Regularly audit log retention policies against latest regulatory requirements."
+    }
+  ]
+}

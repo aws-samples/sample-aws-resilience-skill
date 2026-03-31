@@ -1,171 +1,171 @@
-# RMA 问题优先级分类
+# RMA Question Priority Classification
 
-## 优先级定义
+## Priority Definitions
 
-- **🔴 P0 - 关键问题**：直接影响系统可用性、RTO/RPO和客户体验，必须回答
-- **🟡 P1 - 重要问题**：影响系统韧性和恢复能力，强烈建议回答
-- **🟢 P2 - 建议问题**：最佳实践和持续改进，建议回答
-- **⚪ P3 - 可选问题**：成熟度提升和组织文化，可选回答
+- **P0 - Critical**: Directly impacts system availability, RTO/RPO, and customer experience; must answer
+- **P1 - Important**: Impacts system resilience and recovery capability; strongly recommended
+- **P2 - Recommended**: Best practices and continuous improvement; recommended
+- **P3 - Optional**: Maturity uplift and organizational culture; optional
 
-## 简约版问题列表 (36个)
+## Compact Version (36 Questions)
 
-包含 P0 + P1 优先级的所有问题
+Includes all P0 + P1 priority questions
 
-### 完整版问题列表 (80个)
+### Full Version (80 Questions)
 
-包含 P0 + P1 + P2 + P3 所有问题
-
----
-
-## 🔴 P0 - 关键问题 (12个)
-
-### 恢复目标 (3个)
-1. **问题 1**: 如何定义应用程序的恢复目标？（RTO/RPO/MTTR）
-2. **问题 2**: 如何为应用程序定义SLO？
-3. **问题 3**: 如何确定应用程序的关键程度？
-
-### 灾难恢复 (3个)
-27. **问题 27**: 使用什么标准来选择DR策略？
-30. **问题 30**: 如何验证数据恢复策略符合RPO/RTO？
-34. **问题 34**: 故障转移策略测试频率是多少？
-
-### 高可用性 (3个)
-35. **问题 35**: 如何规划硬依赖故障？
-36. **问题 36**: 如何定义和实现故障隔离边界？
-38. **问题 38**: 何时评估HA控制措施的有效性？
-
-### 变更管理 (1个)
-40. **问题 40**: 如何评估代码部署方法？
-
-### 事件管理 (2个)
-48. **问题 48**: 如何计划对事件的应对？
-51. **问题 51**: 事件升级的程序是什么？
+Includes all P0 + P1 + P2 + P3 questions
 
 ---
 
-## 🟡 P1 - 重要问题 (24个)
+## P0 - Critical Questions (12)
 
-### 可观察性 (6个)
-13. **问题 13**: 如何为应用程序建立指标（日志、指标、跟踪、警报）？
-14. **问题 14**: 如何确保日志可访问且功能正常？
-16. **问题 16**: 如何利用跟踪从应用程序中提取数据？
-18. **问题 18**: 如何将指标与故障域保持一致？
-19. **问题 19**: 如何跟踪可用性和延迟指标？
-21. **问题 21**: 如何跟踪依赖关系并在依赖关系受威胁时发出警报？
+### Recovery Objectives (3)
+1. **Q1**: How do you define recovery objectives for your application? (RTO/RPO/MTTR)
+2. **Q2**: How do you define SLOs for your application?
+3. **Q3**: How do you determine application criticality?
 
-### 灾难恢复 (4个)
-28. **问题 28**: 事故发生期间的通信协议是什么？
-29. **问题 29**: 数据恢复是否自动化？
-31. **问题 31**: DR计划有多详细？
-32. **问题 32**: 如何管理主站点和辅助站点之间的偏差？
+### Disaster Recovery (3)
+27. **Q27**: What criteria do you use to select DR strategy?
+30. **Q30**: How do you validate data recovery strategies meet RPO/RTO?
+34. **Q34**: What is the frequency of testing your failover strategy?
 
-### 高可用性 (2个)
-37. **问题 37**: 如何疏散故障隔离边界？
-39. **问题 39**: 如何避免达到AWS服务限制？
+### High Availability (3)
+35. **Q35**: How do you plan for hard dependency failures?
+36. **Q36**: How do you define and implement fault isolation boundaries?
+38. **Q38**: Under what circumstances should you evaluate HA control effectiveness?
 
-### 变更管理 (6个)
-41. **问题 41**: 使用什么环境来测试部署？
-42. **问题 42**: 在生产环境中多久部署一次代码？
-43. **问题 43**: 自动化在多大程度上集成到发布渠道中？
-44. **问题 44**: 如何回滚失败的部署？
-45. **问题 45**: 如何验证变更是否成功？
-46. **问题 46**: 如何管理系统的版本控制？
+### Change Management (1)
+40. **Q40**: How do you evaluate code deployment methods?
 
-### 事件管理 (6个)
-49. **问题 49**: 事件手册是否自动化？
-50. **问题 50**: 对团队进行事件管理培训的方法是什么？
-52. **问题 52**: 事件报告有多详细？
-54. **问题 54**: 如何应用从事件中获得的见解？
-55. **问题 55**: 如何通知客户和相关第三方事件？
-56. **问题 56**: 团队是否拥有他们使用的事件管理流程？
+### Incident Management (2)
+48. **Q48**: How do you plan for incident response?
+51. **Q51**: What is the procedure for escalating an incident?
 
 ---
 
-## 🟢 P2 - 建议问题 (30个)
+## P1 - Important Questions (24)
 
-### 弹性分析 (6个)
-4. **问题 4**: 记录在案的弹性要求限制有哪些？
-5. **问题 5**: 如何考虑可能性、影响和成本选择控制措施？
-7. **问题 7**: 依赖关系文档有多全面？
-8. **问题 8**: 如何解决与依赖关系的耦合问题？
-9. **问题 9**: 如何创建和利用清单？
-10. **问题 10**: 使用哪种方法对故障情景进行建模？
+### Observability (6)
+13. **Q13**: How do you establish instrumentation (logs, metrics, traces, alerts)?
+14. **Q14**: How do you ensure logs are accessible and functional?
+16. **Q16**: How do you leverage tracing to extract data?
+18. **Q18**: How do you align metrics with fault domains?
+19. **Q19**: How do you track availability and latency metrics?
+21. **Q21**: How do you track dependencies and alert when at risk?
 
-### 弹性容量 (2个)
-11. **问题 11**: 如何预测应用程序在高负载条件下的性能？
-12. **问题 12**: 如何准备应用程序以处理负载变化？
+### Disaster Recovery (4)
+28. **Q28**: What is the communication protocol during incidents?
+29. **Q29**: Is data recovery automated?
+31. **Q31**: How detailed is the DR plan?
+32. **Q32**: How do you manage primary-secondary site drift?
 
-### 可观察性 (8个)
-15. **问题 15**: 如何设置从日志中检索数据？
-17. **问题 17**: 如何使用合成流量监控应用程序？
-20. **问题 20**: 指标在哪些领域提供报告？
-22. **问题 22**: 指标何时提供有关故障场景的信息？
-23. **问题 23**: 选择警报的策略是什么？
-24. **问题 24**: 警报阈值的适应性如何？
-25. **问题 25**: 使用什么方法来中继警报通知？
-26. **问题 26**: 如何自动响应警报？
+### High Availability (2)
+37. **Q37**: How do you evacuate fault isolation boundaries?
+39. **Q39**: How do you avoid reaching AWS service limits?
 
-### 变更管理 (1个)
-47. **问题 47**: 如何确保代码符合组织标准？
+### Change Management (6)
+41. **Q41**: What environments are used to test deployments?
+42. **Q42**: How frequently is code deployed to production?
+43. **Q43**: To what extent is automation integrated into the release pipeline?
+44. **Q44**: How do you roll back failed deployments?
+45. **Q45**: How do you verify that changes are successful?
+46. **Q46**: How do you manage version control for the system?
 
-### 事件管理 (2个)
-53. **问题 53**: 是否跟踪团队如何使用报告存储库？
-57. **问题 57**: 响应小组是否有权采取行动？
-
-### 运营评审 (4个)
-58. **问题 58**: 谁参加运营审查？
-59. **问题 59**: 运营审查多久进行一次？
-60. **问题 60**: 运营审查有多彻底？
-61. **问题 61**: 如何监控运营绩效？
-
-### 混沌工程 (7个)
-62. **问题 62**: 实验负载在多大程度上反映生产流量？
-63. **问题 63**: 混沌实验条件有多现实？
-64. **问题 64**: 混沌实验在哪个环境中进行？
-65. **问题 65**: 混沌实验的可重复性如何？
-66. **问题 66**: 混沌实验多久进行一次？
-67. **问题 67**: 如何测试故障隔离边界？
-68. **问题 68**: 正在进行哪些类型的测试？
+### Incident Management (6)
+49. **Q49**: Are incident playbooks automated?
+50. **Q50**: What methods are used to train teams on incident management?
+52. **Q52**: How detailed are incident reports?
+54. **Q54**: How do you apply insights gained from incidents?
+55. **Q55**: How do you notify customers and third parties about incidents?
+56. **Q56**: Do teams own their incident management processes?
 
 ---
 
-## ⚪ P3 - 可选问题 (14个)
+## P2 - Recommended Questions (30)
 
-### 弹性要求 (1个)
-6. **问题 6**: 如何确保弹性学习优先于新功能？
+### Resilience Analysis (6)
+4. **Q4**: What are the documented resilience requirement constraints?
+5. **Q5**: How do you consider likelihood, impact, and cost when selecting controls?
+7. **Q7**: How comprehensive is dependency documentation?
+8. **Q8**: How do you address coupling with dependencies?
+9. **Q9**: How do you create and leverage inventories?
+10. **Q10**: What methods do you use to model failure scenarios?
 
-### 灾难恢复 (1个)
-33. **问题 33**: 如何防止故障转移站点达到AWS服务限制？
+### Resilience Capacity (2)
+11. **Q11**: How do you forecast application performance under high-load conditions?
+12. **Q12**: How do you prepare your application to handle load changes?
 
-### 混沌工程 (5个)
-69. **问题 69**: 是否保留了实验目录？
-70. **问题 70**: 为应用团队提供了哪些混沌工程指导？
-71. **问题 71**: 如何在实验期间实施监测？
-72. **问题 72**: 实验如何集成到SDLC中？
-73. **问题 73**: 组织如何从个别团队实验中学习？
+### Observability (8)
+15. **Q15**: How do you set up log data retrieval?
+17. **Q17**: How do you use synthetic traffic to monitor your application?
+20. **Q20**: In what areas do metrics provide reporting?
+22. **Q22**: When do metrics provide information about failure scenarios?
+23. **Q23**: What is the strategy for selecting alerts?
+24. **Q24**: How adaptive are alert thresholds?
+25. **Q25**: What methods are used to relay alert notifications?
+26. **Q26**: How do you automate alert responses?
 
-### 游戏日 (3个)
-74. **问题 74**: Game Days对实际环境的模拟程度？
-75. **问题 75**: 游戏日的场景有多逼真？
-76. **问题 76**: 游戏日的重现性如何？
+### Change Management (1)
+47. **Q47**: How do you ensure code complies with organizational standards?
 
-### 组织学习 (4个)
-77. **问题 77**: 如何培育支持韧性的社区？
-78. **问题 78**: 如何定义韧性的角色和责任？
-79. **问题 79**: 如何让团队了解弹性概念的最新情况？
-80. **问题 80**: 如何根据独特情况定制韧性训练？
+### Incident Management (2)
+53. **Q53**: Do you track how teams use the report repository?
+57. **Q57**: Does the response team have authority to take action?
+
+### Operations Reviews (4)
+58. **Q58**: Who participates in operational reviews?
+59. **Q59**: How frequently are operational reviews conducted?
+60. **Q60**: How thorough are operational reviews?
+61. **Q61**: How do you monitor operational performance?
+
+### Chaos Engineering (7)
+62. **Q62**: To what extent does experiment load reflect production traffic?
+63. **Q63**: How realistic are chaos experiment conditions?
+64. **Q64**: In what environment are chaos experiments conducted?
+65. **Q65**: How repeatable are chaos experiments?
+66. **Q66**: How frequently are chaos experiments conducted?
+67. **Q67**: How do you test fault isolation boundaries?
+68. **Q68**: What types of testing are being conducted?
 
 ---
 
-## 版本对比
+## P3 - Optional Questions (14)
 
-| 评估版本 | 包含的问题 | 问题数量 | 预计耗时 |
-|---------|-----------|---------|---------|
-| **简约版** | P0 (12) + P1 (24) | 36个 | 30-40分钟 |
-| **完整版** | P0 (12) + P1 (24) + P2 (30) + P3 (14) | 80个 | 60-90分钟 |
+### Resilience Requirements (1)
+6. **Q6**: How do you ensure resilience learning is prioritized over new features?
 
-## 建议
+### Disaster Recovery (1)
+33. **Q33**: How do you prevent the failover site from reaching AWS service limits?
 
-- **首次评估**：建议选择简约版，快速了解关键风险
-- **深度评估**：在解决P0/P1问题后，可进行完整版评估提升成熟度
-- **定期回顾**：建议每季度进行简约版评估，每年进行完整版评估
+### Chaos Engineering (5)
+69. **Q69**: Is an experiment catalog maintained?
+70. **Q70**: What chaos engineering guidance is provided to application teams?
+71. **Q71**: How is monitoring implemented during experiments?
+72. **Q72**: How are experiments integrated into the SDLC?
+73. **Q73**: How does the organization learn from individual team experiments?
+
+### Game Days (3)
+74. **Q74**: How well do Game Days simulate the real environment?
+75. **Q75**: How realistic are Game Day scenarios?
+76. **Q76**: How reproducible are Game Days?
+
+### Organizational Learning (4)
+77. **Q77**: How do you foster a community that supports resilience?
+78. **Q78**: How do you define roles and responsibilities for resilience?
+79. **Q79**: How do you keep teams up to date on resilience concepts?
+80. **Q80**: How do you customize resilience training for unique circumstances?
+
+---
+
+## Version Comparison
+
+| Version | Questions Included | Count | Estimated Time |
+|---------|-------------------|-------|----------------|
+| **Compact** | P0 (12) + P1 (24) | 36 | 30-40 min |
+| **Full** | P0 (12) + P1 (24) + P2 (30) + P3 (14) | 80 | 60-90 min |
+
+## Recommendations
+
+- **First assessment**: Choose the compact version for a quick view of critical risks
+- **Deep assessment**: After addressing P0/P1 issues, run the full version for maturity uplift
+- **Periodic review**: Quarterly compact assessment, annual full assessment recommended

@@ -1,44 +1,44 @@
-# Game Day 执行模式
+# Game Day Execution Mode
 
-当用户选择 Game Day 模式时，在标准 Phase 0-4 基础上增加团队协作层。
+When the user selects Game Day mode, a team collaboration layer is added on top of the standard Phase 0-4.
 
-## 准备阶段（Game Day 前 1-2 周）
+## Preparation Phase (1-2 weeks before Game Day)
 
-1. 从 Step 1 实验目标中选 1-3 个高影响场景
-2. 生成参与者简报：场景描述、爆炸半径、应急联系人
-3. 确认角色：
+1. Select 1-3 high-impact scenarios from Step 1 experiment targets
+2. Generate participant briefing: scenario description, blast radius, emergency contacts
+3. Confirm roles:
 
-| 角色 | 职责 | 人员要求 |
+| Role | Responsibility | Personnel Requirements |
 |------|------|---------|
-| Incident Commander | 统筹协调，决策升级 | 资深 SRE / 架构师 |
-| Chaos Operator | 操作故障注入和 Kill Switch | 了解 FIS/CM 的工程师 |
-| Scribe | 记录每个动作和时间戳 | 任何成员 |
-| Observer | 不干预，专注观察响应 | 管理层 / 外部顾问 |
+| Incident Commander | Coordinate overall, escalate decisions | Senior SRE / Architect |
+| Chaos Operator | Operate fault injection and Kill Switch | Engineer familiar with FIS/CM |
+| Scribe | Record every action and timestamp | Any team member |
+| Observer | Do not intervene, focus on observing response | Management / external advisor |
 
-4. 确认通知渠道和专用 incident 频道
+4. Confirm notification channels and dedicated incident channel
 
-## 执行日 Agenda（3 小时）
+## Execution Day Agenda (3 hours)
 
 ```
-00:00 - 00:15  Kickoff：回顾场景、确认 Kill Switch、角色
-00:15 - 00:30  基线检查（Phase 0）
-00:30 - 01:30  故障注入 + 团队响应（Phase 1-2）
-               - Operator 按计划注入
-               - 团队像处理真实事故一样响应
-               - Scribe 记录所有行动
-01:30 - 01:45  停止注入，确认恢复（Phase 3-4）
-01:45 - 02:30  热复盘（Debrief）：
-               - 时间线回放
-               - 什么让你意外？哪里有盲区？
-               - MTTR 各阶段分析
-02:30 - 03:00  Action Items：
-               - 每个 gap → ticket + owner + due date
-               - 哪些实验建议定期重复
+00:00 - 00:15  Kickoff: Review scenarios, confirm Kill Switch, roles
+00:15 - 00:30  Baseline check (Phase 0)
+00:30 - 01:30  Fault injection + team response (Phase 1-2)
+               - Operator injects per plan
+               - Team responds as if handling a real incident
+               - Scribe records all actions
+01:30 - 01:45  Stop injection, confirm recovery (Phase 3-4)
+01:45 - 02:30  Hot debrief:
+               - Timeline replay
+               - What surprised you? Where were the blind spots?
+               - MTTR phased analysis
+02:30 - 03:00  Action Items:
+               - Each gap → ticket + owner + due date
+               - Which experiments should be repeated regularly
 ```
 
-## 输出物
+## Deliverables
 
-- 更新的 Runbook
-- Action Items 清单（含负责人和截止日期）
-- MTTR 基准数据（下次对比）
-- 自动化决策：哪些实验纳入持续运行
+- Updated Runbook
+- Action Items list (with owner and due date)
+- MTTR baseline data (for next comparison)
+- Automation decisions: which experiments to run continuously

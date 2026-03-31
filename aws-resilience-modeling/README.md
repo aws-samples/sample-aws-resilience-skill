@@ -1,322 +1,333 @@
-[English](README_EN.md) | **中文**
+**English** | [中文](README_zh.md)
 
 ---
 
-# AWS 系统韧性分析 Skill
+# AWS System Resilience Analysis Skill
 
-这是一个全面的 AWS 系统韧性评估和风险分析 skill，整合了 2025 年最新的业界最佳实践。
+A comprehensive AWS system resilience assessment and risk analysis skill, incorporating the latest 2025 industry best practices.
 
-## 特性
+## Features
 
-- ✅ 基于 **AWS Well-Architected Framework** 可靠性支柱
-- ✅ 整合 **AWS 韧性分析框架**（错误预算、SLO/SLI）
-- ✅ 包含 **混沌工程** 方法论（AWS FIS）
-- ✅ 采用 **AWS 可观测性最佳实践**（CloudWatch、X-Ray、分布式追踪）
-- ✅ 应用 **云设计模式**（Circuit Breaker、Bulkhead、Retry）
-- ✅ 内置 **AWS 常见服务风险参考库**（50+ 个风险点，覆盖存储/数据库/EKS/EC2/网络）
+- ✅ Based on the **AWS Well-Architected Framework** Reliability Pillar
+- ✅ Integrates the **AWS Resilience Analysis Framework** (error budgets, SLO/SLI)
+- ✅ Includes **Chaos Engineering** methodology (AWS FIS)
+- ✅ Adopts **AWS Observability Best Practices** (CloudWatch, X-Ray, distributed tracing)
+- ✅ Applies **Cloud Design Patterns** (Circuit Breaker, Bulkhead, Retry)
+- ✅ Built-in **AWS Common Service Risk Reference Library** (50+ risk points covering storage/database/EKS/EC2/networking)
 
-## 使用方式
+## Usage
 
-### 方式 1：直接调用
+### Method 1: Direct Invocation
 
 ```bash
 /aws-resilience-modeling
 ```
 
-Claude 会首先询问你的环境信息和业务背景，然后开始进行全面的韧性分析。
+Claude will first ask for your environment information and business context, then begin a comprehensive resilience analysis.
 
-### 方式 2：自动触发
+### Method 2: Automatic Trigger
 
-当你在对话中提到以下关键词时，skill 会自动激活：
-- "AWS 韧性分析"
-- "系统风险评估"
-- "AWS 弹性评估"
+The skill activates automatically when you mention the following keywords in conversation:
+- "AWS resilience analysis"
+- "system risk assessment"
 - "AWS resilience assessment"
 
-示例：
+Example:
 ```
-用户: 我想对我们的 AWS 生产环境进行韧性分析
-Claude: [自动加载 aws-resilience-modeling skill]
+User: I want to perform a resilience analysis on our AWS production environment
+Claude: [auto-loads aws-resilience-modeling skill]
 ```
 
-## 准备工作
+## Prerequisites
 
-在开始分析前，请准备以下信息：
+Before starting the analysis, prepare the following information:
 
-### 1. 环境信息
-- AWS 账户 ID 和区域
-- 访问权限（建议只读访问）
-- 现有架构文档（如有）
+### 1. Environment Information
+- AWS account ID and region
+- Access credentials (read-only access recommended)
+- Existing architecture documentation (if available)
 
-### 2. 业务背景
-- 关键业务流程清单
-- 当前的 RTO/RPO 目标
-- 现有的 SLA/SLO（如有）
-- 合规要求（如 SOC2、HIPAA、PCI DSS）
+### 2. Business Context
+- List of critical business processes
+- Current RTO/RPO targets
+- Existing SLA/SLO (if available)
+- Compliance requirements (e.g., SOC2, HIPAA, PCI DSS)
 
-### 3. 分析范围
-- 需要分析的应用和服务
-- 是否包含多账户/多区域
-- 预算和时间约束
+### 3. Analysis Scope
+- Applications and services to be analyzed
+- Whether multi-account/multi-region is included
+- Budget and time constraints
 
-## 输出内容
+## Output
 
-分析完成后，你将获得：
+Upon completion of the analysis, you will receive:
 
-### 主报告
-1. **执行摘要**（2 页）
-   - 关键发现（Top 5 风险）
-   - 韧性成熟度评分
-   - 优先改进建议
+### Main Report
+1. **Executive Summary** (2 pages)
+   - Key findings (Top 5 risks)
+   - Resilience maturity score
+   - Priority improvement recommendations
 
-2. **系统架构可视化**
-   - 架构总览图（Mermaid）
-   - 依赖关系图
-   - 数据流图
-   - 网络拓扑图
+2. **System Architecture Visualization**
+   - Architecture overview diagram (Mermaid)
+   - Dependency diagram
+   - Data flow diagram
+   - Network topology diagram
 
-3. **风险清单**（表格）
-   - 按优先级排序
-   - 包含风险评分、影响、缓解建议
+3. **Risk Inventory** (table)
+   - Sorted by priority
+   - Includes risk scores, impact, and mitigation recommendations
 
-4. **详细风险分析**
-   - 每个高优先级风险的深入分析
-   - 故障场景
-   - 业务影响
-   - 改进建议（架构、配置、监控）
+4. **Detailed Risk Analysis**
+   - In-depth analysis of each high-priority risk
+   - Failure scenarios
+   - Business impact
+   - Improvement recommendations (architecture, configuration, monitoring)
 
-5. **业务影响分析**
-   - 关键业务功能映射
-   - RTO/RPO 合规性分析
+5. **Business Impact Analysis**
+   - Critical business function mapping
+   - RTO/RPO compliance analysis
 
-6. **缓解策略建议**
-   - 具体的架构改进
-   - 配置优化（含参数和命令）
-   - 监控和告警配置
-   - AWS 服务推荐
+6. **Mitigation Strategy Recommendations**
+   - Specific architecture improvements
+   - Configuration optimizations (with parameters and commands)
+   - Monitoring and alerting configuration
+   - AWS service recommendations
 
-7. **实施路线图**
-   - Gantt 图
-   - 详细任务分解
-   - 资源需求和预算
+7. **Implementation Roadmap**
+   - Gantt chart
+   - Detailed task breakdown
+   - Resource requirements and budget
 
-8. **持续改进计划**
-   - SLI/SLO 定义
-   - 事后复盘流程
-   - 混沌工程计划
+8. **Continuous Improvement Plan**
+   - SLI/SLO definitions
+   - Postmortem process
+   - Chaos engineering plan
 
-### 附加文件
+### Additional Files
 
-**references/common-risks-reference.md** - AWS 常见服务风险参考手册
-- 覆盖存储（EBS/S3/EFS/FSx）、数据库、容器（EKS）、计算（EC2）、网络五大类
-- 50+ 个常见风险点，每个包含风险原因和改进建议
-- 评估检查清单，按服务类型逐项确认
+**references/common-risks-reference.md** - AWS Common Service Risk Reference Manual ([中文](references/common-risks-reference_zh.md))
+- Covers five categories: storage (EBS/S3/EFS/FSx), databases, containers (EKS), compute (EC2), and networking
+- 50+ common risk points, each with root cause and improvement recommendations
+- Assessment checklist organized by service type
 
-**references/assessment-output-spec.md** - 混沌工程输入规范
-- 定义 `chaos-engineering-on-aws` skill 所需的结构化输入格式
-- 包含 AWS 资源清单、风险可实验性标记、监控就绪度等 8 个章节
-- 不同架构模式的填写示例（EKS/Serverless/EC2/多区域）
+**references/assessment-output-spec.md** - Chaos Engineering Input Specification ([中文](references/assessment-output-spec_zh.md))
+- Defines the structured input format required by the `chaos-engineering-on-aws` skill
+- Contains 8 sections including AWS resource inventory, risk experiment-readiness flags, and monitoring readiness
+- Fill-in examples for different architecture patterns (EKS/Serverless/EC2/multi-region)
 
-## 目录结构
+> All reference files are available in both English and Chinese. Chinese versions use the `_zh.md` suffix (e.g., `resilience-framework_zh.md`).
+
+## Directory Structure
 
 ```
 aws-resilience-modeling/
-├── SKILL.md                                    # Skill 主配置
-├── README.md                                   # 本文件
+├── SKILL.md                                    # Language router (loads EN/ZH)
+├── SKILL_EN.md                                 # Skill instructions (English)
+├── SKILL_ZH.md                                 # Skill instructions (Chinese)
+├── README.md                                   # This file (English)
+├── README_zh.md                                # Readme (Chinese)
 ├── references/
-│   ├── resilience-framework.md                 # 韧性分析详细参考框架
-│   ├── common-risks-reference.md               # AWS 常见服务风险手册
-│   ├── assessment-output-spec.md               # 混沌工程输入规范
-│   ├── report-generation.md                    # 报告生成流程和代码
-│   ├── HTML-TEMPLATE-USAGE.md                  # HTML 模板使用指南
-│   └── MCP_SETUP_GUIDE.md                      # MCP 服务器配置指南
+│   ├── resilience-framework.md                 # Resilience analysis reference framework (English)
+│   ├── resilience-framework_zh.md              # Resilience analysis reference framework (Chinese)
+│   ├── common-risks-reference.md               # AWS common service risk manual (English)
+│   ├── common-risks-reference_zh.md            # AWS common service risk manual (Chinese)
+│   ├── assessment-output-spec.md               # Chaos engineering input specification (English)
+│   ├── assessment-output-spec_zh.md            # Chaos engineering input specification (Chinese)
+│   ├── report-generation.md                    # Report generation process and code (English)
+│   ├── report-generation_zh.md                 # Report generation process and code (Chinese)
+│   ├── HTML-TEMPLATE-USAGE.md                  # HTML template usage guide (English)
+│   ├── HTML-TEMPLATE-USAGE_zh.md               # HTML template usage guide (Chinese)
+│   ├── MCP_SETUP_GUIDE.md                      # MCP server configuration guide (English)
+│   └── MCP_SETUP_GUIDE_zh.md                   # MCP server configuration guide (Chinese)
 ├── scripts/
-│   └── generate-html-report.py                 # Python 报告生成器
+│   └── generate-html-report.py                 # Python report generator
 └── assets/
-    ├── html-report-template.html               # HTML 交互式报告模板
-    └── example-report-template.md              # Markdown 报告示例
+    ├── html-report-template.html               # HTML interactive report template
+    ├── example-report-template.md              # Markdown report example (English)
+    └── example-report-template_zh.md           # Markdown report example (Chinese)
 ```
 
-## 分析框架
+## Analysis Framework
 
-### 故障模式分类
+### Failure Mode Classification
 
-| 类别 | 说明 |
-|------|------|
-| 单点故障 (SPOF) | 缺乏冗余的关键组件 |
-| 过度延迟 | 性能瓶颈和延迟问题 |
-| 过度负载 | 容量限制和突增负载 |
-| 错误配置 | 不符合最佳实践 |
-| 共享命运 | 紧密耦合和缺乏隔离 |
+| Category | Description |
+|----------|-------------|
+| Single Point of Failure (SPOF) | Critical components lacking redundancy |
+| Excessive Latency | Performance bottlenecks and latency issues |
+| Excessive Load | Capacity limits and traffic spikes |
+| Misconfiguration | Non-compliance with best practices |
+| Shared Fate | Tight coupling and lack of isolation |
 
-### 韧性评估维度
+### Resilience Assessment Dimensions
 
-使用 **5 星评分系统**（1星=不足，5星=优秀）评估：
+Uses a **5-star rating system** (1 star = inadequate, 5 stars = excellent) to assess:
 
-- 冗余设计
-- AZ 容错能力
-- 超时与重试策略
-- 断路器机制
-- 自动扩展能力
-- 配置防护措施
-- 故障隔离
-- 备份恢复机制
-- AWS 最佳实践合规性
+- Redundancy design
+- AZ fault tolerance
+- Timeout and retry strategy
+- Circuit breaker mechanism
+- Auto-scaling capability
+- Configuration safeguards
+- Fault isolation
+- Backup and recovery mechanism
+- AWS best practices compliance
 
-### 风险优先级评分
+### Risk Priority Scoring
 
 ```
-风险得分 = (发生概率 × 业务影响 × 检测难度) / 修复复杂度
+Risk Score = (Probability × Business Impact × Detection Difficulty) / Remediation Complexity
 ```
 
-## 示例场景
+## Example Scenarios
 
-### 场景 1：电商平台
+### Scenario 1: E-Commerce Platform
 ```
-环境:
+Environment:
 - Multi-AZ RDS (PostgreSQL)
-- ECS Fargate 应用
-- CloudFront + S3 静态资源
+- ECS Fargate application
+- CloudFront + S3 static assets
 - ElastiCache Redis
 
-关键发现:
-- RDS 单区域（无 Aurora Global Database）
-- 缺少 Auto Scaling 策略
-- 未配置 Circuit Breaker
-- 监控覆盖不足
+Key Findings:
+- RDS single-region (no Aurora Global Database)
+- Missing Auto Scaling policies
+- No Circuit Breaker configured
+- Insufficient monitoring coverage
 
-建议:
-- 迁移到 Aurora Global Database
-- 实施 Target Tracking Auto Scaling
-- 集成 AWS X-Ray 分布式追踪
-- 建立季度 DR 演练
+Recommendations:
+- Migrate to Aurora Global Database
+- Implement Target Tracking Auto Scaling
+- Integrate AWS X-Ray distributed tracing
+- Establish quarterly DR drills
 ```
 
-### 场景 2：金融 API
+### Scenario 2: Financial API
 ```
-环境:
+Environment:
 - API Gateway + Lambda
 - DynamoDB Global Tables
 - Aurora Serverless
-- Route 53 健康检查
+- Route 53 health checks
 
-关键发现:
-- Lambda 无 Reserved Concurrency
-- 缺少 API 限流策略
-- 未定义 SLO/SLI
-- 无混沌工程实践
+Key Findings:
+- Lambda without Reserved Concurrency
+- Missing API throttling policies
+- SLO/SLI not defined
+- No chaos engineering practices
 
-建议:
-- 配置 Lambda Reserved Concurrency
-- 实施 API Gateway Usage Plans
-- 定义 99.99% 可用性 SLO
-- 建立每周混沌实验
+Recommendations:
+- Configure Lambda Reserved Concurrency
+- Implement API Gateway Usage Plans
+- Define 99.99% availability SLO
+- Establish weekly chaos experiments
 ```
 
-## 灾难恢复策略选择
+## Disaster Recovery Strategy Selection
 
-| 策略 | RTO | RPO | 成本 | 适用场景 |
-|------|-----|-----|------|---------|
-| 备份与恢复 | 小时-天 | 小时-天 | $ | 非关键系统 |
-| 导航灯 | 10分钟-小时 | 分钟 | $$ | 重要系统 |
-| 温备份 | 分钟 | 秒-分钟 | $$$ | 关键业务 |
-| 多站点主动-主动 | 秒-分钟 | 秒 | $$$$ | 任务关键 |
+| Strategy | RTO | RPO | Cost | Applicable Scenarios |
+|----------|-----|-----|------|----------------------|
+| Backup & Restore | Hours–Days | Hours–Days | $ | Non-critical systems |
+| Pilot Light | 10 min–Hours | Minutes | $$ | Important systems |
+| Warm Standby | Minutes | Seconds–Minutes | $$$ | Critical business |
+| Multi-Site Active-Active | Seconds–Minutes | Seconds | $$$$ | Mission-critical |
 
-## 参考资源
+## Reference Resources
 
-### AWS 官方文档
+### AWS Official Documentation
 - [AWS Resilience Analysis Framework](https://docs.aws.amazon.com/prescriptive-guidance/latest/resilience-analysis-framework/)
 - [AWS Well-Architected - Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/)
 - [AWS Fault Injection Simulator](https://docs.aws.amazon.com/fis/latest/userguide/)
 - [AWS Resilience Hub](https://docs.aws.amazon.com/resilience-hub/latest/userguide/)
 
-### 外部资源
+### External Resources
 - [AWS Observability Best Practices](https://aws-observability.github.io/observability-best-practices/)
 - [Principles of Chaos Engineering](https://principlesofchaos.org/)
 - [Chaos Engineering on AWS](https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/)
 
-## 高级特性
+## Advanced Features
 
-### 错误预算管理
+### Error Budget Management
 
-基于 AWS 韧性最佳实践，计算和跟踪错误预算：
+Based on AWS resilience best practices, calculate and track error budgets:
 
 ```
-错误预算 = (1 - SLO) × 时间周期
+Error Budget = (1 - SLO) × Time Period
 
-示例：
-SLO = 99.9%（月度）
-错误预算 = 43.2 分钟/月
+Example:
+SLO = 99.9% (monthly)
+Error Budget = 43.2 minutes/month
 ```
 
-### 混沌工程实验
+### Chaos Engineering Experiments
 
-使用 AWS FIS 进行故障注入：
+Use AWS FIS for fault injection:
 
-- EC2 实例终止
-- 网络延迟/丢包
-- RDS 故障转移
-- AZ 不可用模拟
-- CPU/内存压力测试
+- EC2 instance termination
+- Network latency/packet loss
+- RDS failover
+- AZ unavailability simulation
+- CPU/memory stress tests
 
-### 可观测性三大支柱
+### Three Pillars of Observability
 
-- **日志**：CloudWatch Logs + 结构化日志
-- **指标**：CloudWatch Metrics + 关键监控指标
-- **追踪**：AWS X-Ray + 分布式追踪
+- **Logs**: CloudWatch Logs + structured logging
+- **Metrics**: CloudWatch Metrics + key monitoring indicators
+- **Traces**: AWS X-Ray + distributed tracing
 
-## 常见问题
+## FAQ
 
-### Q: 分析需要多长时间？
-A: 根据环境复杂度：
-- 简单环境（单区域，< 10 服务）：1-2 小时
-- 中等环境（多 AZ，10-50 服务）：3-5 小时
-- 复杂环境（多区域，> 50 服务）：1-2 天
+### Q: How long does the analysis take?
+A: Depends on environment complexity:
+- Simple environment (single region, < 10 services): 1–2 hours
+- Medium environment (multi-AZ, 10–50 services): 3–5 hours
+- Complex environment (multi-region, > 50 services): 1–2 days
 
-### Q: 是否需要 AWS 账户访问权限？
-A: 推荐但非必需：
-- **有权限**：可以自动扫描资源，分析更准确
-- **无权限**：基于提供的架构文档进行分析
+### Q: Is AWS account access required?
+A: Recommended but not mandatory:
+- **With access**: Resources can be scanned automatically for more accurate analysis
+- **Without access**: Analysis is based on provided architecture documentation
 
-### Q: 分析会产生 AWS 费用吗？
-A: 分析本身不产生费用，但实施建议可能包含：
-- AWS Resilience Hub（免费）
-- AWS FIS 混沌实验（按分钟计费）
-- 额外的 AWS 服务（如 Aurora Global Database）
+### Q: Will the analysis incur AWS charges?
+A: The analysis itself incurs no charges, but implementing recommendations may include:
+- AWS Resilience Hub (free)
+- AWS FIS chaos experiments (billed per minute)
+- Additional AWS services (e.g., Aurora Global Database)
 
-### Q: 如何实施建议？
-A: 分析报告包含：
-- 具体的架构改进图
-- AWS CLI 命令
-- CloudFormation/Terraform 代码片段
-- 分阶段实施路线图
+### Q: How do I implement the recommendations?
+A: The analysis report includes:
+- Specific architecture improvement diagrams
+- AWS CLI commands
+- CloudFormation/Terraform code snippets
+- Phased implementation roadmap
 
-### Q: 是否支持多云环境？
-A: 当前专注于 AWS 环境，提供基于 AWS Well-Architected Framework 的专业韧性评估。
+### Q: Is multi-cloud supported?
+A: Currently focused on AWS environments, providing professional resilience assessments based on the AWS Well-Architected Framework.
 
-## 更新日志
+## Changelog
 
 ### v1.1.0 (2026-03-14)
-- ✅ 新增 `common-risks-reference.md` — AWS 常见服务风险参考手册
-- ✅ 整合 50+ 个常见风险点（存储/数据库/EKS/EC2/网络）
-- ✅ 新增按服务类型的评估检查清单
-- ✅ SKILL.md 故障模式识别任务引用风险参考
-- ✅ 风险分类细化对齐实际 AWS 服务
+- ✅ Added `common-risks-reference.md` — AWS Common Service Risk Reference Manual
+- ✅ Integrated 50+ common risk points (storage/database/EKS/EC2/networking)
+- ✅ Added assessment checklist organized by service type
+- ✅ SKILL.md failure mode identification task references the risk reference
+- ✅ Risk classification refined to align with actual AWS services
 
 ### v1.0.0 (2025-02-17)
-- ✅ 初始版本
-- ✅ 整合 AWS Well-Architected Framework (2025)
-- ✅ 整合 AWS 韧性分析框架
-- ✅ 整合混沌工程方法论
-- ✅ 整合 AWS 可观测性最佳实践
-- ✅ 包含详细的 resilience-framework.md 参考
+- ✅ Initial release
+- ✅ Integrated AWS Well-Architected Framework (2025)
+- ✅ Integrated AWS Resilience Analysis Framework
+- ✅ Integrated chaos engineering methodology
+- ✅ Integrated AWS observability best practices
+- ✅ Includes detailed resilience-framework.md reference
 
-## 反馈和贡献
+## Feedback and Contributions
 
-如有问题或建议，请通过以下方式反馈：
-- 在对话中直接提出
-- 更新你本地的 skill 文件
+For questions or suggestions, please provide feedback by:
+- Raising them directly in conversation
+- Updating your local skill files
 
-## 许可
+## License
 
-本 skill 基于 AWS Well-Architected Framework 和混沌工程最佳实践编写，供学习和使用。
+This skill is written based on the AWS Well-Architected Framework and chaos engineering best practices, for learning and use.

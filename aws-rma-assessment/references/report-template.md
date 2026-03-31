@@ -1,39 +1,48 @@
-# RMA 评估报告模板
+# RMA Assessment Report Template
 
-> 本文件包含 RMA 评估报告的完整模板结构和 HTML 生成指南。
-> 主流程概述见 [SKILL.md](../SKILL.md) 的"第六步"和"第七步"章节。
-
----
-
-## 报告文件名格式
-
-`{应用名称}-rma-assessment-{日期}.md`
+> This file contains the complete report template structure and HTML generation guide for RMA assessments.
+> See [SKILL_EN.md](../SKILL_EN.md) Steps 6 and 7 for the main workflow overview.
 
 ---
 
-## 报告结构
+## Report Filename Format
+
+`{application-name}-rma-assessment-{date}.md`
+
+---
+
+## Report Structure
 
 ```markdown
-# RMA 韧性评估报告
-## {应用名称}
+# RMA Resilience Assessment Report
+## {Application Name}
 
-**评估日期**: {日期}
-**评估版本**: 简约版 / 完整版
-**总体成熟度**: {分数}% - {评级}
+## Assessment Metadata
+
+| Field | Value |
+|-------|-------|
+| **Evaluator** | {evaluator name/role} |
+| **Assessment Date** | {YYYY-MM-DD} |
+| **Scope** | {application name, AWS account(s), region(s)} |
+| **Methodology Version** | RMA Assessment v2.0 |
+| **Assessment Type** | {Compact (36 Qs) / Full (80 Qs)} |
+| **Confidentiality** | {as specified by user} |
+
+**Overall Maturity**: {score}% - {rating}
 
 ---
 
-## 执行摘要
+## Executive Summary
 
-### 总体评估
-- 总问题数：{数量}
-- 平均成熟度级别：{级别}
-- 总体评分：{分数}% - {评级}
-- **AI辅助效率**：节省{百分比}%时间，自动分析回答了{数量}个问题
+### Overall Assessment
+- Total questions: {count}
+- Average maturity level: {level}
+- Overall score: {score}% - {rating}
+- **AI-assisted efficiency**: Saved {percentage}% time, auto-analyzed {count} questions
 
-### 成熟度雷达图
+### Maturity Radar Chart
 
-使用Mermaid图表展示10个领域的成熟度：
+Use Mermaid charts to display maturity across 10 domains:
 
 \`\`\`mermaid
 ---
@@ -44,139 +53,174 @@ config:
 ---
 %%{init: {'theme':'base'}}%%
 graph TD
-    subgraph 韧性成熟度雷达图
-        A[恢复目标: 85%]
-        B[可观察性: 72%]
-        C[灾难恢复: 65%]
-        D[高可用性: 78%]
-        E[变更管理: 88%]
-        F[事件管理: 70%]
-        G[运营评审: 60%]
-        H[混沌工程: 45%]
-        I[游戏日: 40%]
-        J[组织学习: 55%]
+    subgraph Resilience Maturity Radar
+        A[Recovery Objectives: 85%]
+        B[Observability: 72%]
+        C[Disaster Recovery: 65%]
+        D[High Availability: 78%]
+        E[Change Management: 88%]
+        F[Incident Management: 70%]
+        G[Operations Reviews: 60%]
+        H[Chaos Engineering: 45%]
+        I[Game Days: 40%]
+        J[Organizational Learning: 55%]
     end
 \`\`\`
 
-**或使用表格形式：**
+**Or use table format:**
 
-| 领域 | 得分 | 评级 | 趋势 |
-|-----|------|------|------|
-| 恢复目标 | 85% | 良好 | 🟢 |
-| 可观察性 | 72% | 一般 | 🟡 |
-| 灾难恢复 | 65% | 一般 | 🟡 |
-| 高可用性 | 78% | 良好 | 🟢 |
-| 变更管理 | 88% | 良好 | 🟢 |
-| 事件管理 | 70% | 一般 | 🟡 |
-| 运营评审 | 60% | 一般 | 🟡 |
-| 混沌工程 | 45% | 需改进 | 🔴 |
-| 游戏日 | 40% | 关键 | 🔴 |
-| 组织学习 | 55% | 需改进 | 🟡 |
+| Domain | Score | Rating | Trend |
+|--------|-------|--------|-------|
+| Recovery Objectives | 85% | Good | 🟢 |
+| Observability | 72% | Fair | 🟡 |
+| Disaster Recovery | 65% | Fair | 🟡 |
+| High Availability | 78% | Good | 🟢 |
+| Change Management | 88% | Good | 🟢 |
+| Incident Management | 70% | Fair | 🟡 |
+| Operations Reviews | 60% | Fair | 🟡 |
+| Chaos Engineering | 45% | Needs Improvement | 🔴 |
+| Game Days | 40% | Critical | 🔴 |
+| Organizational Learning | 55% | Needs Improvement | 🟡 |
 
-### 差距热力图
+### Gap Heatmap
 
-**按优先级和领域的差距分布：**
+**Gap distribution by priority and domain:**
 
-| 领域 | P0差距 | P1差距 | P2差距 | P3差距 | 总差距 |
-|-----|--------|--------|--------|--------|--------|
-| 恢复目标 | 🟢 0 | 🟢 0 | 🟡 1 | - | 1 |
-| 可观察性 | - | 🟡 2 | 🟡 3 | - | 5 |
-| 灾难恢复 | 🔴 2 | 🟡 1 | - | 🟢 0 | 3 |
-| 高可用性 | 🟡 1 | 🟢 0 | - | - | 1 |
-| 变更管理 | 🟢 0 | 🟢 0 | 🟡 1 | - | 1 |
-| 事件管理 | 🟡 1 | 🟡 2 | 🟢 0 | - | 3 |
-| 混沌工程 | - | - | 🔴 5 | 🔴 3 | 8 |
-| 游戏日 | - | - | - | 🔴 3 | 3 |
+| Domain | P0 Gaps | P1 Gaps | P2 Gaps | P3 Gaps | Total |
+|--------|---------|---------|---------|---------|-------|
+| Recovery Objectives | 🟢 0 | 🟢 0 | 🟡 1 | - | 1 |
+| Observability | - | 🟡 2 | 🟡 3 | - | 5 |
+| Disaster Recovery | 🔴 2 | 🟡 1 | - | 🟢 0 | 3 |
+| High Availability | 🟡 1 | 🟢 0 | - | - | 1 |
+| Change Management | 🟢 0 | 🟢 0 | 🟡 1 | - | 1 |
+| Incident Management | 🟡 1 | 🟡 2 | 🟢 0 | - | 3 |
+| Chaos Engineering | - | - | 🔴 5 | 🔴 3 | 8 |
+| Game Days | - | - | - | 🔴 3 | 3 |
 
-**图例**：
-- 🔴 差距>=3个问题（关键）
-- 🟡 差距1-2个问题（中等）
-- 🟢 差距0个问题（良好）
+**Legend:**
+- 🔴 Gaps >= 3 questions (Critical)
+- 🟡 Gaps 1-2 questions (Moderate)
+- 🟢 Gaps 0 questions (Good)
 
-### 关键发现 Top 5
+### P0 Critical Risk Summary
 
-1. **[领域] - 问题X**: {问题描述}
-   - 当前状态：级别 {1/2/3}
-   - 风险级别：高/中/低
-   - 业务影响：{描述}
-   - **AI分析依据**：{自动分析的来源}
+**P0 Average Score**: {P0 score}% — {P0 rating}
 
-### 优势领域
+> **⚠ Critical Risk Warning** (shown if any P0 question is Level 1)
+> The following critical questions scored Level 1, indicating immediate action is required:
 
-列出得分为3级的领域，并标注是否为自动识别
+| Domain | Question | Current Level | Recommended Action |
+|--------|----------|---------------|-------------------|
+| {domain} | {question summary} | Level 1 | {recommended action} |
+
+### Top 5 Key Findings
+
+1. **[Domain] - Question X**: {description}
+   - Current state: Level {1/2/3}
+   - Risk level: High/Medium/Low
+   - Business impact: {description}
+   - **AI analysis basis**: {auto-analysis source}
+
+### Strength Areas
+
+List domains scoring Level 3, noting whether auto-identified
 
 ---
 
-## 领域评估详情
+## Domain Assessment Details
 
-### 1. 恢复目标 (Recovery Objectives)
-**领域评分**: {分数}% - {评级}
+### 1. Recovery Objectives
+**Domain Score**: {score}% - {rating}
 
-| 问题ID | 问题 | 当前级别 | 目标级别 | 差距 |
-|--------|------|----------|----------|------|
-| 1 | ... | 2 | 3 | 需改进 |
+| Q ID | Question | Current Level | Target Level | Gap |
+|------|----------|---------------|--------------|-----|
+| 1 | ... | 2 | 3 | Needs Improvement |
 
-**领域分析**：
-{基于回答的分析和建议}
+**Domain Analysis:**
+{Analysis and recommendations based on answers}
 
-### 2. 可观察性 (Observability)
+### 2. Observability
 ...
 
-{重复所有领域}
+{Repeat for all domains}
 
 ---
 
-## 改进路线图
+## Improvement Roadmap
 
-### 第一阶段（0-3个月）：关键风险缓解
+### Phase 1 (0-3 months): Critical Risk Mitigation
 
-**优先级**: P0
+**Priority**: P0
 
-| 问题ID | 改进项 | 当前->目标 | AWS服务建议 | 预估工作量 | 预估成本 |
-|--------|--------|-----------|-------------|-----------|---------|
-| 27 | 实施DR策略 | 1->3 | Aurora Global DB, Route 53 | 2-3周 | +$1500/月 |
+| Q ID | Improvement Item | Current->Target | AWS Service Recommendation | Est. Effort | Est. Cost |
+|------|-----------------|-----------------|---------------------------|-------------|-----------|
+| 27 | Implement DR strategy | 1->3 | Aurora Global DB, Route 53 | 2-3 weeks | +$1500/mo |
 
-### 第二阶段（3-6个月）：重要改进
+### Phase 2 (3-6 months): Important Improvements
 
-**优先级**: P1
+**Priority**: P1
 
-{类似格式}
+{Similar format}
 
-### 第三阶段（6-12个月）：成熟度提升
+### Phase 3 (6-12 months): Maturity Uplift
 
-**优先级**: P2 + P3
+**Priority**: P2 + P3
 
-{类似格式}
-
----
-
-## AWS 服务推荐
-
-基于差距分析，推荐以下 AWS 服务：
-
-| 服务 | 用途 | 解决的问题 | 预估月成本 |
-|------|------|-----------|-----------|
-| AWS Resilience Hub | 自动化韧性评估 | 问题 38 | $0（按评估计费）|
-| AWS FIS | 混沌工程测试 | 问题 62-68 | ~$100/月 |
-| CloudWatch Synthetics | 合成监控 | 问题 17 | ~$50/月 |
+{Similar format}
 
 ---
 
-## 详细问答记录
+## AWS Service Recommendations
 
-### P0 - 关键问题
+Based on gap analysis, the following AWS services are recommended:
 
-#### 问题 1: 如何定义应用程序的恢复目标？
-- **回答**: {用户的回答}
-- **成熟度级别**: {1/2/3}
-- **评估依据**: {说明为何给这个级别}
-- **改进建议**: {如果不是3级，提供具体建议}
-
-{所有问题的详细记录}
+| Service | Purpose | Addresses | Est. Monthly Cost |
+|---------|---------|-----------|-------------------|
+| AWS Resilience Hub | Automated resilience assessment | Q38 | $0 (per-assessment billing) |
+| AWS FIS | Chaos engineering testing | Q62-68 | ~$100/mo |
+| CloudWatch Synthetics | Synthetic monitoring | Q17 | ~$50/mo |
 
 ---
 
-## 参考资源
+## Detailed Q&A Records
+
+### P0 - Critical Questions
+
+#### Question 1: How do you define recovery objectives for your application?
+- **Answer**: {user's answer}
+- **Maturity Level**: {1/2/3}
+- **Assessment Basis**: {rationale for the level}
+- **Improvement Recommendation**: {specific advice if not Level 3}
+
+{Detailed records for all questions}
+
+---
+
+## Next Steps
+
+For domains scoring Level 1, the following deep-dive analyses are recommended using `aws-resilience-modeling`:
+
+| Domain at Level 1 | Recommended Modeling Task | Focus Area |
+|-------------------|--------------------------|------------|
+| Disaster Recovery | Task 2 (Failure Modes) + Task 4 (Business Impact) | DR strategy validation and business impact analysis |
+| High Availability | Task 1 (Component Mapping) + Task 2 (Failure Modes) | Architecture dependency and fault tolerance analysis |
+| Observability | Task 1 (Component Mapping) + Task 3 (Resilience Assessment) | Monitoring gap identification and scoring |
+
+This assessment should be paired with `aws-resilience-modeling` for a complete risk mitigation lifecycle.
+
+## Scoring Alignment Reference
+
+| RMA Level | Approximate Modeling Stars | Description |
+|-----------|--------------------------|-------------|
+| Level 1 (Ad-hoc) | 1-2 stars | Informal/no process |
+| Level 2 (Defined) | 2.5-3.5 stars | Basic processes exist |
+| Level 3 (Managed) | 4-5 stars | Mature, automated, continuously improved |
+
+*Note: This is an approximate mapping. The two assessments evaluate different dimensions and granularity.*
+
+---
+
+## Reference Resources
 
 - [AWS Well-Architected Framework - Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/)
 - [AWS Resilience Hub](https://aws.amazon.com/resilience-hub/)
@@ -184,27 +228,27 @@ graph TD
 
 ---
 
-**报告生成日期**: {日期时间}
-**评估工具**: RMA Assessment Assistant v1.0
+**Report generated**: {datetime}
+**Assessment tool**: RMA Assessment Assistant v2.0
 ```
 
 ---
 
-## HTML 报告生成（可选）
+## HTML Report Generation (Optional)
 
-如果用户需要 HTML 版本，可使用 pandoc 转换：
+If the user needs an HTML version, use pandoc to convert:
 
 ```bash
-# 检查 pandoc 是否可用
+# Check if pandoc is available
 if command -v pandoc &> /dev/null; then
-    pandoc {报告文件}.md \
+    pandoc {report-file}.md \
       -f gfm \
       -t html5 \
       --standalone \
       --toc \
       --toc-depth=3 \
       --css=https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css \
-      --metadata title="RMA 韧性评估报告" \
-      -o {报告文件}.html
+      --metadata title="RMA Resilience Assessment Report" \
+      -o {report-file}.html
 fi
 ```

@@ -1,0 +1,280 @@
+{
+  "metadata": {
+    "group": 3,
+    "name_en": "Disaster Recovery",
+    "name_zh": "灾难恢复",
+    "question_count": 9
+  },
+  "questions": [
+    {
+      "id": 27,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 27：您使用什么标准来选择应用程序的灾难恢复策略？",
+      "question_en": "What criteria do you use to select disaster recovery strategy for your application?",
+      "image": "image(1).png",
+      "why_important": "DR策略直接决定RTO/RPO能否满足业务要求",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "DR 策略由企业规定",
+          "description_en": "DR strategies are prescribed by the business"
+        },
+        {
+          "level": 2,
+          "description_zh": "DR 策略由应用程序团队制定",
+          "description_en": "DR strategies are developed by the application team"
+        },
+        {
+          "level": 3,
+          "description_zh": "DR 策略由应用程序团队针对特定场景制定",
+          "description_en": "DR strategies are developed by the application team for specific scenarios"
+        }
+      ],
+      "aws_best_practice": "DR策略应与RTO/RPO对齐。AWS提供4种策略：备份和恢复（小时级RTO）、导航灯（分钟级RTO）、温备用（秒级RTO）、主动-主动（无RTO）。使用 AWS Resilience Hub 评估并推荐合适的策略。",
+      "why_important_en": "DR strategy directly determines whether RTO/RPO can meet business requirements",
+      "aws_best_practice_en": "DR strategy should align with RTO/RPO. AWS offers 4 strategies: Backup & Restore (hours RTO), Pilot Light (minutes RTO), Warm Standby (seconds RTO), Active-Active (zero RTO). Use AWS Resilience Hub to assess and recommend the appropriate strategy."
+    },
+    {
+      "id": 28,
+      "priority": "P1",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 28：事故发生期间的通信协议是什么？",
+      "question_en": "What is the communication protocol during incidents?",
+      "image": "image.png",
+      "why_important": "清晰的通信协议确保事故期间的有效协作",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式的通信协议或临时决定",
+          "description_en": "No formal communication protocol or ad-hoc decisions"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的通信渠道，但未明确角色职责或通信频率",
+          "description_en": "Basic communication channels exist but roles and communication frequency not clearly defined"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细的通信协议：指定渠道（Slack/Teams）、角色职责、更新频率、升级路径、客户沟通模板",
+          "description_en": "Detailed communication protocol: designated channels (Slack/Teams), role responsibilities, update frequency, escalation paths, customer communication templates"
+        }
+      ],
+      "aws_best_practice": "建立专用的事件响应频道（如Slack war room）。定义角色：事件指挥官、技术负责人、通信负责人。使用 AWS Chatbot 集成 CloudWatch 告警到 Slack/Teams。准备客户通信模板。",
+      "why_important_en": "Clear communication protocols ensure effective collaboration during incidents",
+      "aws_best_practice_en": "Establish dedicated incident response channels (e.g., Slack war room). Define roles: incident commander, technical lead, communications lead. Use AWS Chatbot to integrate CloudWatch alerts into Slack/Teams. Prepare customer communication templates."
+    },
+    {
+      "id": 29,
+      "priority": "P1",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 29：数据恢复是否自动化？",
+      "question_en": "Is data recovery automated?",
+      "image": "image.png",
+      "why_important": "自动化恢复减少RTO并降低人为错误",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "数据恢复完全手动，依赖人工操作",
+          "description_en": "Data recovery fully manual, relying on human operations"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分自动化（如自动备份），但恢复过程需要手动触发和验证",
+          "description_en": "Partially automated (e.g., automatic backups) but recovery process requires manual triggering and validation"
+        },
+        {
+          "level": 3,
+          "description_zh": "完全自动化：自动备份、一键或自动触发恢复、自动验证数据完整性",
+          "description_en": "Fully automated: automatic backups, one-click or auto-triggered recovery, automated data integrity validation"
+        }
+      ],
+      "aws_best_practice": "使用 AWS Backup 统一管理备份策略。配置自动快照（RDS/EBS）和跨区域复制。使用 AWS Lambda 自动化恢复流程。实施 Infrastructure as Code (CloudFormation/Terraform) 实现快速重建。",
+      "why_important_en": "Automated recovery reduces RTO and lowers human error",
+      "aws_best_practice_en": "Use AWS Backup for unified backup policy management. Configure automatic snapshots (RDS/EBS) and cross-region replication. Use AWS Lambda to automate recovery processes. Implement Infrastructure as Code (CloudFormation/Terraform) for rapid rebuilds."
+    },
+    {
+      "id": 30,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 30：您使用什么方法来验证您的数据恢复策略，以确保它们符合您的 RPO 和 RTO 目标？",
+      "question_en": "What methods do you use to validate data recovery strategies meet RPO and RTO goals?",
+      "image": "image.png",
+      "why_important": "未经测试的DR计划等于没有DR计划",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未测试数据恢复策略",
+          "description_en": "Data recovery strategies not tested"
+        },
+        {
+          "level": 2,
+          "description_zh": "定期测试数据恢复（年度），验证恢复流程",
+          "description_en": "Regular testing of data recovery (annually), validating recovery process"
+        },
+        {
+          "level": 3,
+          "description_zh": "定期测试数据恢复（季度或更频繁），自动化测试，验证RTO/RPO目标，包括配置漂移检测",
+          "description_en": "Regular automated testing (quarterly or more), validating RTO/RPO goals, including configuration drift detection"
+        }
+      ],
+      "aws_best_practice": "建议至少季度进行 DR 演练。使用 AWS Backup 自动化备份，AWS CloudFormation 检测配置漂移。测试应包括：完全恢复时间测量、数据完整性验证、故障转移流程测试。",
+      "why_important_en": "An untested DR plan is equivalent to having no DR plan",
+      "aws_best_practice_en": "Recommend DR drills at least quarterly. Use AWS Backup for automated backups and AWS CloudFormation for drift detection. Tests should include: full recovery time measurement, data integrity validation, failover process testing."
+    },
+    {
+      "id": 31,
+      "priority": "P1",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 31：DR计划有多详细？",
+      "question_en": "How detailed is the DR plan?",
+      "image": "image.png",
+      "why_important": "详细的DR计划是快速有效恢复的前提",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式DR计划或仅有高层次概述",
+          "description_en": "No formal DR plan or only high-level overview"
+        },
+        {
+          "level": 2,
+          "description_zh": "有DR计划文档，但缺少详细步骤或未包含所有关键系统",
+          "description_en": "DR plan documented but lacking detailed steps or not covering all critical systems"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细的DR计划：runbook、角色职责、RTO/RPO指标、依赖关系、恢复优先级、自动化脚本",
+          "description_en": "Detailed DR plan: runbooks, role responsibilities, RTO/RPO metrics, dependencies, recovery priorities, automation scripts"
+        }
+      ],
+      "aws_best_practice": "DR计划应包含：架构图、恢复步骤runbook、角色职责矩阵、RTO/RPO要求、依赖关系清单、测试计划。使用 AWS Resilience Hub 生成和维护DR计划。存储在版本控制系统并定期更新。",
+      "why_important_en": "A detailed DR plan is a prerequisite for fast and effective recovery",
+      "aws_best_practice_en": "DR plan should include: architecture diagrams, recovery step runbooks, role responsibility matrix, RTO/RPO requirements, dependency inventory, test plan. Use AWS Resilience Hub to generate and maintain DR plans. Store in version control and update regularly."
+    },
+    {
+      "id": 32,
+      "priority": "P1",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 32：如何管理主站点和辅助站点之间的偏差？",
+      "question_en": "How do you manage drift between primary and secondary sites?",
+      "image": "image.png",
+      "why_important": "配置偏差会导致故障转移失败",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未跟踪或管理主辅站点配置偏差",
+          "description_en": "No tracking or management of primary-secondary site configuration drift"
+        },
+        {
+          "level": 2,
+          "description_zh": "手动检查配置一致性，但频率低或不完整",
+          "description_en": "Manual configuration consistency checks but infrequent or incomplete"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动化配置管理：IaC（Infrastructure as Code）、配置漂移检测、自动同步、持续验证",
+          "description_en": "Automated configuration management: IaC, drift detection, automatic synchronization, continuous validation"
+        }
+      ],
+      "aws_best_practice": "使用 IaC (CloudFormation/Terraform) 管理所有基础设施。使用 CloudFormation Drift Detection 检测配置偏差。实施 GitOps 工作流确保主辅站点从同一源部署。定期进行故障转移演练验证一致性。",
+      "why_important_en": "Configuration drift can cause failover failures",
+      "aws_best_practice_en": "Use IaC (CloudFormation/Terraform) to manage all infrastructure. Use CloudFormation Drift Detection to detect configuration deviations. Implement GitOps workflow to ensure primary and secondary sites deploy from the same source. Regularly conduct failover drills to verify consistency."
+    },
+    {
+      "id": 33,
+      "priority": "P3",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 33：如何防止故障转移站点达到AWS服务限制？",
+      "question_en": "How do you prevent the failover site from reaching AWS service limits?",
+      "image": "image.png",
+      "why_important": "故障转移站点的容量限制可能导致恢复失败",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未考虑故障转移站点的AWS服务限制",
+          "description_en": "AWS service limits at failover site not considered"
+        },
+        {
+          "level": 2,
+          "description_zh": "知道限制，但未提前请求提升或验证",
+          "description_en": "Aware of limits but not proactively requesting increases or validating"
+        },
+        {
+          "level": 3,
+          "description_zh": "主动管理故障转移容量：提前提升限制、定期验证、容量预留、自动化检查",
+          "description_en": "Proactive failover capacity management: advance limit increases, regular validation, capacity reservations, automated checks"
+        }
+      ],
+      "aws_best_practice": "为DR区域提前规划：1) 识别关键服务限制（EC2、EIP、VPC）；2) 请求与主区域相同的限制；3) 使用Capacity Reservations预留资源；4) 定期DR演练验证容量；5) 监控DR区域配额使用。使用 Service Quotas API 自动化。",
+      "why_important_en": "Capacity limits at the failover site can cause recovery failures",
+      "aws_best_practice_en": "Plan ahead for DR regions: 1) Identify critical service limits (EC2, EIP, VPC); 2) Request limits matching the primary region; 3) Use Capacity Reservations to reserve resources; 4) Regular DR drills to validate capacity; 5) Monitor DR region quota usage. Automate with Service Quotas API."
+    },
+    {
+      "id": 34,
+      "priority": "P0",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 34：您的故障转移策略测试频率是多少？",
+      "question_en": "What is the frequency of testing your failover strategy?",
+      "image": "image.png",
+      "why_important": "定期测试是确保故障转移可靠性的唯一方法",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "从不或很少测试故障转移（年度或更少）",
+          "description_en": "Never or rarely test failover (annually or less)"
+        },
+        {
+          "level": 2,
+          "description_zh": "定期测试故障转移（年度），但仅在非生产环境",
+          "description_en": "Regular failover testing (annually), but only in non-production"
+        },
+        {
+          "level": 3,
+          "description_zh": "频繁测试故障转移（季度或月度），包括生产环境的受控故障转移",
+          "description_en": "Frequent failover testing (quarterly or monthly), including controlled production failover"
+        }
+      ],
+      "aws_best_practice": "建议至少季度测试故障转移。复杂或关键的恢复路径应在生产中定期执行。使用 Route 53 健康检查和故障转移路由策略。考虑使用 AWS FIS 进行故障注入测试。",
+      "why_important_en": "Regular testing is the only way to ensure failover reliability",
+      "aws_best_practice_en": "Recommend at least quarterly failover testing. Complex or critical recovery paths should be regularly exercised in production. Use Route 53 health checks and failover routing policies. Consider using AWS FIS for fault injection testing."
+    },
+    {
+      "id": 81,
+      "priority": "P2",
+      "category": "灾难恢复",
+      "category_en": "Disaster Recovery",
+      "question_zh": "问题 81：您的DR策略是否满足适用的法规合规要求（如数据驻留、保留期限）？",
+      "question_en": "Does your DR strategy meet regulatory compliance requirements for your industry (e.g., data residency, retention periods)?",
+      "image": "image.png",
+      "why_important": "合规不达标可能导致法律风险和罚款，DR策略必须在技术能力和合规约束之间取得平衡",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未考虑DR策略的合规要求，或不清楚适用的法规",
+          "description_en": "Compliance requirements not considered in DR strategy, or applicable regulations unknown"
+        },
+        {
+          "level": 2,
+          "description_zh": "已识别适用的合规要求，DR策略部分满足（如数据驻留已考虑但保留期限未验证）",
+          "description_en": "Applicable compliance requirements identified, DR strategy partially meets them (e.g., data residency considered but retention periods not validated)"
+        },
+        {
+          "level": 3,
+          "description_zh": "DR策略完全满足合规要求：数据驻留、保留期限、跨境传输限制均已验证和文档化，定期审计",
+          "description_en": "DR strategy fully meets compliance: data residency, retention periods, cross-border transfer restrictions all validated and documented, regularly audited"
+        }
+      ],
+      "aws_best_practice": "1) 使用AWS Config规则验证数据驻留合规；2) 确保备份保留策略满足行业法规（如金融7年、医疗6年）；3) 使用AWS Backup跨区域复制时注意数据主权限制；4) 在DR演练中包含合规验证步骤；5) 使用AWS Artifact获取合规报告。",
+      "why_important_en": "Non-compliance can lead to legal risks and fines; DR strategy must balance technical capability with compliance constraints",
+      "aws_best_practice_en": "1) Use AWS Config rules to validate data residency compliance; 2) Ensure backup retention policies meet industry regulations (e.g., finance 7 years, healthcare 6 years); 3) Consider data sovereignty restrictions when using AWS Backup cross-region replication; 4) Include compliance validation steps in DR drills; 5) Use AWS Artifact for compliance reports."
+    }
+  ]
+}

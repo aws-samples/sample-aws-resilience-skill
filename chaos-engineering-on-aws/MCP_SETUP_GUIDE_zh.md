@@ -1,19 +1,19 @@
-# MCP Server Setup Guide
+# MCP Server 配置指南
 
-This Skill relies on AWS official MCP Servers to interact with AWS services. Below are the configuration methods for each MCP Server.
+本 Skill 依赖 AWS 官方 MCP Server 与 AWS 服务交互。以下是各 MCP Server 的配置方法。
 
-> ⚠️ `awslabs.core-mcp-server` is DEPRECATED. Configure standalone MCP Servers directly.
-> Migration guide: https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+> ⚠️ `awslabs.core-mcp-server` 已废弃，请直接配置独立 MCP Server。
+> 迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
 
 ---
 
-## Required MCP Servers
+## 必需的 MCP Server
 
 ### 1. aws-api-mcp-server
 
-**Purpose**: FIS experiment create/run/stop, EC2/RDS/EKS resource validation, IAM permission checks
+**用途**：FIS 实验创建/执行/停止、EC2/RDS/EKS 资源验证、IAM 权限检查
 
-**Installation**: Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+**安装**：需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 #### Claude Code
 
@@ -27,7 +27,7 @@ claude mcp add awslabs-aws-api-mcp-server \
 
 #### Kiro
 
-Edit `.kiro/settings/mcp.json`:
+编辑 `.kiro/settings/mcp.json`：
 
 ```json
 {
@@ -49,7 +49,7 @@ Edit `.kiro/settings/mcp.json`:
 
 #### Cursor / VS Code
 
-Edit `.cursor/mcp.json` or `.vscode/mcp.json`:
+编辑 `.cursor/mcp.json` 或 `.vscode/mcp.json`：
 
 ```json
 {
@@ -70,7 +70,7 @@ Edit `.cursor/mcp.json` or `.vscode/mcp.json`:
 
 ### 2. cloudwatch-mcp-server
 
-**Purpose**: CloudWatch metric reading, alarm create/query (Stop Conditions), log queries
+**用途**：CloudWatch 指标读取、告警创建/查询（Stop Conditions）、日志查询
 
 #### Claude Code
 
@@ -84,16 +84,16 @@ claude mcp add awslabs-cloudwatch-mcp-server \
 
 #### Kiro / Cursor / VS Code
 
-Same format as above, replace package name with `awslabs.cloudwatch-mcp-server@latest`.
+同上格式，替换包名为 `awslabs.cloudwatch-mcp-server@latest`。
 
 ---
 
-## Recommended MCP Servers (as needed)
+## 推荐的 MCP Server（按需配置）
 
 ### 3. eks-mcp-server
 
-**Condition**: Configure when the target system uses EKS architecture
-**Purpose**: EKS cluster management, K8s resource operations, Pod log viewing
+**条件**：目标系统为 EKS 架构时配置
+**用途**：EKS 集群管理、K8s 资源操作、Pod 日志查看
 
 #### Claude Code
 
@@ -109,18 +109,18 @@ claude mcp add awslabs-eks-mcp-server \
 
 ### 4. chaosmesh-mcp
 
-**Condition**: Configure when EKS cluster has Chaos Mesh installed
-**Purpose**: K8s application-layer fault injection (30 tools, covering all CRD types)
-**Repository**: https://github.com/RadiumGu/Chaosmesh-MCP
+**条件**：EKS 集群已安装 Chaos Mesh 时配置
+**用途**：K8s 应用层故障注入（30 个 tool，覆盖全部 CRD 类型）
+**仓库**：https://github.com/RadiumGu/Chaosmesh-MCP
 
 #### Claude Code
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/RadiumGu/Chaosmesh-MCP.git
 cd Chaosmesh-MCP
 
-# Add MCP Server
+# 添加 MCP Server
 claude mcp add chaosmesh-mcp \
   -e KUBECONFIG=~/.kube/config \
   -- python3 server.py
@@ -146,9 +146,9 @@ claude mcp add chaosmesh-mcp \
 
 ---
 
-## Complete Configuration Example
+## 完整配置示例
 
-Below is the full recommended MCP configuration for this Skill (covering all scenarios):
+以下是本 Skill 推荐的完整 MCP 配置（覆盖所有场景）：
 
 ```json
 {
@@ -193,32 +193,32 @@ Below is the full recommended MCP configuration for this Skill (covering all sce
 
 ---
 
-## AWS Credentials Configuration
+## AWS 凭证配置
 
-MCP Servers use the standard AWS credential chain. Recommended methods:
+MCP Server 使用标准 AWS 凭证链。推荐配置方式：
 
 ```bash
-# Method 1: AWS Profile (recommended)
+# 方式 1：AWS Profile（推荐）
 aws configure --profile default
-# Set AWS_PROFILE=default in MCP config
+# 在 MCP 配置中设置 AWS_PROFILE=default
 
-# Method 2: Environment variables
+# 方式 2：环境变量
 export AWS_ACCESS_KEY_ID=xxx
 export AWS_SECRET_ACCESS_KEY=xxx
-export AWS_SESSION_TOKEN=xxx  # If using temporary credentials
+export AWS_SESSION_TOKEN=xxx  # 如使用临时凭证
 
-# Method 3: IAM Role (EC2/EKS environment)
-# No extra config needed, auto-uses instance role
+# 方式 3：IAM Role（EC2/EKS 环境）
+# 无需额外配置，自动使用实例角色
 ```
 
 ---
 
 ## FIS IAM Role
 
-FIS experiment execution requires a dedicated IAM Role. If one does not exist, Step 4 of the Skill will auto-generate the creation command. Manual creation reference:
+FIS 实验执行需要专用 IAM Role。如果还没有，Skill 的步骤 4 会自动生成创建命令。手动创建参考：
 
 ```bash
-# Create FIS execution role
+# 创建 FIS 执行角色
 aws iam create-role \
   --role-name FISExperimentRole \
   --assume-role-policy-document '{
@@ -230,70 +230,70 @@ aws iam create-role \
     }]
   }'
 
-# Attach policies (select by experiment type)
-# EC2 experiments
+# 附加权限（按实验类型选择）
+# EC2 实验
 aws iam attach-role-policy --role-name FISExperimentRole \
   --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
 
-# RDS experiments
+# RDS 实验
 aws iam attach-role-policy --role-name FISExperimentRole \
   --policy-arn arn:aws:iam::aws:policy/AmazonRDSFullAccess
 
-# EKS experiments
+# EKS 实验
 aws iam attach-role-policy --role-name FISExperimentRole \
   --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
 
-# Network experiments
+# 网络实验
 aws iam attach-role-policy --role-name FISExperimentRole \
   --policy-arn arn:aws:iam::aws:policy/AmazonVPCFullAccess
 
-# CloudWatch (read alarm state for Stop Conditions)
+# CloudWatch（读取告警状态用于 Stop Conditions）
 aws iam attach-role-policy --role-name FISExperimentRole \
   --policy-arn arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
 ```
 
-> ⚠️ For production environments, use least-privilege policies instead of FullAccess. The above is for quick-start reference only.
+> ⚠️ 生产环境建议使用最小权限策略，而非 FullAccess。上述仅为快速开始参考。
 
 ---
 
-## Verify Configuration
+## 验证配置
 
-After configuration, verify as follows:
+配置完成后验证：
 
 ```bash
-# Verify aws-api-mcp-server
-# Run in Claude Code
+# 验证 aws-api-mcp-server
+# 在 Claude Code 中运行
 > /mcp
-# Should see awslabs-aws-api-mcp-server status: connected
+# 应看到 awslabs-aws-api-mcp-server 状态：connected
 
-# Verify AWS credentials
+# 验证 AWS 凭证
 aws sts get-caller-identity
 
-# Verify FIS permissions
+# 验证 FIS 权限
 aws fis list-experiment-templates
 
-# Verify CloudWatch permissions
+# 验证 CloudWatch 权限
 aws cloudwatch describe-alarms --max-items 1
 
-# Verify EKS (if configured)
+# 验证 EKS（如已配置）
 aws eks list-clusters
 
-# Verify Chaos Mesh (if configured)
+# 验证 Chaos Mesh（如已配置）
 kubectl get crd | grep chaos-mesh
 ```
 
 ---
 
-## Fallback Without MCP
+## 无 MCP 降级
 
-If MCP Servers are not configured or unavailable, the Skill automatically falls back to direct AWS CLI calls:
+如果 MCP Server 未配置或不可用，Skill 自动降级为 AWS CLI 直接调用：
 
-| Operation | MCP Method | CLI Fallback |
+| 操作 | MCP 方式 | CLI 降级 |
 |------|---------|---------|
-| FIS experiments | aws-api-mcp-server | `aws fis create-experiment-template` / `start-experiment` |
-| Metric reading | cloudwatch-mcp-server | `aws cloudwatch get-metric-data` |
-| Alarm management | cloudwatch-mcp-server | `aws cloudwatch put-metric-alarm` |
-| K8s operations | eks-mcp-server | `kubectl` |
+| FIS 实验 | aws-api-mcp-server | `aws fis create-experiment-template` / `start-experiment` |
+| 指标读取 | cloudwatch-mcp-server | `aws cloudwatch get-metric-data` |
+| 告警管理 | cloudwatch-mcp-server | `aws cloudwatch put-metric-alarm` |
+| K8s 操作 | eks-mcp-server | `kubectl` |
 | Chaos Mesh | chaosmesh-mcp | `kubectl apply -f` |
 
-Functionality remains complete after fallback, but accuracy is slightly lower (LLM must construct JSON/YAML itself).
+降级后功能完整，但准确性略低（LLM 需自行构造 JSON/YAML）。

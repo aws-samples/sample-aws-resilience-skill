@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "group": 1,
+    "name_en": "Resilience Requirements",
+    "name_zh": "韧性要求",
+    "question_count": 3
+  },
+  "questions": [
+    {
+      "id": 1,
+      "priority": "P0",
+      "category": "恢复目标",
+      "category_en": "Recovery Objectives",
+      "question_zh": "问题 1：如何定义应用程序的恢复目标？（目标包括但不限于：恢复点目标 (RPO)、恢复时间目标 (RTO)、平均恢复时间 (MTTR)",
+      "question_en": "How do you define recovery objectives for your application? (Including RPO, RTO, MTTR)",
+      "image": "image.png",
+      "why_important": "恢复目标是所有韧性投资决策的基础，直接影响架构设计和资源分配",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定义或未正式记录恢复目标",
+          "description_en": "Recovery objectives not defined or documented"
+        },
+        {
+          "level": 2,
+          "description_zh": "已定义恢复目标，但未定期审查或验证",
+          "description_en": "Recovery objectives defined but not regularly reviewed"
+        },
+        {
+          "level": 3,
+          "description_zh": "已定义明确的恢复目标（RTO<15分钟，RPO接近零），定期测试和验证，并与业务SLA对齐",
+          "description_en": "Clear recovery objectives defined (RTO<15min, near-zero RPO), regularly tested and aligned with business SLAs"
+        }
+      ],
+      "aws_best_practice": "根据业务影响分析确定每个应用程序的 RTO 和 RPO。对于关键任务应用，建议 RTO 15分钟，RPO 接近零。使用 AWS Resilience Hub 自动评估和跟踪恢复目标。",
+      "why_important_en": "Recovery objectives are the foundation for all resilience investment decisions, directly impacting architecture design and resource allocation",
+      "aws_best_practice_en": "Determine RTO and RPO for each application based on Business Impact Analysis. For mission-critical applications, recommend RTO of 15 minutes and near-zero RPO. Use AWS Resilience Hub to automatically assess and track recovery objectives."
+    },
+    {
+      "id": 2,
+      "priority": "P0",
+      "category": "服务级别目标",
+      "category_en": "Service Level Objectives",
+      "question_zh": "问题 2：如何为应用程序定义正常运行时间和延迟的服务级别目标 (SLO)？",
+      "question_en": "How do you define Service Level Objectives (SLOs) for uptime and latency?",
+      "image": "image.png",
+      "why_important": "SLO是衡量服务质量的核心指标，用于错误预算管理和优先级决策",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未定义SLO或仅有模糊的可用性目标",
+          "description_en": "No SLOs defined or only vague availability targets"
+        },
+        {
+          "level": 2,
+          "description_zh": "定义了基本的SLO（如99.9%可用性），但未定期审查或调整",
+          "description_en": "Basic SLOs defined (e.g., 99.9% availability) but not regularly reviewed"
+        },
+        {
+          "level": 3,
+          "description_zh": "定义了详细的SLO（正常运行时间99.99%，延迟<100ms），与RTO/RPO对齐，定期审查并基于实际性能数据调整",
+          "description_en": "Detailed SLOs defined (99.99% uptime, <100ms latency), aligned with RTO/RPO, regularly reviewed based on actual performance"
+        }
+      ],
+      "aws_best_practice": "使用 Google SRE 方法定义 SLI/SLO。关键任务应用建议 99.99% 正常运行时间，P95 延迟 <100ms。使用 CloudWatch 跟踪 SLI，并设置错误预算策略。",
+      "why_important_en": "SLOs are core metrics for measuring service quality, used for error budget management and prioritization decisions",
+      "aws_best_practice_en": "Use Google SRE methodology to define SLIs/SLOs. For mission-critical applications, recommend 99.99% uptime and P95 latency <100ms. Use CloudWatch to track SLIs and implement error budget policies."
+    },
+    {
+      "id": 3,
+      "priority": "P0",
+      "category": "重要性标准文档",
+      "category_en": "Criticality Criteria",
+      "question_zh": "问题 3：如何确定或衡量应用程序的关键程度？",
+      "question_en": "How do you determine or measure application criticality?",
+      "image": "image.png",
+      "why_important": "关键程度决定韧性投资的优先级和资源分配",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未正式评估应用程序关键性",
+          "description_en": "Application criticality not formally assessed"
+        },
+        {
+          "level": 2,
+          "description_zh": "基于主观判断或单一维度（如收入）评估关键性",
+          "description_en": "Criticality assessed based on subjective judgment or single dimension (e.g., revenue)"
+        },
+        {
+          "level": 3,
+          "description_zh": "基于多维度评估关键性（业务影响、财务成本、合规要求、客户影响），有明确的分类标准和文档",
+          "description_en": "Multi-dimensional criticality assessment (business impact, financial cost, compliance, customer impact) with clear classification criteria and documentation"
+        }
+      ],
+      "aws_best_practice": "评估应用程序关键性需考虑：停机时间成本、风险级别、战略重要性、基础设施成本。使用业务影响分析（BIA）方法，将应用分为关键任务、重要和非关键三类。",
+      "why_important_en": "Criticality level determines the priority of resilience investments and resource allocation",
+      "aws_best_practice_en": "Assess application criticality considering: downtime cost, risk level, strategic importance, infrastructure cost. Use Business Impact Analysis (BIA) methodology to classify applications as mission-critical, important, or non-critical."
+    }
+  ]
+}

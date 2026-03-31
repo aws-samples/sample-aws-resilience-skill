@@ -1,0 +1,370 @@
+{
+  "metadata": {
+    "group": 8,
+    "name_en": "Chaos Engineering",
+    "name_zh": "混沌工程",
+    "question_count": 12
+  },
+  "questions": [
+    {
+      "id": 62,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 62：实验负载在多大程度上反映生产流量？",
+      "question_en": "To what extent does experiment load reflect production traffic?",
+      "image": "image.png",
+      "why_important": "真实的负载测试确保实验结果可靠",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "实验负载不代表生产流量",
+          "description_en": "Experiment load not representative of production traffic"
+        },
+        {
+          "level": 2,
+          "description_zh": "使用近似的负载模式，但缺少真实流量特征",
+          "description_en": "Use approximate load patterns but lacking real traffic characteristics"
+        },
+        {
+          "level": 3,
+          "description_zh": "高度真实的负载：从生产流量录制回放、包含真实数据分布和峰值模式",
+          "description_en": "Highly realistic load: replay from production traffic recordings, includes real data distribution and peak patterns"
+        }
+      ],
+      "aws_best_practice": "使用真实流量模式进行测试：1) 使用ALB访问日志分析流量模式；2) 使用工具录制和回放流量（AWS FIS、Gatling）；3) 包含峰值场景；4) 测试数据应代表生产数据分布。在预发布环境进行。",
+      "why_important_en": "Realistic load testing ensures reliable experiment results",
+      "aws_best_practice_en": "Use real traffic patterns for testing: 1) Analyze traffic patterns using ALB access logs; 2) Use tools to record and replay traffic (AWS FIS, Gatling); 3) Include peak scenarios; 4) Test data should represent production data distribution. Conduct in pre-production environments."
+    },
+    {
+      "id": 63,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 63：混沌实验条件有多现实？",
+      "question_en": "How realistic are chaos experiment conditions?",
+      "image": "image.png",
+      "why_important": "现实的实验条件提供可信的韧性验证",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "实验条件简化，不反映真实故障",
+          "description_en": "Simplified experiment conditions, not reflecting real failures"
+        },
+        {
+          "level": 2,
+          "description_zh": "模拟常见故障，但缺少复杂场景或级联故障",
+          "description_en": "Simulate common failures but lacking complex scenarios or cascading failures"
+        },
+        {
+          "level": 3,
+          "description_zh": "高度现实的场景：多点故障、级联故障、部分故障、真实时间约束",
+          "description_en": "Highly realistic scenarios: multi-point failures, cascading failures, partial failures, real-time constraints"
+        }
+      ],
+      "aws_best_practice": "设计现实的混沌实验：1) 基于历史事件；2) 测试多点故障（AZ故障+依赖延迟）；3) 包含部分故障（20%请求失败）；4) 模拟网络分区；5) 测试恢复过程。使用 AWS FIS 执行。",
+      "why_important_en": "Realistic experiment conditions provide credible resilience validation",
+      "aws_best_practice_en": "Design realistic chaos experiments: 1) Based on historical incidents; 2) Test multi-point failures (AZ failure + dependency latency); 3) Include partial failures (20% request failure); 4) Simulate network partitions; 5) Test recovery processes. Execute using AWS FIS."
+    },
+    {
+      "id": 64,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 64：混沌实验在哪个环境中进行？",
+      "question_en": "In what environment are chaos experiments conducted?",
+      "image": "image.png",
+      "why_important": "生产环境测试是验证真实韧性的唯一方法",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "仅在开发或测试环境进行实验",
+          "description_en": "Experiments only in dev or test environments"
+        },
+        {
+          "level": 2,
+          "description_zh": "在预发布环境进行，但与生产有差异",
+          "description_en": "Conducted in staging but differs from production"
+        },
+        {
+          "level": 3,
+          "description_zh": "在生产环境进行受控实验：小规模测试、逐步扩大、完整监控、快速回滚能力",
+          "description_en": "Controlled experiments in production: small-scale tests, gradual expansion, complete monitoring, rapid rollback capability"
+        }
+      ],
+      "aws_best_practice": "生产混沌工程遵循渐进原则：1) 从非关键服务开始；2) 使用流量百分比控制爆炸半径；3) 在低流量时段；4) 准备回滚机制；5) 实时监控影响。使用 AWS FIS 的安全护栏（stop condition）。",
+      "why_important_en": "Production environment testing is the only way to validate real resilience",
+      "aws_best_practice_en": "Production chaos engineering follows a progressive approach: 1) Start with non-critical services; 2) Use traffic percentage to control blast radius; 3) During low-traffic periods; 4) Prepare rollback mechanisms; 5) Monitor impact in real-time. Use AWS FIS safety guardrails (stop conditions)."
+    },
+    {
+      "id": 65,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 65：混沌实验的可重复性如何？",
+      "question_en": "How repeatable are chaos experiments?",
+      "image": "image.png",
+      "why_important": "可重复性确保实验结果可验证",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "实验过程不可重复或依赖手动操作",
+          "description_en": "Experiments not repeatable or relying on manual operations"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的脚本，但需要手动调整参数",
+          "description_en": "Basic scripts exist but require manual parameter adjustments"
+        },
+        {
+          "level": 3,
+          "description_zh": "完全自动化和可重复：参数化实验模板、版本控制、自动化执行、结果对比",
+          "description_en": "Fully automated and repeatable: parameterized experiment templates, version control, automated execution, result comparison"
+        }
+      ],
+      "aws_best_practice": "建立实验库：1) 使用 AWS FIS 模板定义实验；2) 参数化配置（爆炸半径、持续时间）；3) 存储在Git版本控制；4) 自动化执行（定期或CI/CD）；5) 结果存储和对比分析。",
+      "why_important_en": "Repeatability ensures experiment results can be verified",
+      "aws_best_practice_en": "Build an experiment library: 1) Define experiments using AWS FIS templates; 2) Parameterized configuration (blast radius, duration); 3) Store in Git version control; 4) Automated execution (periodic or CI/CD); 5) Result storage and comparative analysis."
+    },
+    {
+      "id": 66,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 66：混沌实验多久进行一次？",
+      "question_en": "How frequently are chaos experiments conducted?",
+      "image": "image.png",
+      "why_important": "定期实验确保韧性不会退化",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "很少或从不进行混沌实验",
+          "description_en": "Rarely or never conduct chaos experiments"
+        },
+        {
+          "level": 2,
+          "description_zh": "不定期进行，通常在重大变更后",
+          "description_en": "Irregularly conducted, usually after major changes"
+        },
+        {
+          "level": 3,
+          "description_zh": "定期进行：每周/每月自动化实验、季度Game Days、重大变更前验证",
+          "description_en": "Regular experiments: weekly/monthly automated tests, quarterly Game Days, validation before major changes"
+        }
+      ],
+      "aws_best_practice": "建立混沌实验节奏：1) 每周：自动化基础实验（单点故障）；2) 每月：复杂场景实验；3) 每季度：全面Game Days；4) 每次重大变更前：回归测试。记录结果并跟踪改进。",
+      "why_important_en": "Regular experiments ensure resilience does not degrade",
+      "aws_best_practice_en": "Establish chaos experiment cadence: 1) Weekly: automated basic experiments (single-point failures); 2) Monthly: complex scenario experiments; 3) Quarterly: comprehensive Game Days; 4) Before each major change: regression testing. Record results and track improvements."
+    },
+    {
+      "id": 67,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 67：如何测试故障隔离边界？",
+      "question_en": "How do you test fault isolation boundaries?",
+      "image": "image.png",
+      "why_important": "故障隔离边界测试验证架构韧性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未测试故障隔离边界",
+          "description_en": "Fault isolation boundaries not tested"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的AZ故障测试，但未测试更广泛的隔离边界",
+          "description_en": "Basic AZ failure tests but not testing broader isolation boundaries"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的隔离测试：AZ故障、Region故障、控制平面与数据平面、单元隔离（如适用）",
+          "description_en": "Comprehensive isolation testing: AZ failure, Region failure, control/data plane, cell isolation (if applicable)"
+        }
+      ],
+      "aws_best_practice": "测试多层故障隔离：1) AZ级：使用 AWS FIS 注入AZ故障；2) Region级：测试跨区域故障转移；3) 服务级：隔离单个服务故障；4) Cell级：测试单元化架构隔离。验证影响范围符合预期。",
+      "why_important_en": "Fault isolation boundary testing validates architecture resilience",
+      "aws_best_practice_en": "Test multi-layer fault isolation: 1) AZ-level: inject AZ failures using AWS FIS; 2) Region-level: test cross-region failover; 3) Service-level: isolate single service failures; 4) Cell-level: test cell-based architecture isolation. Verify impact scope meets expectations."
+    },
+    {
+      "id": 68,
+      "priority": "P2",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 68：正在进行哪些类型的测试？",
+      "question_en": "What types of testing are being conducted?",
+      "image": "image.png",
+      "why_important": "多样化的测试覆盖不同故障场景",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "测试类型单一，仅覆盖基本故障",
+          "description_en": "Single test type, only covering basic failures"
+        },
+        {
+          "level": 2,
+          "description_zh": "有多种测试类型，但覆盖不全面",
+          "description_en": "Multiple test types but coverage not comprehensive"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的测试套件：资源故障、网络故障、性能降级、数据损坏、安全事件、级联故障",
+          "description_en": "Comprehensive test suite: resource failures, network failures, performance degradation, data corruption, security events, cascading failures"
+        }
+      ],
+      "aws_best_practice": "建立测试矩阵覆盖：1) 资源故障（EC2终止、磁盘满）；2) 网络问题（延迟、丢包、分区）；3) 依赖故障（API错误、超时）；4) 性能降级（CPU节流、IO限制）；5) 安全事件（凭证泄露）。使用 AWS FIS 实现。",
+      "why_important_en": "Diverse testing covers different failure scenarios",
+      "aws_best_practice_en": "Build a test matrix covering: 1) Resource failures (EC2 termination, disk full); 2) Network issues (latency, packet loss, partitions); 3) Dependency failures (API errors, timeouts); 4) Performance degradation (CPU throttling, IO limits); 5) Security events (credential leaks). Implement using AWS FIS."
+    },
+    {
+      "id": 69,
+      "priority": "P3",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 69：是否保留了实验目录？",
+      "question_en": "Is an experiment catalog maintained?",
+      "image": "image.png",
+      "why_important": "实验目录促进知识共享和重复使用",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未保留实验记录或散落各处",
+          "description_en": "No experiment records kept or scattered everywhere"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的实验文档，但不集中或难以查找",
+          "description_en": "Basic experiment documentation exists but not centralized or hard to find"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的实验库：集中存储、分类标签、搜索功能、结果对比、最佳实践",
+          "description_en": "Complete experiment catalog: centralized storage, categorized tags, search capability, result comparison, best practices"
+        }
+      ],
+      "aws_best_practice": "建立混沌工程知识库：1) 使用Git存储FIS实验模板；2) Wiki文档化实验设计和结果；3) 标签分类（故障类型、服务、严重性）；4) 记录学到的经验教训；5) 定期分享会展示结果。使用 AWS FIS 实验模板库。",
+      "why_important_en": "Experiment catalogs promote knowledge sharing and reuse",
+      "aws_best_practice_en": "Build a chaos engineering knowledge base: 1) Store FIS experiment templates in Git; 2) Document experiment designs and results in wiki; 3) Tag categories (failure type, service, severity); 4) Record lessons learned; 5) Regular sharing sessions to present results. Use AWS FIS experiment template library."
+    },
+    {
+      "id": 70,
+      "priority": "P3",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 70：为应用团队提供了哪些混沌工程指导？",
+      "question_en": "What chaos engineering guidance is provided to application teams?",
+      "image": "image.png",
+      "why_important": "指导和培训提高混沌工程的采用率和质量",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无混沌工程指导，团队自行探索",
+          "description_en": "No chaos engineering guidance, teams explore on their own"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本文档，但缺少培训或实践支持",
+          "description_en": "Basic documentation exists but lacking training or hands-on support"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的支持体系：培训课程、实践工作坊、卓越中心（CoE）、导师计划、工具平台",
+          "description_en": "Comprehensive support system: training courses, hands-on workshops, Center of Excellence (CoE), mentor program, tooling platform"
+        }
+      ],
+      "aws_best_practice": "建立混沌工程能力：1) 创建培训材料（原则、工具、案例）；2) 组织动手实验室（使用AWS FIS）；3) 建立CoE提供咨询；4) 提供预定义实验模板；5) 分享成功案例。从试点团队开始，逐步扩展。",
+      "why_important_en": "Guidance and training improve chaos engineering adoption rates and quality",
+      "aws_best_practice_en": "Build chaos engineering capabilities: 1) Create training materials (principles, tools, case studies); 2) Organize hands-on labs (using AWS FIS); 3) Establish CoE for consulting; 4) Provide pre-defined experiment templates; 5) Share success stories. Start with pilot teams and gradually expand."
+    },
+    {
+      "id": 71,
+      "priority": "P3",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 71：如何在实验期间实施监测？",
+      "question_en": "How is monitoring implemented during experiments?",
+      "image": "image.png",
+      "why_important": "实验期间的监测确保安全并收集数据",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "实验期间缺少监测或仅被动观察",
+          "description_en": "Lacking monitoring during experiments or only passive observation"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本监测，但缺少实时告警或自动化停止",
+          "description_en": "Basic monitoring exists but lacking real-time alerts or automated stops"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的实验监测：实时仪表板、自动告警、停止条件、影响度量、性能基线对比",
+          "description_en": "Comprehensive experiment monitoring: real-time dashboards, automatic alerts, stop conditions, impact metrics, performance baseline comparison"
+        }
+      ],
+      "aws_best_practice": "实施安全护栏：1) 使用AWS FIS stop conditions（CloudWatch告警触发）；2) 实时监控关键指标（可用性、延迟、错误率）；3) 设置爆炸半径限制；4) 准备回滚机制；5) 记录所有观察结果。在专用仪表板实时监控实验影响。",
+      "why_important_en": "Monitoring during experiments ensures safety and data collection",
+      "aws_best_practice_en": "Implement safety guardrails: 1) Use AWS FIS stop conditions (CloudWatch alarm triggered); 2) Monitor key metrics in real-time (availability, latency, error rate); 3) Set blast radius limits; 4) Prepare rollback mechanisms; 5) Record all observations. Monitor experiment impact in real-time on dedicated dashboards."
+    },
+    {
+      "id": 72,
+      "priority": "P3",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 72：实验如何集成到SDLC中？",
+      "question_en": "How are experiments integrated into the SDLC?",
+      "image": "image.png",
+      "why_important": "将实验集成到SDLC确保持续韧性验证",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "混沌实验与SDLC分离，手动触发",
+          "description_en": "Chaos experiments separate from SDLC, manually triggered"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分集成，在特定阶段手动执行",
+          "description_en": "Partially integrated, manually executed at specific phases"
+        },
+        {
+          "level": 3,
+          "description_zh": "深度集成：CI/CD自动触发、部署前验证、持续测试、结果门控",
+          "description_en": "Deep integration: CI/CD auto-trigger, pre-deployment validation, continuous testing, result gating"
+        }
+      ],
+      "aws_best_practice": "在SDLC中集成混沌工程：1) 在预发布环境运行自动化实验；2) 重大变更前运行回归测试；3) 使用CodePipeline集成FIS实验；4) 失败则阻止生产部署；5) 定期在生产运行非破坏性实验。shift-left混沌工程。",
+      "why_important_en": "Integrating experiments into the SDLC ensures continuous resilience validation",
+      "aws_best_practice_en": "Integrate chaos engineering into SDLC: 1) Run automated experiments in pre-production; 2) Run regression tests before major changes; 3) Integrate FIS experiments with CodePipeline; 4) Failures block production deployment; 5) Regularly run non-destructive experiments in production. Shift-left chaos engineering."
+    },
+    {
+      "id": 73,
+      "priority": "P3",
+      "category": "混沌工程",
+      "category_en": "Chaos Engineering",
+      "question_zh": "问题 73：组织如何从个别团队实验中学习？",
+      "question_en": "How does the organization learn from individual team experiments?",
+      "image": "image.png",
+      "why_important": "组织级学习放大单个实验的价值",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "实验结果仅限于执行团队",
+          "description_en": "Experiment results limited to executing team"
+        },
+        {
+          "level": 2,
+          "description_zh": "有分享机制，但不系统或参与度低",
+          "description_en": "Sharing mechanism exists but not systematic or low participation"
+        },
+        {
+          "level": 3,
+          "description_zh": "组织级学习：定期分享会、知识库、跨团队复制、公司级Game Days、最佳实践传播",
+          "description_en": "Organization-wide learning: regular sharing sessions, knowledge base, cross-team replication, company-wide Game Days, best practice propagation"
+        }
+      ],
+      "aws_best_practice": "建立学习文化：1) 月度混沌工程分享会；2) 内部wiki记录所有实验；3) 鼓励团队复制成功实验；4) 组织公司级Game Days；5) 建立混沌工程社区（Slack channel）；6) 表彰最佳实践。无责备文化是关键。",
+      "why_important_en": "Organization-level learning amplifies the value of individual experiments",
+      "aws_best_practice_en": "Build learning culture: 1) Monthly chaos engineering sharing sessions; 2) Internal wiki documenting all experiments; 3) Encourage teams to replicate successful experiments; 4) Organize company-wide Game Days; 5) Establish chaos engineering community (Slack channel); 6) Recognize best practices. Blameless culture is key."
+    }
+  ]
+}

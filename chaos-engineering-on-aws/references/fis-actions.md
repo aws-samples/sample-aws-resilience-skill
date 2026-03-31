@@ -1,89 +1,89 @@
-# FIS Actions 参考（按服务分类）
+# FIS Actions Reference (by Service)
 
-## FIS 通用
-| Action | 说明 |
+## FIS General
+| Action | Description |
 |--------|------|
-| `aws:fis:inject-api-internal-error` | 向目标 IAM Role 的 API 请求注入 500 错误 |
-| `aws:fis:inject-api-throttle-error` | 注入限流错误 |
-| `aws:fis:inject-api-unavailable-error` | 注入服务不可用错误 |
-| `aws:fis:wait` | 等待指定时间（编排用） |
+| `aws:fis:inject-api-internal-error` | Inject 500 errors into API requests for the target IAM Role |
+| `aws:fis:inject-api-throttle-error` | Inject throttling errors |
+| `aws:fis:inject-api-unavailable-error` | Inject service unavailable errors |
+| `aws:fis:wait` | Wait for a specified duration (for orchestration) |
 
 ## EC2
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:ec2:terminate-instances` | 终止实例（SPOF 验证） |
-| `aws:ec2:stop-instances` | 停止实例（可恢复） |
-| `aws:ec2:reboot-instances` | 重启实例 |
-| `aws:ec2:send-spot-instance-interruptions` | 模拟 Spot 中断 |
-| `aws:ec2:asg-insufficient-instance-capacity-error` | ASG 容量不足 |
-| `aws:ec2:disrupt-network-connectivity` | EC2 网络中断（NACL） |
+| `aws:ec2:terminate-instances` | Terminate instances (SPOF validation) |
+| `aws:ec2:stop-instances` | Stop instances (recoverable) |
+| `aws:ec2:reboot-instances` | Reboot instances |
+| `aws:ec2:send-spot-instance-interruptions` | Simulate Spot interruptions |
+| `aws:ec2:asg-insufficient-instance-capacity-error` | ASG insufficient capacity |
+| `aws:ec2:disrupt-network-connectivity` | EC2 network disruption (NACL) |
 
 ## EBS
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:ebs:pause-volume-io` | 暂停 EBS 卷 IO |
+| `aws:ebs:pause-volume-io` | Pause EBS volume IO |
 
 ## EKS
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:eks:terminate-nodegroup-instances` | 终止节点组实例（**推荐用于节点级故障**） |
-| `aws:eks:pod-*` 系列 | Pod 故障注入 — ⚠️ **不推荐**，初始化慢（>2min），需额外 SA/RBAC 配置，Pod 级故障优先用 Chaos Mesh |
+| `aws:eks:terminate-nodegroup-instances` | Terminate node group instances (**recommended for node-level faults**) |
+| `aws:eks:pod-*` series | Pod fault injection — ⚠️ **Not recommended**: slow initialization (>2min), requires additional SA/RBAC config. Prefer Chaos Mesh for Pod-level faults |
 
 ## ECS
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:ecs:drain-container-instances` | 排空容器实例 |
-| `aws:ecs:stop-task` | 停止 ECS 任务 |
-| `aws:ecs:task` 系列 | ECS 任务级故障注入 |
+| `aws:ecs:drain-container-instances` | Drain container instances |
+| `aws:ecs:stop-task` | Stop ECS tasks |
+| `aws:ecs:task` series | ECS task-level fault injection |
 
 ## RDS
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:rds:failover-db-cluster` | Aurora/RDS 集群故障转移 |
-| `aws:rds:reboot-db-instances` | 重启 RDS 实例 |
+| `aws:rds:failover-db-cluster` | Aurora/RDS cluster failover |
+| `aws:rds:reboot-db-instances` | Reboot RDS instances |
 
 ## DynamoDB
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:dynamodb:global-table-pause-replication` | 暂停全局表复制 |
+| `aws:dynamodb:global-table-pause-replication` | Pause global table replication |
 
 ## ElastiCache / MemoryDB
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:elasticache:interrupt-cluster-az-power` | ElastiCache AZ 断电 |
-| `aws:memorydb:interrupt-cluster-az-power` | MemoryDB AZ 断电 |
+| `aws:elasticache:interrupt-cluster-az-power` | ElastiCache AZ power interruption |
+| `aws:memorydb:interrupt-cluster-az-power` | MemoryDB AZ power interruption |
 
 ## Lambda
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:lambda:invocation-add-delay` | Lambda 调用注入延迟 |
-| `aws:lambda:invocation-error` | Lambda 调用注入错误 |
-| `aws:lambda:invocation-http-integration-response` | HTTP 集成响应注入 |
+| `aws:lambda:invocation-add-delay` | Inject delay into Lambda invocations |
+| `aws:lambda:invocation-error` | Inject errors into Lambda invocations |
+| `aws:lambda:invocation-http-integration-response` | HTTP integration response injection |
 
 ## S3
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:s3:bucket-pause-replication` | 暂停跨区域复制 |
+| `aws:s3:bucket-pause-replication` | Pause cross-region replication |
 
 ## Kinesis
-| Action | 说明 |
+| Action | Description |
 |--------|------|
-| `aws:kinesis:add-put-record-throttle` | 写入限流 |
+| `aws:kinesis:add-put-record-throttle` | Write throttling |
 
-## 网络
-| Action | 说明 |
+## Network
+| Action | Description |
 |--------|------|
-| `aws:network:disrupt-connectivity` | 子网/SG 级别网络中断（AZ 隔离） |
-| `aws:network:route-table-disrupt-cross-region-connectivity` | 跨区域路由中断 |
-| `aws:network:transit-gateway-disrupt-cross-region-connectivity` | TGW 跨区域中断 |
+| `aws:network:disrupt-connectivity` | Subnet/SG-level network disruption (AZ isolation) |
+| `aws:network:route-table-disrupt-cross-region-connectivity` | Cross-region route disruption |
+| `aws:network:transit-gateway-disrupt-cross-region-connectivity` | TGW cross-region disruption |
 
-## 其他
-| Action | 说明 |
+## Others
+| Action | Description |
 |--------|------|
-| `aws:arc:start-zonal-autoshift` | 触发 AZ 自动流量迁移 |
-| `aws:cloudwatch:assert-alarm-state` | 断言告警状态（编排条件检查） |
-| `aws:ssm:send-command` | 实例上执行 SSM 文档 |
-| `aws:ssm:start-automation-execution` | 运行 SSM Automation |
-| `aws:directconnect:disrupt-connectivity` | Direct Connect 中断 |
+| `aws:arc:start-zonal-autoshift` | Trigger AZ automatic traffic shift |
+| `aws:cloudwatch:assert-alarm-state` | Assert alarm state (orchestration condition check) |
+| `aws:ssm:send-command` | Execute SSM document on instances |
+| `aws:ssm:start-automation-execution` | Run SSM Automation |
+| `aws:directconnect:disrupt-connectivity` | Direct Connect disruption |
 
-> 完整列表：[AWS FIS Actions Reference](https://docs.aws.amazon.com/fis/latest/userguide/fis-actions-reference.html)
+> Full list: [AWS FIS Actions Reference](https://docs.aws.amazon.com/fis/latest/userguide/fis-actions-reference.html)

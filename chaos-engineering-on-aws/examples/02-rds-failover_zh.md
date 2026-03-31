@@ -1,20 +1,20 @@
-# Example 2: RDS Aurora Failover — Database HA Validation
+# 示例 2: RDS Aurora 故障转移 — 数据库 HA 验证
 
-**Architecture pattern**: Aurora Cluster (Writer + Reader)
-**FIS Action**: `aws:rds:failover-db-cluster`
-**Validation target**: Reader promoted to Writer, application connections auto-recover, zero data loss
+**架构模式**：Aurora Cluster（Writer + Reader）
+**FIS Action**：`aws:rds:failover-db-cluster`
+**验证点**：Reader 提升为 Writer、应用连接自动恢复、零数据丢失
 
 ---
 
-## Steady-State Hypothesis
+## 稳态假设
 
-After triggering Aurora cluster failover:
-- Database write recovery time <= 30s
-- Application request success rate >= 99% (brief drop allowed during failover)
-- Data integrity 100% after failover
-- Application connection pool auto-reconnects without manual intervention
+当触发 Aurora 集群故障转移后：
+- 数据库写入恢复时间 <= 30s
+- 应用请求成功率 >= 99%（故障转移期间允许短暂下降）
+- 故障转移后数据完整性 100%
+- 应用连接池自动重连，无需手动干预
 
-## Stop Conditions
+## 停止条件
 
 ```json
 {
@@ -27,7 +27,7 @@ After triggering Aurora cluster failover:
 }
 ```
 
-Corresponding Alarm (alert if connections drop to zero for over 5 minutes):
+对应 Alarm（连接数归零超过 5 分钟则告警）：
 ```bash
 aws cloudwatch put-metric-alarm \
   --alarm-name "chaos-stop-db-connections" \
@@ -42,7 +42,7 @@ aws cloudwatch put-metric-alarm \
   --alarm-actions "arn:aws:sns:{region}:{account}:chaos-alerts"
 ```
 
-## FIS Experiment Template
+## FIS 实验模板
 
 ```json
 {
@@ -79,38 +79,38 @@ aws cloudwatch put-metric-alarm \
 }
 ```
 
-## Execution Commands
+## 执行命令
 
 ```bash
-# Confirm current Writer
+# 确认当前 Writer
 aws rds describe-db-clusters --db-cluster-identifier {cluster-id} \
   --query 'DBClusters[0].DBClusterMembers[?IsClusterWriter==`true`].DBInstanceIdentifier'
 
-# Create and start experiment
+# 创建并启动实验
 aws fis create-experiment-template --cli-input-json file://examples/rds-failover-template.json
 aws fis start-experiment --experiment-template-id <template-id>
 
-# Verify Writer has switched
+# 验证 Writer 已切换
 aws rds describe-db-clusters --db-cluster-identifier {cluster-id} \
   --query 'DBClusters[0].DBClusterMembers[?IsClusterWriter==`true`].DBInstanceIdentifier'
 ```
 
-## Observation Metrics
+## 观测指标
 
-| Metric | Namespace | MetricName | Description |
+| 指标 | Namespace | MetricName | 说明 |
 |------|-----------|------------|------|
-| Connection count | AWS/RDS | DatabaseConnections | Drops to zero during failover |
-| Write latency | AWS/RDS | CommitLatency | Should return to normal after failover |
-| Replica lag | AWS/RDS | AuroraReplicaLag | New Writer sync status |
-| Application error rate | Application layer | 5xx / connection refused | Validate connection pool reconnect |
+| 连接数 | AWS/RDS | DatabaseConnections | 故障转移期间会归零 |
+| 写入延迟 | AWS/RDS | CommitLatency | 故障转移后应恢复正常 |
+| 副本延迟 | AWS/RDS | AuroraReplicaLag | 新 Writer 同步状态 |
+| 应用错误率 | 应用层 | 5xx / connection refused | 验证连接池重连 |
 
-## Expected Results
+## 预期结果
 
-| Phase | Time | Expected |
+| 阶段 | 时间 | 预期 |
 |------|------|------|
-| Injection | T+0s | Failover triggered |
-| Impact | T+5-15s | Database connections interrupted, writes fail |
-| Switchover | T+15-30s | Reader promoted to Writer |
-| Recovery | T+20-35s | Application connection pool reconnects, writes resume |
+| 注入 | T+0s | 触发故障转移 |
+| 影响 | T+5-15s | 数据库连接中断，写入失败 |
+| 切换 | T+15-30s | Reader 提升为 Writer |
+| 恢复 | T+20-35s | 连接池重连，写入恢复 |
 
-**If failed**: Common causes — application not using Aurora cluster endpoint (using instance endpoint instead), connection pool lacks retry logic, DNS TTL too long. Check connection string and retry configuration.
+**如果失败**：常见原因 — 应用未使用 Aurora 集群端点（使用了实例端点）、连接池无重试逻辑、DNS TTL 过长。检查连接字符串和重试配置。

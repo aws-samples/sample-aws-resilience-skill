@@ -1,20 +1,20 @@
-# 示例 4: AZ 网络隔离 — 多 AZ 容错验证
+# Example 4: AZ Network Isolation — Multi-AZ Fault Tolerance Validation
 
-**架构模式**：多 AZ 部署（ALB + EC2/EKS + RDS Multi-AZ）
-**FIS Action**：`aws:network:disrupt-connectivity`
-**验证点**：单 AZ 网络中断后，流量自动切到健康 AZ，服务持续可用
+**Architecture pattern**: Multi-AZ deployment (ALB + EC2/EKS + RDS Multi-AZ)
+**FIS Action**: `aws:network:disrupt-connectivity`
+**Validation target**: After single AZ network disruption, traffic automatically shifts to healthy AZ, service remains available
 
 ---
 
-## 稳态假设
+## Steady-State Hypothesis
 
-当隔离 1 个 AZ 的网络后：
-- ALB 请求成功率 >= 99%（允许切换期间短暂下降）
-- P99 延迟 <= 1000ms（单 AZ 承载全量可能略升）
-- 恢复时间 <= 120s
-- 数据库 Multi-AZ 故障转移成功（如 Primary 在被隔离 AZ）
+After isolating the network of 1 AZ:
+- ALB request success rate >= 99% (brief drop allowed during switchover)
+- P99 latency <= 1000ms (may increase slightly with single AZ bearing full load)
+- Recovery time <= 120s
+- Database Multi-AZ failover succeeds (if Primary is in the isolated AZ)
 
-## 停止条件
+## Stop Conditions
 
 ```json
 {
@@ -27,7 +27,7 @@
 }
 ```
 
-对应 Alarm：
+Corresponding Alarm:
 ```bash
 aws cloudwatch put-metric-alarm \
   --alarm-name "chaos-stop-availability" \
@@ -41,7 +41,7 @@ aws cloudwatch put-metric-alarm \
   --alarm-actions "arn:aws:sns:{region}:{account}:chaos-alerts"
 ```
 
-## FIS 实验模板
+## FIS Experiment Template
 
 ```json
 {
@@ -82,55 +82,55 @@ aws cloudwatch put-metric-alarm \
 }
 ```
 
-## 执行命令
+## Execution Commands
 
 ```bash
-# 确认目标 AZ 的子网
+# Confirm target AZ subnets
 aws ec2 describe-subnets \
   --filters "Name=availability-zone,Values={region}a" \
   --query 'Subnets[].{Id:SubnetId,AZ:AvailabilityZone,VPC:VpcId}'
 
-# 确认各 AZ 实例分布
+# Confirm instance distribution across AZs
 aws ec2 describe-instances \
   --filters "Name=tag:Environment,Values=production" \
   --query 'Reservations[].Instances[].{Id:InstanceId,AZ:Placement.AvailabilityZone,State:State.Name}'
 
-# 创建并启动实验
+# Create and start experiment
 aws fis create-experiment-template --cli-input-json file://examples/az-network-disrupt-template.json
 aws fis start-experiment --experiment-template-id <template-id>
 ```
 
-## 观测指标
+## Observation Metrics
 
-| 指标 | Namespace | MetricName | 说明 |
+| Metric | Namespace | MetricName | Description |
 |------|-----------|------------|------|
-| ALB 5xx | AWS/ApplicationELB | HTTPCode_ELB_5XX_Count | AZ 切换期间的错误 |
-| 健康主机数 | AWS/ApplicationELB | HealthyHostCount | 按 AZ 维度观察 |
-| 目标响应时间 | AWS/ApplicationELB | TargetResponseTime | 单 AZ 负载增加后的延迟 |
-| RDS 连接数 | AWS/RDS | DatabaseConnections | 如触发 DB 故障转移 |
-| AZ 间流量 | VPC Flow Logs | — | 验证流量切换 |
+| ALB 5xx | AWS/ApplicationELB | HTTPCode_ELB_5XX_Count | Errors during AZ switchover |
+| Healthy host count | AWS/ApplicationELB | HealthyHostCount | Observe by AZ dimension |
+| Target response time | AWS/ApplicationELB | TargetResponseTime | Latency after single AZ load increase |
+| RDS connection count | AWS/RDS | DatabaseConnections | If DB failover is triggered |
+| Inter-AZ traffic | VPC Flow Logs | — | Verify traffic switchover |
 
-## 预期结果
+## Expected Results
 
-| 阶段 | 时间 | 预期 |
+| Phase | Time | Expected |
 |------|------|------|
-| 注入 | T+0s | 目标 AZ 子网网络中断 |
-| 检测 | T+10-30s | ALB 检测到 AZ-a 目标不健康 |
-| 切换 | T+30-60s | ALB 将流量路由到 AZ-b/AZ-c |
-| 稳定 | T+60-120s | 单 AZ（或双 AZ）承载全量流量 |
-| 恢复 | T+5min | 网络恢复，AZ-a 实例重新加入 |
+| Injection | T+0s | Target AZ subnet network disrupted |
+| Detection | T+10-30s | ALB detects AZ-a targets unhealthy |
+| Switchover | T+30-60s | ALB routes traffic to AZ-b/AZ-c |
+| Stabilization | T+60-120s | Single AZ (or dual AZ) handles full traffic |
+| Recovery | T+5min | Network restored, AZ-a instances rejoin |
 
-**如果失败**：常见原因：
-- 实例全部部署在同一 AZ（无冗余）
-- ALB 跨 AZ 健康检查间隔过长
-- RDS 未开启 Multi-AZ
-- 有状态服务依赖本地存储（EBS 不跨 AZ）
-- Session sticky 导致切换后用户丢失会话
+**If failed**: Common causes:
+- All instances deployed in the same AZ (no redundancy)
+- ALB cross-AZ health check interval too long
+- RDS Multi-AZ not enabled
+- Stateful services depend on local storage (EBS does not span AZs)
+- Session stickiness causes session loss after switchover
 
-## 注意事项
+## Caution
 
-⚠️ **这是爆炸半径最大的实验**。建议：
-1. 先在 Staging 验证
-2. 确认每个 AZ 都有足够容量独立承载全量流量
-3. 选择业务低峰时段
-4. 确保 On-call 团队就位
+⚠️ **This is the experiment with the largest blast radius.** Recommendations:
+1. Validate in Staging first
+2. Confirm each AZ has sufficient capacity to independently handle full traffic
+3. Choose a low-traffic time window
+4. Ensure On-call team is in position

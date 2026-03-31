@@ -1,99 +1,99 @@
-# 报告模板
+# Report Templates
 
-## 单次实验报告
+## Single Experiment Report
 
 ```markdown
-# 混沌工程实验报告
+# Chaos Engineering Experiment Report
 
-## 实验概况
-- 实验名称：{name}
-- 风险 ID：{risk_id}（来自 Assessment 2.4）
-- 执行时间：{timestamp}
-- 实验环境：{env}
-- 结果：{PASSED ✅ / FAILED ❌ / ABORTED ⚠️}
+## Experiment Overview
+- Experiment name: {name}
+- Risk ID: {risk_id} (from Assessment 2.4)
+- Execution time: {timestamp}
+- Environment: {env}
+- Result: {PASSED ✅ / FAILED ❌ / ABORTED ⚠️}
 
-## 输入来源
-- Assessment 报告：{文件名}
-- 风险描述：{描述}
-- Assessment 建议注入方式：{建议}
-- 实际使用注入方式：{实际}
+## Input Source
+- Assessment report: {filename}
+- Risk description: {description}
+- Assessment suggested injection method: {suggestion}
+- Actual injection method: {actual}
 
-## 稳态假设 vs 实际表现
+## Steady-State Hypothesis vs. Actual Performance
 
-| 指标 | 基线值 | 假设阈值 | 实验期间值 | 恢复后值 | 判定 |
+| Metric | Baseline | Hypothesis Threshold | During Experiment | After Recovery | Verdict |
 |------|--------|---------|-----------|---------|------|
-| 成功率 | 99.98% | >= 99.5% | {值} | {值} | ✅/❌ |
-| P99 延迟 | 120ms | <= 500ms | {值} | {值} | ✅/❌ |
-| 恢复时间 | N/A | <= {RTO}s | {值} | N/A | ✅/❌ |
+| Success rate | 99.98% | >= 99.5% | {value} | {value} | ✅/❌ |
+| P99 latency | 120ms | <= 500ms | {value} | {value} | ✅/❌ |
+| Recovery time | N/A | <= {RTO}s | {value} | N/A | ✅/❌ |
 
-## 时间线
-- T+0s: 故障注入开始
-- T+{X}s: 检测到影响
-- T+{Y}s: 恢复开始
-- T+{Z}s: 服务完全恢复
+## Timeline
+- T+0s: Fault injection started
+- T+{X}s: Impact detected
+- T+{Y}s: Recovery started
+- T+{Z}s: Service fully recovered
 
-## MTTR 分阶段分析
+## MTTR Phased Analysis
 
-| 阶段 | 耗时 | 说明 | 改进方向 |
+| Phase | Duration | Description | Improvement Direction |
 |------|------|------|---------|
-| Detection（故障→告警） | {X}s | {描述} | {建议} |
-| Triage（告警→定位） | {X}s | {描述} | {建议} |
-| Response（定位→修复） | {X}s | {描述} | {建议} |
-| Recovery（修复→恢复） | {X}s | {描述} | {建议} |
-| **总 MTTR** | {X}s | | |
+| Detection (fault → alarm) | {X}s | {description} | {suggestion} |
+| Triage (alarm → root cause) | {X}s | {description} | {suggestion} |
+| Response (root cause → fix) | {X}s | {description} | {suggestion} |
+| Recovery (fix → restored) | {X}s | {description} | {suggestion} |
+| **Total MTTR** | {X}s | | |
 
-## 关键发现
+## Key Findings
 1. ...
 
-## 改进建议
+## Improvement Recommendations
 1. **[P0]** ...
 2. **[P1]** ...
 
-## 韧性评分更新
+## Resilience Score Update
 
-| 维度 | 实验前（2.7） | 实验后 | 变化 |
+| Dimension | Before Experiment (2.7) | After Experiment | Change |
 |------|-------------|--------|------|
-| 冗余设计 | ⭐ X/5 | ⭐ X/5 | — |
+| Redundancy Design | ⭐ X/5 | ⭐ X/5 | — |
 | ... | | | |
 
-## 新发现风险
+## Newly Discovered Risks
 
-| 风险 ID | 描述 | 严重度 | 建议 |
+| Risk ID | Description | Severity | Recommendation |
 |---------|------|--------|------|
-| R-NEW-001 | ... | 🟠 高 | ... |
+| R-NEW-001 | ... | 🟠 High | ... |
 ```
 
-## 汇总报告
+## Summary Report
 
 ```markdown
-# 混沌工程实验汇总报告
+# Chaos Engineering Summary Report
 
-## 总览
-- 项目：{名称}
-- 架构模式：{模式}
-- 实验周期：{range}
-- 实验总数：{N} | 通过：{P} | 失败：{F} | 中止：{A}
+## Overview
+- Project: {name}
+- Architecture pattern: {pattern}
+- Experiment period: {range}
+- Total experiments: {N} | Passed: {P} | Failed: {F} | Aborted: {A}
 
-## 韧性成熟度变化
-- 实验前：{score}/5.0（Assessment 评估）
-- 实验后：{score}/5.0（实验验证）
+## Resilience Maturity Change
+- Before experiments: {score}/5.0 (Assessment evaluation)
+- After experiments: {score}/5.0 (Experiment validation)
 
-## 风险验证状态
+## Risk Validation Status
 
-| 风险 ID | 描述 | 严重度 | 结果 | 验证状态 | 改进优先级 |
+| Risk ID | Description | Severity | Result | Validation Status | Improvement Priority |
 |---------|------|--------|------|---------|-----------|
-| R-XXX | ... | 🔴 | FAILED | 风险确认 ⚠️ | P0 |
-| R-YYY | ... | 🔴 | PASSED | 影响可控 ✅ | P2（降级） |
+| R-XXX | ... | 🔴 | FAILED | Risk confirmed ⚠️ | P0 |
+| R-YYY | ... | 🔴 | PASSED | Impact manageable ✅ | P2 (downgraded) |
 
-## 改进路线图
+## Improvement Roadmap
 1. ...
 ```
 
-## HTML 报告
+## HTML Report
 
-HTML 版本基于 Markdown 内容生成，额外包含：
-- 内联 CSS（无外部依赖，单文件可离线打开）
-- 颜色编码：PASSED=绿色、FAILED=红色、ABORTED=橙色
-- 指标对比可视化（CSS bar chart 或内嵌 SVG）
-- 实验时间线图
-- 响应式布局
+The HTML version is generated from Markdown content with additional features:
+- Inline CSS (no external dependencies, single file works offline)
+- Color coding: PASSED=green, FAILED=red, ABORTED=orange
+- Metric comparison visualization (CSS bar chart or embedded SVG)
+- Experiment timeline diagram
+- Responsive layout

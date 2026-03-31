@@ -1,268 +1,268 @@
-[English](README_EN.md) | **中文**
+**English** | [中文](README_zh.md)
 
 ---
 
 # RMA Assessment Assistant
 
-智能RMA（Reliability, Maintainability, Availability）韧性评估助手
+An intelligent RMA (Reliability, Maintainability, Availability) resilience assessment assistant.
 
-## 🚀 AI辅助效率提升
+## 🚀 AI-Assisted Efficiency Gains
 
-**传统RMA方式** vs **AI辅助方式**：
+**Traditional RMA approach** vs **AI-assisted approach**:
 
-| 对比项 | 传统方式 | AI辅助方式 | 效率提升 |
-|-------|---------|-----------|---------|
-| **评估时间** | 2.5-3小时 | 20-60分钟 | **节省75-85%** |
-| **交互次数** | 80+次单独问答 | 15-20次批量交互 | **减少75%** |
-| **自动分析** | ❌ 手动填写 | ✅ 自动分析文档/代码 | **自动回答60-70%问题** |
-| **智能推断** | ❌ 不支持 | ✅ 上下文关联推断 | **减少重复询问** |
-| **报告生成** | ⏱️ 1小时人工整理 | ⚡ 即时生成 | **节省100%** |
-| **可视化** | ⚠️ 基础图表 | ✅ 雷达图+热力图 | **增强洞察** |
+| Comparison | Traditional | AI-Assisted | Efficiency Gain |
+|-----------|-------------|-------------|-----------------|
+| **Assessment Time** | 2.5–3 hours | 20–60 minutes | **75–85% saved** |
+| **Interactions** | 80+ individual Q&As | 15–20 batch interactions | **75% reduction** |
+| **Auto Analysis** | ❌ Manual entry | ✅ Auto-analyze docs/code | **Auto-answers 60–70% of questions** |
+| **Smart Inference** | ❌ Not supported | ✅ Context-based inference | **Fewer repeated questions** |
+| **Report Generation** | ⏱️ 1 hour manual work | ⚡ Instant generation | **100% saved** |
+| **Visualization** | ⚠️ Basic charts | ✅ Radar + heatmap | **Enhanced insights** |
 
-## 功能特点
+## Features
 
-- ⚡ **批量问答**：80个问题压缩到15-20次交互，大幅减少用户负担
-- 🤖 **智能分析**：自动读取架构文档和IaC代码，自动回答60-70%问题
-- 🧠 **上下文推断**：基于已有回答智能推断相关问题答案
-- 📊 **可视化报告**：生成带雷达图和热力图的详细评估报告
-- 🎯 **双版本支持**：简约版（20-30分钟）和完整版（40-60分钟）
-- 💡 **AWS服务建议**：针对每个差距推荐具体的AWS服务和预估成本
+- ⚡ **Batch Q&A**: 80 questions compressed into 15–20 interactions, dramatically reducing user burden
+- 🤖 **Smart Analysis**: Automatically reads architecture docs and IaC code, auto-answers 60–70% of questions
+- 🧠 **Context Inference**: Intelligently infers related question answers based on existing responses
+- 📊 **Visual Reports**: Generates detailed assessment reports with radar charts and heatmaps
+- 🎯 **Dual Version Support**: Lite version (20–30 min) and Full version (40–60 min)
+- 💡 **AWS Service Recommendations**: Specific AWS service suggestions and estimated costs for each gap
 
-## 基于的框架
+## Underlying Frameworks
 
-RMA评估整合了以下AWS官方框架：
+The RMA assessment integrates the following official AWS frameworks:
 
-1. **[AWS Well-Architected Framework (WAF)](https://aws.amazon.com/architecture/well-architected/)** - 可靠性支柱
-   - 提供问题设计和最佳实践建议
-   - 评估标准基于WAF的可靠性原则
+1. **[AWS Well-Architected Framework (WAF)](https://aws.amazon.com/architecture/well-architected/)** - Reliability Pillar
+   - Provides question design and best practice recommendations
+   - Assessment criteria based on WAF reliability principles
 
 2. **[AWS Observability Maturity Model](https://aws.amazon.com/solutions/implementations/observability-maturity-model/)**
-   - 指导可观察性相关问题的评估标准
-   - 提供监控和日志的成熟度基准
+   - Guides assessment criteria for observability-related questions
+   - Provides maturity benchmarks for monitoring and logging
 
 3. **[AWS Resilience Lifecycle Framework](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/resilience-lifecycle.html)**
-   - 定义韧性持续改进的生命周期
-   - 指导改进路线图的制定
+   - Defines the lifecycle for continuous resilience improvement
+   - Guides the development of improvement roadmaps
 
-**重要说明**：本评估工具是**非正式评估辅助工具**，不是AWS官方认证或合规承诺。适用于内部韧性改进和成熟度提升。
+**Important Note**: This assessment tool is an **informal assessment aid**, not an official AWS certification or compliance commitment. It is suitable for internal resilience improvement and maturity advancement.
 
-## 适用场景
+## Applicable Scenarios
 
-根据AWS官方RMA指南，以下场景适合进行RMA评估：
+According to the official AWS RMA guide, the following scenarios are suitable for RMA assessment:
 
-### ✅ 推荐使用场景
+### ✅ Recommended Use Cases
 
-1. **客户请求指导**
-   - 客户主动请求帮助建立持续改进系统
-   - 需要制定韧性提升计划
+1. **Customer-Requested Guidance**
+   - Customer proactively requests help establishing a continuous improvement system
+   - Need to develop a resilience improvement plan
 
-2. **发现韧性差距**
-   - 账户团队检测到客户韧性态势存在差距
-   - 最近发生重大事故，需要评估和改进
+2. **Identifying Resilience Gaps**
+   - Account team detects gaps in a customer's resilience posture
+   - A major incident has recently occurred requiring assessment and improvement
 
-3. **对话启动器**
-   - 作为与客户讨论特定韧性领域的切入点
-   - 建立韧性意识和持续改进文化
+3. **Conversation Starter**
+   - As an entry point to discuss specific resilience areas with customers
+   - Building resilience awareness and a culture of continuous improvement
 
-### ❌ 不适用场景
+### ❌ Not Applicable
 
-- 正式合规审计（本工具不是认证工具）
-- 需要外部审计师验证的场景
-- 法律或监管要求的正式评估
+- Formal compliance audits (this tool is not a certification tool)
+- Scenarios requiring external auditor validation
+- Formal assessments required by law or regulation
 
-## 使用方法
+## How to Use
 
-### 方式1：通过命令行调用（推荐）
+### Method 1: Command-line invocation (recommended)
 
 ```bash
 /rma-assessment-assistant
 ```
 
-### 方式2：在对话中自然提及
+### Method 2: Mention naturally in conversation
 
 ```
-我想评估我的应用程序的韧性
-```
-
-```
-帮我做一个RMA评估
+I want to assess the resilience of my application
 ```
 
 ```
-进行一次快速的韧性检查
+Help me do an RMA assessment
 ```
 
-## 评估流程
+```
+Run a quick resilience check
+```
 
-### 1. 版本选择（5秒）
+## Assessment Process
 
-启动后，会展示两个版本的对比表：
+### 1. Version Selection (5 seconds)
 
-| 维度 | 简约版 | 完整版 | 传统方式 |
-|------|--------|--------|----------|
-| 问题数量 | 36个 | 80个 | 80个 |
-| **AI辅助耗时** | **20-30分钟** | **40-60分钟** | **3.5-4小时** |
-| 交互次数 | 8-12次 | 15-20次 | 80+次 |
-| 问题优先级 | P0 + P1 | P0 + P1 + P2 + P3 | P0-P3全部 |
-| 核心领域 | ✅ 完整覆盖 | ✅ 完整覆盖 | ✅ 完整覆盖 |
-| 混沌工程 | ⚠️ 部分 | ✅ 完整 | ✅ 完整 |
-| 游戏日 | ❌ 不包含 | ✅ 包含 | ✅ 包含 |
-| 组织学习 | ❌ 不包含 | ✅ 包含 | ✅ 包含 |
-| 自动文档分析 | ✅ 支持 | ✅ 支持 | ❌ 手动 |
-| 智能推断 | ✅ 支持 | ✅ 支持 | ❌ 不支持 |
+After launching, a comparison table of the two versions is displayed:
 
-### 2. 批量信息收集（1-2分钟）
+| Dimension | Lite Version | Full Version | Traditional |
+|-----------|-------------|--------------|-------------|
+| Questions | 36 | 80 | 80 |
+| **AI-assisted time** | **20–30 min** | **40–60 min** | **3.5–4 hours** |
+| Interactions | 8–12 | 15–20 | 80+ |
+| Question priority | P0 + P1 | P0 + P1 + P2 + P3 | P0–P3 all |
+| Core domains | ✅ Full coverage | ✅ Full coverage | ✅ Full coverage |
+| Chaos Engineering | ⚠️ Partial | ✅ Full | ✅ Full |
+| Game Days | ❌ Not included | ✅ Included | ✅ Included |
+| Organizational Learning | ❌ Not included | ✅ Included | ✅ Included |
+| Auto document analysis | ✅ Supported | ✅ Supported | ❌ Manual |
+| Smart inference | ✅ Supported | ✅ Supported | ❌ Not supported |
 
-**一次性提供**以下基本信息（支持复制粘贴）：
-- 应用名称、描述、业务关键性
-- 架构文档路径（可选，提供后可自动回答60%+问题）
-- IaC代码路径（可选，CloudFormation/Terraform等）
-- 已知的RTO/RPO目标
-- 当前部署区域和可用区
+### 2. Batch Information Collection (1–2 minutes)
 
-**效率提升**：传统方式需要多次问答，AI方式一次收集全部信息
+Provide the following basic information **all at once** (copy-paste friendly):
+- Application name, description, business criticality
+- Architecture document path (optional; enables auto-answering 60%+ questions)
+- IaC code path (optional; CloudFormation/Terraform, etc.)
+- Known RTO/RPO targets
+- Current deployment regions and availability zones
 
-### 3. 智能自动分析（5-15分钟）
+**Efficiency gain**: Traditional approach requires multiple rounds of Q&A; AI approach collects all information at once.
 
-如果提供了架构文档或IaC代码，AI将自动：
-- 🔍 分析Multi-AZ、备份、Auto Scaling等配置
-- 🤖 自动回答60-70%的问题（标注置信度）
-- 🧠 基于上下文推断相关问题答案
-- ✅ 生成自动分析摘要供用户确认
+### 3. Smart Auto Analysis (5–15 minutes)
 
-**效率提升**：传统方式需要手动逐个填写，AI方式大部分自动完成
+If architecture docs or IaC code are provided, the AI will automatically:
+- 🔍 Analyze configurations such as Multi-AZ, backup, Auto Scaling
+- 🤖 Auto-answer 60–70% of questions (with confidence annotations)
+- 🧠 Infer related question answers based on context
+- ✅ Generate an auto-analysis summary for user confirmation
 
-### 4. 批量交互式问答（15-45分钟）
+**Efficiency gain**: Traditional approach requires manual entry one by one; AI approach completes most of the work automatically.
 
-相关问题分组提问，**不是**80个单独问题：
-- 📦 简约版：8-12次批量交互（每次3-6个相关问题）
-- 📦 完整版：15-20次批量交互
-- 每个问题提供3个成熟度级别选项（1-3级）
-- 显示AWS最佳实践建议和智能推荐
-- 支持"同意推荐"快速确认
+### 4. Batch Interactive Q&A (15–45 minutes)
 
-**效率提升**：传统方式80次单独问答，AI方式批量分组减少75%交互
+Related questions are grouped together — **not** 80 individual questions:
+- 📦 Lite version: 8–12 batch interactions (3–6 related questions each)
+- 📦 Full version: 15–20 batch interactions
+- Each question provides 3 maturity level options (levels 1–3)
+- Displays AWS best practice recommendations and smart suggestions
+- Supports "accept recommendation" for quick confirmation
 
-### 5. 即时报告生成（<1分钟）
+**Efficiency gain**: Traditional approach has 80 individual Q&As; AI approach reduces interactions by 75% through batch grouping.
 
-自动生成包含以下内容的详细报告：
-- 📊 执行摘要（总体评分、关键发现Top 5、AI分析统计）
-- 📈 成熟度雷达图（10个领域可视化）
-- 🗺️ 差距热力图（优先级和领域分布）
-- 📈 领域评估详情（10个主题领域）
-- 🎯 改进路线图（分阶段实施计划）
-- 💡 AWS服务推荐（含成本预估）
-- 📋 详细问答记录（标注自动/手动回答）
+### 5. Instant Report Generation (< 1 minute)
 
-**效率提升**：传统方式需要1小时人工整理，AI方式即时生成
+Automatically generates a detailed report containing:
+- 📊 Executive summary (overall score, Top 5 key findings, AI analysis stats)
+- 📈 Maturity radar chart (10-domain visualization)
+- 🗺️ Gap heatmap (priority and domain distribution)
+- 📈 Domain assessment details (10 thematic areas)
+- 🎯 Improvement roadmap (phased implementation plan)
+- 💡 AWS service recommendations (with cost estimates)
+- 📋 Detailed Q&A record (annotated as auto/manual answers)
 
-## 问题分类
+**Efficiency gain**: Traditional approach requires 1 hour of manual compilation; AI approach generates instantly.
 
-### 10个主题领域
+## Question Classification
 
-1. **恢复目标** (Recovery Objectives) - 3个问题
-2. **可观察性** (Observability) - 14个问题
-3. **灾难恢复** (Disaster Recovery) - 8个问题
-4. **高可用性** (High Availability) - 5个问题
-5. **变更管理** (Change Management) - 8个问题
-6. **事件管理** (Incident Management) - 10个问题
-7. **运营评审** (Operational Reviews) - 4个问题
-8. **混沌工程** (Chaos Engineering) - 14个问题
-9. **游戏日** (Game Days) - 3个问题
-10. **组织学习** (Organizational Learning) - 11个问题
+### 10 Thematic Domains
 
-### 4个优先级
+1. **Recovery Objectives** - 3 questions
+2. **Observability** - 14 questions
+3. **Disaster Recovery** - 8 questions
+4. **High Availability** - 5 questions
+5. **Change Management** - 8 questions
+6. **Incident Management** - 10 questions
+7. **Operational Reviews** - 4 questions
+8. **Chaos Engineering** - 14 questions
+9. **Game Days** - 3 questions
+10. **Organizational Learning** - 11 questions
 
-- **🔴 P0 - 关键问题** (12个)：直接影响系统可用性和RTO/RPO
-- **🟡 P1 - 重要问题** (24个)：影响系统韧性和恢复能力
-- **🟢 P2 - 建议问题** (28个)：最佳实践和持续改进
-- **⚪ P3 - 可选问题** (16个)：成熟度提升和组织文化
+### 4 Priority Levels
 
-## 报告示例
+- **🔴 P0 - Critical** (12 questions): Directly affect system availability and RTO/RPO
+- **🟡 P1 - Important** (24 questions): Affect system resilience and recovery capability
+- **🟢 P2 - Recommended** (28 questions): Best practices and continuous improvement
+- **⚪ P3 - Optional** (16 questions): Maturity advancement and organizational culture
 
-报告包含以下部分：
+## Sample Report
+
+The report contains the following sections:
 
 ```markdown
-# RMA 韧性评估报告
-## {应用名称}
+# RMA Resilience Assessment Report
+## {Application Name}
 
-**评估日期**: 2026-03-01
-**评估版本**: 简约版 / 完整版
-**总体成熟度**: 72% - 一般 (Fair)
+**Assessment Date**: 2026-03-01
+**Assessment Version**: Lite / Full
+**Overall Maturity**: 72% - Fair
 
-## 📊 执行摘要
+## 📊 Executive Summary
 
-### 🔴 关键发现 Top 5
-1. [灾难恢复] - 问题27: DR策略选择
-   - 当前状态：级别 1
-   - 风险级别：高
-   - 业务影响：区域故障导致完全业务中断
+### 🔴 Top 5 Critical Findings
+1. [Disaster Recovery] - Question 27: DR strategy selection
+   - Current state: Level 1
+   - Risk level: High
+   - Business impact: Complete business disruption during regional failure
 
-### ✅ 优势领域
-- 可观察性：已实施统一日志和监控
-- 变更管理：完全自动化的CI/CD流程
+### ✅ Strength Areas
+- Observability: Unified logging and monitoring already implemented
+- Change Management: Fully automated CI/CD pipeline
 
-## 🎯 改进路线图
+## 🎯 Improvement Roadmap
 
-### 第一阶段（0-3个月）：关键风险缓解
-| 改进项 | AWS服务建议 | 预估工作量 | 预估成本 |
-|--------|-------------|-----------|---------|
-| 实施DR策略 | Aurora Global DB, Route 53 | 2-3周 | +$1500/月 |
+### Phase 1 (0–3 months): Critical Risk Mitigation
+| Improvement | AWS Service Recommendation | Estimated Effort | Estimated Cost |
+|-------------|---------------------------|-----------------|----------------|
+| Implement DR strategy | Aurora Global DB, Route 53 | 2–3 weeks | +$1500/month |
 ```
 
-## 预期效果
+## Expected Outcomes
 
-### 🚀 效率提升（量化数据）
+### 🚀 Efficiency Gains (Quantified)
 
-| 评估环节 | 传统方式 | AI辅助方式 | 节省时间 | 效率提升 |
-|---------|---------|-----------|---------|---------|
-| **信息收集** | 30分钟（多次询问） | 1-2分钟（一次提供） | 28分钟 | **93%** |
-| **问题回答** | 2.5-3小时（80次单独问答） | 15-45分钟（批量交互） | 2小时+ | **75-85%** |
-| **文档分析** | 1小时（人工阅读） | 5-15分钟（自动分析） | 50分钟 | **83%** |
-| **报告生成** | 1小时（人工整理） | <1分钟（即时生成） | 60分钟 | **99%** |
-| **总计** | **3.5-4小时** | **20-60分钟** | **3小时+** | **75-85%** |
+| Assessment Stage | Traditional | AI-Assisted | Time Saved | Efficiency Gain |
+|-----------------|-------------|-------------|-----------|-----------------|
+| **Information Collection** | 30 min (multiple rounds) | 1–2 min (once) | 28 min | **93%** |
+| **Answering Questions** | 2.5–3 hours (80 individual Q&As) | 15–45 min (batch) | 2+ hours | **75–85%** |
+| **Document Analysis** | 1 hour (manual reading) | 5–15 min (auto) | 50 min | **83%** |
+| **Report Generation** | 1 hour (manual compilation) | < 1 min (instant) | 60 min | **99%** |
+| **Total** | **3.5–4 hours** | **20–60 minutes** | **3+ hours** | **75–85%** |
 
-**用户反馈效果：**
-- 📉 交互次数减少75%（80次→15-20次）
-- 🤖 自动回答覆盖率60-70%
-- ⚡ 首次评估完成时间缩短到传统方式的15-25%
-- 📊 报告质量提升（增加可视化图表和AI洞察）
+**User feedback results:**
+- 📉 75% fewer interactions (80 → 15–20)
+- 🤖 60–70% auto-answer coverage
+- ⚡ First-time assessment completed in 15–25% of traditional time
+- 📊 Higher report quality (added visual charts and AI insights)
 
-### 💎 质量提升
+### 💎 Quality Improvements
 
-- ✅ **智能推荐**：基于AWS最佳实践和已有架构的个性化建议
-- ✅ **零遗漏**：自动检测架构配置，确保不遗漏关键问题
-- ✅ **一致性**：统一的评分标准和评估方法
-- ✅ **可追溯**：所有自动回答标注分析依据和置信度
-- ✅ **可视化**：雷达图和热力图增强洞察力
-- ✅ **可操作**：自动生成分阶段改进路线图和AWS服务推荐
+- ✅ **Smart Recommendations**: Personalized suggestions based on AWS best practices and existing architecture
+- ✅ **Zero Omissions**: Automatic detection of architecture configurations ensures no critical issues are missed
+- ✅ **Consistency**: Uniform scoring criteria and assessment methodology
+- ✅ **Traceability**: All auto-answers annotated with analysis basis and confidence level
+- ✅ **Visualization**: Radar charts and heatmaps enhance insights
+- ✅ **Actionable**: Automatically generates phased improvement roadmaps and AWS service recommendations
 
-## 参考资料
+## References
 
 - [AWS Well-Architected Framework - Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/)
 - [AWS Resilience Hub](https://aws.amazon.com/resilience-hub/)
 - [AWS Fault Injection Simulator](https://aws.amazon.com/fis/)
 - [Google SRE Book](https://sre.google/books/)
 
-## 问题数据完成度 ✅
+## Question Data Completeness ✅
 
-当前版本包含：
-- ✅ **P0问题（12题）**：完整详细数据
-- ✅ **P1问题（24题）**：完整详细数据
-- ✅ **P2问题（30题）**：完整详细数据
-- ✅ **P3问题（14题）**：完整详细数据
+Current version includes:
+- ✅ **P0 questions (12)**: Complete detailed data
+- ✅ **P1 questions (24)**: Complete detailed data
+- ✅ **P2 questions (30)**: Complete detailed data
+- ✅ **P3 questions (14)**: Complete detailed data
 
-**🎉 所有80个问题包含完整详细数据！**
+**🎉 All 80 questions contain complete detailed data!**
 
-**简约版**：P0+P1共36题，快速评估关键韧性指标（20-30分钟）
-**完整版**：P0+P1+P2+P3共80题，全面深度评估（40-60分钟）
+**Lite version**: P0+P1, 36 questions total — quick assessment of key resilience indicators (20–30 minutes)
+**Full version**: P0+P1+P2+P3, 80 questions total — comprehensive in-depth assessment (40–60 minutes)
 
-## 版本历史
+## Version History
 
-- v2.0 (2026-03-03): 🎉 完成所有80个问题的详细数据，简约版和完整版均完全可用
-- v1.1 (2026-03-03): 完成P1详细数据，简约版（36题）完全可用
-- v1.0 (2026-03-01): 初始版本，支持80个问题框架，双版本选择
+- v2.0 (2026-03-03): 🎉 Complete detailed data for all 80 questions; both Lite and Full versions fully available
+- v1.1 (2026-03-03): Complete P1 detailed data; Lite version (36 questions) fully available
+- v1.0 (2026-03-01): Initial release, supporting 80-question framework with dual-version selection
 
-## 技术支持
+## Technical Support
 
-如有问题或建议，请联系 AWS 架构团队。
+For questions or suggestions, please contact the AWS Architecture Team.

@@ -1,267 +1,267 @@
-# AWS 常见服务风险参考手册
+# AWS Common Service Risk Reference Manual
 
-本文档整理了 AWS 常见服务的韧性风险点，供韧性评估过程中参考。评估时应结合客户实际环境，识别是否存在以下风险，并给出针对性的改进建议。
+This document compiles resilience risk points for commonly used AWS services, serving as a reference during resilience assessments. When assessing, combine these with the customer's actual environment to identify whether these risks exist and provide targeted improvement recommendations.
 
 ---
 
-## 1. 存储类风险
+## 1. Storage Risks
 
 ### 1.1 EBS (Elastic Block Store)
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 存储-风险点1 | EBS gp3 I/O Latency 升高 | gp3 I/O Latency 有时升高到 10ms 以上，可能持续几分钟到几十分钟，影响上层应用性能 | 对 I/O Latency 敏感的应用升级到 io2（一致性比 gp3 高 2 个数量级）；自建 MySQL 可迁移到 Aurora（底层分布式存储非 EBS）；应用层构建 HA，Latency 达到阈值时切换到备节点 |
-| 存储-风险点2 | EBS Volume 损坏丢盘 | Volume 发生损坏丢盘，数据丢失不能恢复 | RPO=0 的业务在应用层配置多副本分布到不同 AZ，多副本写成功才返回；使用 DLM 定期备份 Volume；使用 AWS Backup 定期备份 EBS |
-| 存储-风险点3 | Snapshot 创建的 EBS Volume 初始化性能问题 | 从 Snapshot 创建的 Volume 未完全初始化前读写 Latency 较高（几十毫秒） | 启用 FSR（Fast Snapshot Restore）功能；使用 FIO 对 Volume 进行顺序读触发主动初始化 |
-| 存储-风险点4 | 缺乏 EBS I/O 故障模拟工具 | 缺乏模拟 EBS Volume I/O Latency 升高/停止的方法和工具 | 使用 AWS FIS 对 EBS Volume 进行 I/O 停止读写模拟注入（秒级到小时级），验证上层应用是否能正确 failover |
-| 存储-风险点5 | EBS Volume 性能达不到预设指标 | 应用 workload 提升时 Volume 性能（IOPS/throughput）未达预设指标 | EC2 实例有 I/O 性能上限，多 Volume 累积性能达到上限后需升级 EC2 规格；监控 ec2_instance_ebs_performance_exceeded_iops 指标 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Storage-Risk-1 | EBS gp3 I/O latency spikes | gp3 I/O latency sometimes rises above 10ms, potentially lasting minutes to tens of minutes, affecting application performance | Upgrade to io2 for I/O latency-sensitive applications (2 orders of magnitude more consistent than gp3); migrate self-managed MySQL to Aurora (distributed storage, not EBS); build application-layer HA to switch to standby node when latency reaches threshold |
+| Storage-Risk-2 | EBS Volume corruption/loss | Volume corruption leads to unrecoverable data loss | For RPO=0 workloads, configure multi-replica at application layer distributed across AZs with multi-replica write confirmation; use DLM for periodic volume backups; use AWS Backup for periodic EBS backups |
+| Storage-Risk-3 | Snapshot-created EBS Volume initialization performance | Volumes created from snapshots have high read/write latency (tens of ms) before full initialization | Enable FSR (Fast Snapshot Restore); use FIO sequential reads to trigger proactive initialization |
+| Storage-Risk-4 | Lack of EBS I/O fault simulation tools | No methods/tools to simulate EBS Volume I/O latency spikes/stops | Use AWS FIS to inject I/O pause on EBS Volumes (seconds to hours), verify if upper-layer applications can correctly failover |
+| Storage-Risk-5 | EBS Volume performance not meeting preset targets | Volume performance (IOPS/throughput) doesn't meet targets when application workload increases | EC2 instances have I/O performance limits; when cumulative multi-volume performance reaches the limit, upgrade EC2 instance type; monitor ec2_instance_ebs_performance_exceeded_iops metric |
 
 ### 1.2 S3
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 存储-风险点6 | S3 对象被删除或覆盖无法恢复 | 对象被删除或覆盖时用户不能恢复原来的数据 | 开启 S3 Versioning；考虑打开 Object Lock 功能保证旧版本不被删除 |
-| 存储-风险点9 | S3 高并发 503 错误 | 高并发读写时发生 503 错误 | S3 同一 prefix 有 3500 PUT/5500 GET 限制，将请求打散到不同 prefix；在 prefix 加入哈希字符串或属性；代码加入 retry |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Storage-Risk-6 | S3 objects deleted or overwritten without recovery | Users cannot recover original data when objects are deleted or overwritten | Enable S3 Versioning; consider enabling Object Lock to prevent old version deletion |
+| Storage-Risk-9 | S3 high-concurrency 503 errors | 503 errors during high-concurrency reads/writes | S3 has 3500 PUT/5500 GET limits per prefix; distribute requests across different prefixes; add hash strings or attributes to prefixes; add retry logic in code |
 
 ### 1.3 EFS
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 存储-风险点7 | EFS 账单飙高 | Elastic Throughput 模式按流量收费，高峰时段长时产生高额费用 | 高峰时段 >5% 时应切换为 Provisioned Throughput 模式 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Storage-Risk-7 | EFS billing spikes | Elastic Throughput mode charges by traffic, generating high costs during extended peak periods | Switch to Provisioned Throughput mode when peak periods exceed 5% of the time |
 
 ### 1.4 FSx
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 存储-风险点8 | FSx 定期性能下降 | 维护窗口（软件升级、安全补丁）期间 I/O 受影响 | 选择 Multi-region 模式降低影响（<1 分钟 vs Single-region 几分钟到 30 分钟）；将维护窗口设置在业务低谷时间 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Storage-Risk-8 | FSx periodic performance degradation | I/O affected during maintenance windows (software upgrades, security patches) | Choose Multi-region mode to reduce impact (<1 min vs Single-region minutes to 30 min); schedule maintenance windows during business off-peak hours |
 
 ### 1.5 DataSync
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 存储-风险点10 | DataSync 产生大量 S3 Request 费用 | 每次启动都全量扫描 source 和 destination bucket | 降低 DataSync job 运行频率；如需 Bucket 同步改用 S3 Replication |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Storage-Risk-10 | DataSync generates high S3 request costs | Full scan of source and destination buckets on every job start | Reduce DataSync job frequency; use S3 Replication for bucket synchronization instead |
 
 ---
 
-## 2. 数据库类风险
+## 2. Database Risks
 
-### 2.1 架构与高可用
+### 2.1 Architecture and High Availability
 
-| 风险编号 | 适用服务 | 风险点 | 风险原因 | 改进建议 |
-|---------|---------|--------|---------|---------|
-| 数据库-风险点1 | RDS/Aurora/ElastiCache/DocumentDB | 未使用 Multi-AZ 高可用架构 | 无法应对主节点/单 AZ 故障 | RDS 生产环境选择 Multi-AZ Instance/Cluster（SLA 从 99.5% 提升到 99.95%）；Multi-AZ Cluster 大部分 Failover <35s；Aurora/ElastiCache/DocumentDB 至少创建一个跨 AZ 副本 |
-| 数据库-风险点2 | RDS/Aurora/ElastiCache/MemoryDB/DocumentDB/DynamoDB | 未选择跨 Region 架构 | 有跨区域容灾需求但未配置 | RDS 创建跨区域只读副本；Aurora 选择 Global Database（复制延迟 <1s）；ElastiCache 选择 Global Datastore；MemoryDB 选择 Multi-Region（SLA 99.999%）；DynamoDB 选择 Global Table（支持多写） |
+| Risk ID | Applicable Service | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-------------------|-----------|-----------|---------------------------|
+| DB-Risk-1 | RDS/Aurora/ElastiCache/DocumentDB | Not using Multi-AZ HA architecture | Cannot handle primary node/single AZ failures | RDS production should use Multi-AZ Instance/Cluster (SLA increases from 99.5% to 99.95%); Multi-AZ Cluster: most failovers <35s; Aurora/ElastiCache/DocumentDB: create at least one cross-AZ replica |
+| DB-Risk-2 | RDS/Aurora/ElastiCache/MemoryDB/DocumentDB/DynamoDB | No cross-region architecture | Has cross-region DR requirements but not configured | RDS: create cross-region read replicas; Aurora: use Global Database (replication lag <1s); ElastiCache: use Global Datastore; MemoryDB: use Multi-Region (SLA 99.999%); DynamoDB: use Global Table (supports multi-write) |
 
-### 2.2 性能与配置
+### 2.2 Performance and Configuration
 
-| 风险编号 | 适用服务 | 风险点 | 风险原因 | 改进建议 |
-|---------|---------|--------|---------|---------|
-| 数据库-风险点3 | RDS | 生产环境使用 T 系列机型 | T 系列使用信用点数系统，耗尽时性能下降 | 生产环境使用 M/R 系列；高并发场景推荐 R 系列（CPU:内存=1:8）；追求性价比可用 r8g/r7g/r6g Graviton |
-| 数据库-风险点4 | RDS | 存储类型选择不当导致延迟不满足要求 | 延迟敏感业务选择了 io1/gp3 | 推荐使用 io2 存储（支持在线磁盘类型转换）；或选择 Aurora 提供更低延迟；主从复制延迟敏感推荐 Aurora（基于 redo 的物理复制） |
-| 数据库-风险点5 | Aurora/RDS | 版本选择问题 | 稳定性优先但选择了非 LTS 版本，每年需升级 | LTS 版本拥有至少三年生命周期；Aurora LTS 版本为 3.04（截至 2025/02）；RDS 用户可迁移到 Aurora LTS |
+| Risk ID | Applicable Service | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-------------------|-----------|-----------|---------------------------|
+| DB-Risk-3 | RDS | Using T-series instances in production | T-series use a credit system; performance degrades when credits are exhausted | Use M/R series for production; R series recommended for high-concurrency (CPU:memory=1:8); use r8g/r7g/r6g Graviton for cost efficiency |
+| DB-Risk-4 | RDS | Inappropriate storage type causing latency issues | Latency-sensitive workloads using io1/gp3 | Use io2 storage (supports online storage type conversion); or choose Aurora for lower latency; for replication lag sensitivity, use Aurora (redo-based physical replication) |
+| DB-Risk-5 | Aurora/RDS | Version selection issues | Stability-first but chose non-LTS version requiring annual upgrades | LTS versions have at least 3-year lifecycle; Aurora LTS version is 3.04 (as of 2025/02); RDS users can migrate to Aurora LTS |
 
-### 2.3 应用与运维
+### 2.3 Application and Operations
 
-| 风险编号 | 适用服务 | 风险点 | 风险原因 | 改进建议 |
-|---------|---------|--------|---------|---------|
-| 数据库-风险点6 | RDS/Aurora | 应用程序未经过故障恢复性测试 | 线上异常时无法快速恢复 | 在测试环境进行 Failover 恢复性测试；Aurora 有更精细化的故障注入测试场景 |
-| 数据库-风险点7 | 数据库客户端 | 程序端配置了本地 DNS 缓存 | Failover 时客户端不能及时感知新节点 | 关闭本地 DNS 缓存（注意 Java JVM 默认 DNS Cache）；使用 AWS Driver/RDS Proxy 加速感知；ElastiCache 集群模式配置客户端拓扑刷新 |
-| 数据库-风险点8 | 数据库应用 | 应用程序未使用连接池 | 连接数过高或短时间大量新建连接影响性能 | 开启驱动侧连接池并配置合理超时/重连策略；驱动不支持连接池可使用 RDS Proxy |
-| 数据库-风险点9 | 数据库 | 未开启慢查询日志或未定期优化 | 数据库性能下降甚至雪崩 | 开启慢查询日志定期分析优化；开启 Performance Insight 关注 Top SQL；控制单表数据量；大表场景上线前模拟数据量摸高测试 |
-| 数据库-风险点10 | 数据库 | 未订阅资源相关告警信息 | 业务增长时未能及时扩容优化 | 订阅核心监控指标（CPU/内存/latency）；开启 Performance Insight 关注 Database Load 和 AAS；运维不足可使用 Serverless 自动伸缩 |
-| 数据库-风险点11 | 数据库 | 对存储空间未进行合理评估 | 磁盘/内存数据被写满 | 订阅存储指标；RDS 开启磁盘自动扩展；ElastiCache 配置数据淘汰策略和 TTL；大容量使用集群模式+AutoScaling/Serverless；Aurora >128TB 可用 Limitless Database/DSQL |
-| 数据库-风险点12 | 数据库 | 高峰期执行运维操作 | 版本强制升级等导致意外中断 | 及时关注版本生命周期通知主动升级；遵循升级最佳实践（准备/测试/方案设计/回滚）；关闭小版本自动升级；规划在业务低峰期操作；使用蓝绿部署减少中断 |
-| 数据库-风险点13 | 数据库 | 未制定合理的数据恢复预案 | 数据误删除/丢失无法恢复 | RDS/Aurora/DocumentDB 使用 PITR 恢复到任意时间点；Aurora 开启 Backtrack 支持原集群恢复；AWS Backup 跨区域备份；MemoryDB 提供 AZ 故障 RPO=0 保护 |
-| 数据库-风险点14 | 数据库 | 未对成本进行合理优化 | 成本超出预期 | 使用 Graviton 系列；使用 RI；波峰波谷明显考虑 Serverless；Aurora/DocumentDB IO 成本 >25% 考虑 IO Optimized；ElastiCache 迁移到 Valkey 节省 20%-33%；热数据 <20% 考虑数据分层 |
-
----
-
-## 3. 容器类风险 (EKS)
-
-### 3.1 集群与基础设施
-
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EKS-风险点1 | EKS 集群所在区域故障 | 区域故障导致服务中断 | 在其他区域部署灾备集群，通过 Route 53 转移流量 |
-| EKS-风险点2 | 工作节点未跨多可用区部署 | 单 AZ 故障导致服务中断 | 使用多节点组或跨 AZ 节点组；应用 Pod Topology Spread Constraints；启用 EKS Zonal Shift；定期混沌工程测试 |
-| EKS-风险点3 | 可用区特定实例类型容量不足 | GPU 等特殊实例类型容量不足导致无法扩容 | 设置跨 AZ 节点组；利用 Karpenter 多实例类型选择能力；预留部分计算资源 |
-| EKS-风险点4 | 子网 IP 地址不足 | 无法扩充节点或 Pod | 创建更大子网或在更大子网创建新节点组；使用 Custom Networking 拆分 Pod 和节点子网 |
-| EKS-风险点5 | 控制平面升级导致不可用 | API Server 或集群组件不可用 | 更新前检查兼容性和审计日志；定期更新集群组件版本；使用蓝绿升级策略 |
-| EKS-风险点6 | 控制平面超负荷 | 节点过多或 API 请求过多导致响应延迟 | 监测 API Server 指标优化请求方式（分页/减少 Watch）；高峰前开工单扩容控制平面；定期更新集群版本 |
-
-### 3.2 集群组件
-
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EKS-风险点7 | CoreDNS 服务异常 | CoreDNS 异常或超出 DNS PPS 限制导致域名解析失败 | CoreDNS 至少 2 副本跨 AZ 部署；利用 EKS Managed Addon 自动扩展；使用 Node-Local DNS；监控 CoreDNS 指标 |
-| EKS-风险点8 | 集群其他组件异常（CSI 等） | 依赖组件异常导致 Pod 无法调度 | 配置 Liveness Probe 自动重启；监测组件日志和集群事件 |
-
-### 3.3 节点与实例
-
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EKS-风险点9 | EC2 实例故障无法自动恢复 | 实例停机/重启/网络维护导致不可用 | 使用托管节点组或 Karpenter 自动感知并修复；使用 Descheduler 快速驱逐 Pod；使用 Node Monitoring Agent 或 EKS Auto Mode |
-| EKS-风险点10 | 节点资源预留不足 | 系统组件失去响应 | 持续监控节点资源；利用 Right-Sizing 工具配置 Pod Request/Limit；kubelet 配置增加资源预留 |
-| EKS-风险点11 | 不正确的 sysctl 参数配置 | 节点性能下降或不稳定 | 尽可能不修改操作系统内核参数 |
-| EKS-风险点12 | Spot 实例中断率高 | 不合适的实例类型配置 | 利用 Karpenter 扩展实例选择范围和多 AZ；基线工作负载选择按需实例或 Capacity Block |
-
-### 3.4 Pod 与工作负载
-
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EKS-风险点13 | Pod 单点故障 | Pod 所有副本在同一节点上 | 配置多副本；配置 Pod Anti-Affinity 或 Topology Spread Constraints |
-| EKS-风险点14 | 持久化存储单点故障 | EBS 单点故障导致数据不可用 | 尽可能使用 EFS 共享存储；StatefulSet 配置 volumeClaimTemplates 并在应用层同步数据；定期快照备份 |
-| EKS-风险点15 | Pod 无法应对重新调度 | 资源或 Spot 中断导致 Pod 重调度失败 | 评估应用是否适合 Kubernetes；启用 PreStop Lifecycle Hook 实现优雅终止 |
-| EKS-风险点16 | Pod 缺乏健康检查机制 | 故障或滚动更新时无法自动恢复 | 配置 Liveness/Readiness 探针；设置 PDB 保证最小可用副本；启用 PreStop Hook 优雅终止 |
-| EKS-风险点17 | Pod 间网络不稳定 | 请求失败或高延迟 | 应用配置重试机制（保证幂等）；利用服务网格统一实现路由和重试 |
-| EKS-风险点18 | Pod 资源配置不合理 | 调度器无法正常工作导致资源浪费/争抢 | 利用 krr+Prometheus 等 right-sizing 工具配置 Request；利用 HPA+Karpenter 动态调整资源 |
+| Risk ID | Applicable Service | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-------------------|-----------|-----------|---------------------------|
+| DB-Risk-6 | RDS/Aurora | Application not tested for failure recovery | Cannot recover quickly during production issues | Conduct failover recovery testing in test environments; Aurora has more granular fault injection test scenarios |
+| DB-Risk-7 | Database Client | Local DNS cache configured on application side | Client cannot detect new nodes promptly during failover | Disable local DNS cache (note Java JVM default DNS cache); use AWS Driver/RDS Proxy for faster detection; configure client topology refresh for ElastiCache cluster mode |
+| DB-Risk-8 | Database Application | Application not using connection pooling | Excessive connections or large bursts of new connections impact performance | Enable driver-side connection pooling with proper timeout/reconnect strategy; use RDS Proxy if driver doesn't support connection pooling |
+| DB-Risk-9 | Database | Slow query logging not enabled or not regularly optimized | Database performance degradation or avalanche | Enable slow query logging for regular analysis and optimization; enable Performance Insight to monitor Top SQL; control single table data volume; simulate data volume for load testing before go-live |
+| DB-Risk-10 | Database | Not subscribed to resource alerts | Cannot scale or optimize promptly as business grows | Subscribe to core monitoring metrics (CPU/memory/latency); enable Performance Insight to monitor Database Load and AAS; use Serverless auto-scaling for insufficient ops capacity |
+| DB-Risk-11 | Database | No proper storage space planning | Disk/memory data fills up | Subscribe to storage metrics; enable RDS auto-expansion for disk; configure data eviction policies and TTL for ElastiCache; use cluster mode + AutoScaling/Serverless for large capacity; Aurora >128TB can use Limitless Database/DSQL |
+| DB-Risk-12 | Database | Maintenance operations during peak hours | Forced version upgrades cause unexpected interruptions | Proactively monitor version lifecycle notifications; follow upgrade best practices (preparation/testing/plan design/rollback); disable minor version auto-upgrade; schedule during off-peak hours; use blue-green deployment to minimize downtime |
+| DB-Risk-13 | Database | No proper data recovery plan | Data accidentally deleted/lost without recovery | RDS/Aurora/DocumentDB: use PITR to restore to any point in time; Aurora: enable Backtrack for in-cluster recovery; AWS Backup for cross-region backup; MemoryDB provides RPO=0 protection for AZ failures |
+| DB-Risk-14 | Database | No cost optimization | Costs exceed expectations | Use Graviton series; use RI; consider Serverless for peak/valley workloads; Aurora/DocumentDB: consider IO Optimized when IO costs exceed 25%; ElastiCache: migrate to Valkey to save 20%-33%; consider data tiering when hot data is <20% |
 
 ---
 
-## 4. 计算类风险 (EC2)
+## 3. Container Risks (EKS)
 
-### 4.1 可观测性与故障感知
+### 3.1 Cluster and Infrastructure
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EC2-风险点1 | 缺乏对 EC2 实例底层维护的感知 | 无法感知停机/重启/网络维护事件 | 借助 EC2 Health Dashboard；使用 EC2 Health API 构建自动化脚本；AWS Health Event + EventBridge 构建事件驱动可观测；部署 AWS Health Aware 方案 |
-| EC2-风险点2 | 缺乏对 EC2 实例底层故障的感知 | 无法感知底层故障 | 借助 CloudWatch 监控 Status Check Failed (system) 指标并指定触发操作 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EKS-Risk-1 | EKS cluster region failure | Region failure causes service outage | Deploy disaster recovery cluster in another region, shift traffic via Route 53 |
+| EKS-Risk-2 | Worker nodes not deployed across multiple AZs | Single AZ failure causes service outage | Use multi-node groups or cross-AZ node groups; apply Pod Topology Spread Constraints; enable EKS Zonal Shift; regular chaos engineering testing |
+| EKS-Risk-3 | AZ-specific instance type capacity insufficient | Insufficient capacity for special instance types like GPU prevents scaling | Set up cross-AZ node groups; leverage Karpenter multi-instance type selection; reserve some compute resources |
+| EKS-Risk-4 | Subnet IP address exhaustion | Cannot expand nodes or Pods | Create larger subnets or create new node groups in larger subnets; use Custom Networking to separate Pod and node subnets |
+| EKS-Risk-5 | Control plane upgrade causes unavailability | API Server or cluster components become unavailable | Check compatibility and audit logs before updates; regularly update cluster component versions; use blue-green upgrade strategy |
+| EKS-Risk-6 | Control plane overloaded | Too many nodes or API requests cause response delays | Monitor API Server metrics and optimize request patterns (pagination/reduce Watch); open support case for control plane scaling before peaks; regularly update cluster version |
 
-### 4.2 高可用与容量
+### 3.2 Cluster Components
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EC2-风险点3 | 缺乏处理 EC2 单点故障的手段 | 单点故障无法自动恢复 | 优先使用 EC2 Auto Scaling 管理（内置健康检查和自动替换）；未使用 ASG 的启用 EC2 Auto Recovery；应用层启用高可用（如 Redis/Kafka 多副本） |
-| EC2-风险点4 | 缺乏对 EC2 实例的运维测试手段 | 无法验证 HA/DR 方案 | 使用 AWS FIS 进行故障注入与模拟测试 |
-| EC2-风险点5 | 缺乏有效容量规划 | 稳定重要业务缺乏容量预留 | 通过 ODCR 进行按需容量预留；使用 Future-dated Capacity Reservation；FOOB 流程作为补充 |
-| EC2-风险点6 | 容量需求突增遇到 ICE 报错 | Insufficient Capacity Error | 提高灵活性（Instance → Geography → Time）；设置重试和指数回退；提早扩容、小步长、高频率 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EKS-Risk-7 | CoreDNS service failure | CoreDNS issues or exceeding DNS PPS limits cause DNS resolution failures | Deploy CoreDNS with at least 2 replicas across AZs; use EKS Managed Addon for auto-scaling; use Node-Local DNS; monitor CoreDNS metrics |
+| EKS-Risk-8 | Other cluster component failures (CSI, etc.) | Dependency component failures prevent Pod scheduling | Configure Liveness Probes for auto-restart; monitor component logs and cluster events |
 
-### 4.3 Spot 实例
+### 3.3 Nodes and Instances
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EC2-风险点7 | Spot 中断率过高 | 实例类型/AZ 选择不够灵活 | 提高灵活性（实例家族/代系/规格/AZ）；使用 capacity-optimized/price-capacity-optimized 分配策略；借助 Spot Placement Score/Spot Instance Advisor/Attribute-based Instance Selection |
-| EC2-风险点8 | 业务应用无法高效应对 Spot 中断 | 应用未做中断处理 | 评估应用是否适合 Spot（异步/高容错/Time Shiftable）；设置 Checkpoint/State Management；利用 CloudWatch Event 监听中断通知；借助 FIS 模拟 Spot 中断 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EKS-Risk-9 | EC2 instance failures without auto-recovery | Instance stop/restart/network maintenance causes unavailability | Use managed node groups or Karpenter for auto-detection and repair; use Descheduler for rapid Pod eviction; use Node Monitoring Agent or EKS Auto Mode |
+| EKS-Risk-10 | Insufficient node resource reservation | System components become unresponsive | Continuously monitor node resources; use right-sizing tools to configure Pod Request/Limit; configure kubelet with increased resource reservations |
+| EKS-Risk-11 | Incorrect sysctl parameter configuration | Node performance degradation or instability | Avoid modifying OS kernel parameters whenever possible |
+| EKS-Risk-12 | High Spot instance interruption rate | Improper instance type configuration | Use Karpenter to expand instance selection range and multi-AZ; use On-Demand instances or Capacity Block for baseline workloads |
 
-### 4.4 成本优化
+### 3.4 Pod and Workloads
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| EC2-风险点9 | 实例选型不恰当导致成本增加 | 选型过大或过小 | 借助 Compute Optimizer/Cost Explorer 获取建议；突发型用 T 系列；迁移到最新一代实例；适配 Graviton 提高性价比；X86 可从 Intel 迁移到 AMD |
-| EC2-风险点10 | 操作维护不当导致成本增加 | 已停止实例未终止等 | 借助控制台或 Trusted Advisor 查看停止实例；CloudWatch 监控 Status Check Failed 终止受损实例；Instance Scheduler 自动启停 |
-| EC2-风险点11 | 未选择最佳实例购买选项 | 未使用 SP/RI/Spot | 稳定业务购买 Savings Plans；灵活无状态业务使用 Spot |
-| EC2-风险点12 | 配置容量超过业务需求 | 资源浪费 | 使用 EC2 Auto Scaling 配置伸缩策略匹配业务需求 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EKS-Risk-13 | Pod single point of failure | All Pod replicas on same node | Configure multiple replicas; configure Pod Anti-Affinity or Topology Spread Constraints |
+| EKS-Risk-14 | Persistent storage single point of failure | EBS single point of failure causes data unavailability | Use EFS shared storage whenever possible; configure volumeClaimTemplates for StatefulSet and sync data at application layer; regular snapshot backups |
+| EKS-Risk-15 | Pod cannot handle rescheduling | Resource or Spot interruptions cause Pod rescheduling failures | Evaluate if application is suitable for Kubernetes; enable PreStop Lifecycle Hook for graceful termination |
+| EKS-Risk-16 | Pod lacks health check mechanisms | Cannot auto-recover during failures or rolling updates | Configure Liveness/Readiness probes; set PDB to ensure minimum available replicas; enable PreStop Hook for graceful termination |
+| EKS-Risk-17 | Unstable inter-Pod networking | Request failures or high latency | Configure retry mechanisms in applications (ensure idempotency); use service mesh for unified routing and retry |
+| EKS-Risk-18 | Improper Pod resource configuration | Scheduler cannot work properly, causing resource waste/contention | Use right-sizing tools like krr+Prometheus to configure Requests; use HPA+Karpenter for dynamic resource adjustment |
 
 ---
 
-## 5. 网络类风险
+## 4. Compute Risks (EC2)
+
+### 4.1 Observability and Failure Detection
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EC2-Risk-1 | Lack of EC2 underlying maintenance awareness | Cannot detect stop/restart/network maintenance events | Use EC2 Health Dashboard; build automation scripts with EC2 Health API; AWS Health Event + EventBridge for event-driven observability; deploy AWS Health Aware solution |
+| EC2-Risk-2 | Lack of EC2 underlying failure detection | Cannot detect underlying failures | Use CloudWatch to monitor Status Check Failed (system) metrics and specify triggered actions |
+
+### 4.2 High Availability and Capacity
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EC2-Risk-3 | Lack of EC2 single point of failure handling | Single point failures cannot auto-recover | Prefer EC2 Auto Scaling management (built-in health checks and auto-replacement); enable EC2 Auto Recovery for non-ASG instances; enable application-layer HA (e.g., Redis/Kafka multi-replica) |
+| EC2-Risk-4 | Lack of EC2 operational testing methods | Cannot verify HA/DR plans | Use AWS FIS for fault injection and simulation testing |
+| EC2-Risk-5 | Lack of effective capacity planning | Stable critical workloads lack capacity reservations | Use ODCR (On-Demand Capacity Reservation); use Future-dated Capacity Reservation; FOOB process as supplement |
+| EC2-Risk-6 | ICE errors during sudden capacity demand | Insufficient Capacity Error | Increase flexibility (Instance -> Geography -> Time); set up retry and exponential backoff; scale early, small steps, high frequency |
+
+### 4.3 Spot Instances
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EC2-Risk-7 | Excessive Spot interruption rate | Insufficient flexibility in instance type/AZ selection | Increase flexibility (instance family/generation/size/AZ); use capacity-optimized/price-capacity-optimized allocation strategy; use Spot Placement Score/Spot Instance Advisor/Attribute-based Instance Selection |
+| EC2-Risk-8 | Application unable to handle Spot interruptions efficiently | Application not designed for interruptions | Evaluate if application suits Spot (async/fault-tolerant/time-shiftable); set up Checkpoint/State Management; use CloudWatch Events to listen for interruption notices; use FIS to simulate Spot interruptions |
+
+### 4.4 Cost Optimization
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| EC2-Risk-9 | Inappropriate instance selection increasing costs | Oversized or undersized instances | Use Compute Optimizer/Cost Explorer for recommendations; use T-series for burstable workloads; migrate to latest generation instances; adopt Graviton for better price-performance; x86 can migrate from Intel to AMD |
+| EC2-Risk-10 | Improper operations increasing costs | Stopped instances not terminated, etc. | Use console or Trusted Advisor to check stopped instances; CloudWatch to monitor Status Check Failed to terminate damaged instances; Instance Scheduler for auto start/stop |
+| EC2-Risk-11 | Not using optimal purchasing options | Not using SP/RI/Spot | Purchase Savings Plans for stable workloads; use Spot for flexible stateless workloads |
+| EC2-Risk-12 | Capacity configured beyond business needs | Resource waste | Use EC2 Auto Scaling with scaling policies to match business demand |
+
+---
+
+## 5. Network Risks
 
 ### 5.1 Direct Connect
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 网络-风险点1 | Direct Connect 单点风险 | 单条无备份/备份带宽不足/同一 AWS router/同一 pop 点 | 备份与主用带宽一致；选择不同 DX location；选择 VPN 作为备份 |
-| 网络-风险点2 | Direct Connect 发生 gray failure 无法及时切换 | 缺乏端到端可见性，无法识别连接质量问题 | 使用 Network Synthetic Monitor 监控延迟和丢包；利用 NHI 快速定位根因；配置 CloudWatch 警报自动/手动切换；定期故障转移演练 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Network-Risk-1 | Direct Connect single point of failure | Single connection without backup/insufficient backup bandwidth/same AWS router/same PoP | Backup bandwidth matches primary; choose different DX locations; use VPN as backup |
+| Network-Risk-2 | Direct Connect gray failure prevents timely failover | Lack of end-to-end visibility, cannot identify connection quality issues | Use Network Synthetic Monitor for latency and packet loss monitoring; use NHI for rapid root cause identification; configure CloudWatch alarms for auto/manual failover; regular failover drills |
 
 ### 5.2 VPN & SDWAN
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 网络-风险点3 | Site-to-site VPN 单点风险 | 未配置冗余 tunnel | 利用 BGP 同时使用 2 条 tunnel（负载均衡模式）；创建 2 个 VPN connection（避免同时维护）；本地使用多台 VPN 路由器 |
-| 网络-风险点4 | SDWAN 内部发生短时间断连 | TGW 底层维护导致 BGP session 中断 | 每个 connect peer 分别建立 2 个 BGP peering session（共 4 个） |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Network-Risk-3 | Site-to-site VPN single point of failure | No redundant tunnels configured | Use BGP with both tunnels simultaneously (load-balanced mode); create 2 VPN connections (avoid simultaneous maintenance); use multiple on-premises VPN routers |
+| Network-Risk-4 | SDWAN brief disconnections | TGW underlying maintenance causes BGP session interruption | Establish 2 BGP peering sessions per connect peer (4 total) |
 
 ### 5.3 NAT Gateway
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 网络-风险点5 | 使用 NAT Gateway 出公网连接失败 | 每个目标最多 55000 并发连接，超出后新连接失败 | 使用 NAT Gateway Multiple IP（最多 8 个 IP，并发提升到 440000） |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Network-Risk-5 | NAT Gateway outbound connection failures | Maximum 55,000 concurrent connections per destination; new connections fail when exceeded | Use NAT Gateway Multiple IP (up to 8 IPs, increasing concurrency to 440,000) |
 
-### 5.4 负载均衡
+### 5.4 Load Balancing
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 网络-风险点6 | ALB 无法处理突增流量 | 突增流量超出 ALB 扩容能力 | 使用 Load Balancer Capacity Unit Reservation（预热）提前预留最低容量 |
-| 网络-风险点7 | ALB 的 IP 地址无法固定 | 底层 EC2 扩缩容导致 IP 变化 | 客户端必须使用 DNS 连接 ALB（遵循 TTL=1 分钟）；如必须固定 IP 使用 ALB-type Target Group for NLB |
-| 网络-风险点8 | 使用 NLB 做长连接会发生超时 | NLB TCP timeout 默认 350 秒 | 将 NLB TCP 空闲超时配置为 60-6000 秒之间的合适值 |
-| 网络-风险点9 | 使用 GWLB+第三方防火墙时有 50% 概率丢包 | 单 AZ 部署防火墙或防火墙故障 | 开启 GWLB cross-zone load balancing；结合 TGW 做东西向检查时开启 appliance mode |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Network-Risk-6 | ALB cannot handle traffic spikes | Traffic spikes exceed ALB scaling capacity | Use Load Balancer Capacity Unit Reservation (pre-warming) to reserve minimum capacity in advance |
+| Network-Risk-7 | ALB IP addresses cannot be fixed | Underlying EC2 scaling causes IP changes | Clients must use DNS to connect to ALB (follow TTL=1 minute); if fixed IP is required, use ALB-type Target Group for NLB |
+| Network-Risk-8 | NLB long connection timeouts | NLB TCP timeout defaults to 350 seconds | Configure NLB TCP idle timeout to an appropriate value between 60-6000 seconds |
+| Network-Risk-9 | 50% packet loss with GWLB + third-party firewall | Single-AZ firewall deployment or firewall failure | Enable GWLB cross-zone load balancing; enable appliance mode when using TGW for east-west inspection |
 
-### 5.5 网络监控
+### 5.5 Network Monitoring
 
-| 风险编号 | 风险点 | 风险原因 | 改进建议 |
-|---------|--------|---------|---------|
-| 网络-风险点10 | 应用性能下降 TCP 连接超时 | 无法快速定位是网络还是应用问题 | 使用 Network Flow Monitor 的 NHI 快速区分；监控 Retransmissions 和 Timeouts 指标；设置 CloudWatch 警报 |
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Network-Risk-10 | Application performance degradation and TCP connection timeouts | Cannot quickly determine if issue is network or application | Use Network Flow Monitor NHI for rapid differentiation; monitor Retransmissions and Timeouts metrics; set up CloudWatch alarms |
 
 ---
 
-## 6. 评估检查清单
+## 6. Assessment Checklist
 
-在进行韧性评估时，针对每个服务类型，按以下检查清单逐项确认：
+During resilience assessments, verify the following checklist items for each service type:
 
-### 存储检查清单
-- [ ] EBS 存储类型是否匹配业务 I/O 需求（gp3 vs io2）
-- [ ] EBS Volume 是否有定期备份策略（DLM/AWS Backup）
-- [ ] 从 Snapshot 恢复的 Volume 是否启用了 FSR
-- [ ] 是否进行过 EBS I/O 故障模拟测试（FIS）
-- [ ] EC2 实例 I/O 性能上限是否满足多 Volume 需求
-- [ ] S3 是否开启了 Versioning
-- [ ] S3 高并发场景是否做了 prefix 打散
-- [ ] EFS 吞吐模式是否匹配使用模式
-- [ ] FSx 维护窗口是否设置在业务低谷
+### Storage Checklist
+- [ ] Is EBS storage type matched to business I/O requirements (gp3 vs io2)?
+- [ ] Do EBS Volumes have periodic backup policies (DLM/AWS Backup)?
+- [ ] Is FSR enabled for Volumes restored from snapshots?
+- [ ] Have EBS I/O fault simulation tests been conducted (FIS)?
+- [ ] Does EC2 instance I/O performance ceiling meet multi-volume requirements?
+- [ ] Is S3 Versioning enabled?
+- [ ] Is S3 prefix distribution configured for high-concurrency scenarios?
+- [ ] Does EFS throughput mode match usage patterns?
+- [ ] Is FSx maintenance window set during business off-peak hours?
 
-### 数据库检查清单
-- [ ] 生产环境是否使用 Multi-AZ 架构
-- [ ] 是否有跨 Region 容灾方案（如需要）
-- [ ] 生产环境是否避免使用 T 系列机型
-- [ ] 存储类型是否满足延迟要求
-- [ ] 是否选择了合适的数据库版本（LTS vs 非 LTS）
-- [ ] 是否进行过 Failover 恢复性测试
-- [ ] 客户端是否关闭了本地 DNS 缓存
-- [ ] 应用是否使用了连接池
-- [ ] 是否开启了慢查询日志和 Performance Insight
-- [ ] 是否订阅了核心监控告警
-- [ ] 存储空间是否有自动扩展或告警
-- [ ] 运维操作是否安排在低峰期
-- [ ] 是否有数据恢复预案（PITR/Backtrack/跨区域备份）
-- [ ] 成本是否经过优化评估
+### Database Checklist
+- [ ] Is production using Multi-AZ architecture?
+- [ ] Is there a cross-region DR plan (if needed)?
+- [ ] Does production avoid T-series instances?
+- [ ] Does storage type meet latency requirements?
+- [ ] Is the appropriate database version selected (LTS vs non-LTS)?
+- [ ] Have failover recovery tests been conducted?
+- [ ] Is local DNS cache disabled on clients?
+- [ ] Is the application using connection pooling?
+- [ ] Is slow query logging and Performance Insight enabled?
+- [ ] Are core monitoring alerts subscribed?
+- [ ] Is there auto-expansion or alerting for storage space?
+- [ ] Are maintenance operations scheduled during off-peak hours?
+- [ ] Is there a data recovery plan (PITR/Backtrack/cross-region backup)?
+- [ ] Have costs been evaluated for optimization?
 
-### EKS 检查清单
-- [ ] 是否有跨区域灾备集群
-- [ ] 工作节点是否跨多 AZ 部署
-- [ ] 是否配置了多实例类型应对容量不足
-- [ ] 子网 IP 地址是否充足
-- [ ] 控制平面升级是否有兼容性验证流程
-- [ ] 控制平面是否有负载监控
-- [ ] CoreDNS 是否多副本跨 AZ 部署
-- [ ] 集群组件是否配置了健康检查
-- [ ] 节点故障是否能自动恢复（托管节点组/Karpenter）
-- [ ] 节点资源预留是否充足
-- [ ] Spot 实例是否配置了多实例类型和多 AZ
-- [ ] Pod 是否配置了多副本和反亲和性
-- [ ] 持久化存储是否有备份策略
-- [ ] Pod 是否配置了 Liveness/Readiness 探针
-- [ ] Pod 是否配置了 PDB 和优雅终止
-- [ ] Pod 资源 Request/Limit 是否合理
+### EKS Checklist
+- [ ] Is there a cross-region disaster recovery cluster?
+- [ ] Are worker nodes deployed across multiple AZs?
+- [ ] Are multiple instance types configured for capacity insufficiency?
+- [ ] Are subnet IP addresses sufficient?
+- [ ] Is there a compatibility verification process for control plane upgrades?
+- [ ] Is there load monitoring for the control plane?
+- [ ] Is CoreDNS deployed with multiple replicas across AZs?
+- [ ] Are cluster components configured with health checks?
+- [ ] Can node failures auto-recover (managed node groups/Karpenter)?
+- [ ] Are node resource reservations sufficient?
+- [ ] Are Spot instances configured with multiple instance types and AZs?
+- [ ] Are Pods configured with multiple replicas and anti-affinity?
+- [ ] Is there a backup strategy for persistent storage?
+- [ ] Are Pods configured with Liveness/Readiness probes?
+- [ ] Are Pods configured with PDB and graceful termination?
+- [ ] Are Pod resource Request/Limit properly set?
 
-### EC2 检查清单
-- [ ] 是否有 EC2 底层维护事件的感知手段
-- [ ] 是否有 EC2 底层故障的感知手段
-- [ ] 是否使用 Auto Scaling 或 Auto Recovery 处理单点故障
-- [ ] 是否使用 FIS 进行过运维测试
-- [ ] 稳定业务是否有容量预留（ODCR）
-- [ ] 是否有 ICE 报错的应对策略
-- [ ] Spot 实例是否配置了灵活的实例选择
-- [ ] 应用是否能高效应对 Spot 中断
-- [ ] 实例选型是否经过优化
-- [ ] 是否有自动启停策略避免浪费
-- [ ] 是否选择了最佳购买选项（SP/RI/Spot）
+### EC2 Checklist
+- [ ] Is there awareness of EC2 underlying maintenance events?
+- [ ] Is there awareness of EC2 underlying failures?
+- [ ] Is Auto Scaling or Auto Recovery used for single point of failure handling?
+- [ ] Have FIS operational tests been conducted?
+- [ ] Do stable workloads have capacity reservations (ODCR)?
+- [ ] Is there a strategy for handling ICE errors?
+- [ ] Are Spot instances configured with flexible instance selection?
+- [ ] Can the application efficiently handle Spot interruptions?
+- [ ] Has instance selection been optimized?
+- [ ] Is there an auto start/stop strategy to avoid waste?
+- [ ] Are optimal purchasing options selected (SP/RI/Spot)?
 
-### 网络检查清单
-- [ ] Direct Connect 是否有冗余（不同 DX location）
-- [ ] Direct Connect 是否有 gray failure 检测手段
-- [ ] VPN 是否配置了冗余 tunnel
-- [ ] NAT Gateway 是否跨 AZ 部署
-- [ ] NAT Gateway 并发连接是否满足需求
-- [ ] ALB 是否有预热策略应对突增流量
-- [ ] NLB TCP 超时是否配置合理
-- [ ] GWLB 是否开启了 cross-zone load balancing
-- [ ] 是否有网络性能监控手段（Network Flow Monitor）
+### Network Checklist
+- [ ] Does Direct Connect have redundancy (different DX locations)?
+- [ ] Is there gray failure detection for Direct Connect?
+- [ ] Are VPN redundant tunnels configured?
+- [ ] Are NAT Gateways deployed across AZs?
+- [ ] Do NAT Gateway concurrent connections meet requirements?
+- [ ] Is there a pre-warming strategy for ALB traffic spikes?
+- [ ] Is NLB TCP timeout properly configured?
+- [ ] Is GWLB cross-zone load balancing enabled?
+- [ ] Is there network performance monitoring (Network Flow Monitor)?

@@ -1,0 +1,280 @@
+{
+  "metadata": {
+    "group": 7,
+    "name_en": "Resilience Analysis",
+    "name_zh": "韧性分析",
+    "question_count": 9
+  },
+  "questions": [
+    {
+      "id": 4,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 4：记录在案的弹性要求限制有哪些？",
+      "question_en": "What are the documented constraints on resilience requirements?",
+      "image": "image.png",
+      "why_important": "明确的韧性要求限制确保韧性投资与业务需求对齐",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未记录或未定义韧性要求的限制条件",
+          "description_en": "No documented or defined limits on resilience requirements"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的限制说明，但不全面或未与利益相关者对齐",
+          "description_en": "Basic limit statements exist but not comprehensive or not aligned with stakeholders"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细记录韧性要求限制：成本约束、技术限制、业务容忍度、监管要求，并定期审查",
+          "description_en": "Detailed documentation of resilience requirement limits: cost constraints, technical limitations, business tolerance, regulatory requirements, regularly reviewed"
+        }
+      ],
+      "aws_best_practice": "明确定义韧性投资边界：最大可接受的RTO/RPO、成本预算上限、技术债务容忍度。使用业务影响分析（BIA）确定优先级。记录在架构决策记录（ADR）中，并与业务利益相关者定期审查。",
+      "why_important_en": "Clear resilience requirement constraints ensure resilience investments align with business needs",
+      "aws_best_practice_en": "Clearly define resilience investment boundaries: maximum acceptable RTO/RPO, cost budget caps, tech debt tolerance. Use BIA to determine priorities. Document in Architecture Decision Records (ADRs) and regularly review with business stakeholders."
+    },
+    {
+      "id": 5,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 5：如何考虑可能性、影响和成本选择控制措施？",
+      "question_en": "How do you consider likelihood, impact, and cost when selecting controls?",
+      "image": "image.png",
+      "why_important": "基于风险的决策确保韧性投资的ROI最大化",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未系统性考虑可能性、影响和成本进行决策",
+          "description_en": "No systematic consideration of likelihood, impact, and cost in decisions"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的风险评估，但缺少定量分析或成本效益分析",
+          "description_en": "Basic risk assessment exists but lacking quantitative analysis or cost-benefit analysis"
+        },
+        {
+          "level": 3,
+          "description_zh": "系统化的风险评估框架：定量分析故障可能性、影响评估、成本效益分析、优先级矩阵",
+          "description_en": "Systematic risk assessment framework: quantitative failure likelihood analysis, impact assessment, cost-benefit analysis, prioritization matrix"
+        }
+      ],
+      "aws_best_practice": "使用风险矩阵评估控制措施：横轴=可能性（罕见/偶尔/频繁），纵轴=影响（低/中/高/关键）。计算年度损失期望（ALE）。优先投资高影响高可能性的风险。使用 AWS Well-Architected Tool 进行风险评估。",
+      "why_important_en": "Risk-based decision-making ensures maximum ROI on resilience investments",
+      "aws_best_practice_en": "Use a risk matrix to evaluate controls: x-axis = likelihood (rare/occasional/frequent), y-axis = impact (low/medium/high/critical). Calculate Annualized Loss Expectancy (ALE). Prioritize investment in high-impact, high-likelihood risks. Use AWS Well-Architected Tool for risk assessment."
+    },
+    {
+      "id": 6,
+      "priority": "P3",
+      "category": "韧性要求",
+      "category_en": "Resilience Requirements",
+      "question_zh": "问题 6：如何确保弹性学习优先于新功能？",
+      "question_en": "How do you ensure resilience learning is prioritized over new features?",
+      "image": "image.png",
+      "why_important": "平衡韧性学习与新功能开发确保长期系统健康",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "韧性学习总是让位于新功能开发",
+          "description_en": "Resilience learning always gives way to new feature development"
+        },
+        {
+          "level": 2,
+          "description_zh": "偶尔投入时间进行韧性学习，但不系统",
+          "description_en": "Occasionally invest time in resilience learning but not systematic"
+        },
+        {
+          "level": 3,
+          "description_zh": "系统化的韧性投资：固定百分比时间（如20%）、专门的韧性冲刺、技术债务管理",
+          "description_en": "Systematic resilience investment: fixed percentage of time (e.g., 20%), dedicated resilience sprints, tech debt management"
+        }
+      ],
+      "aws_best_practice": "采用Google的20%时间或亚马逊的20%规则用于韧性改进。将韧性工作纳入sprint计划。使用错误预算政策：SLO耗尽时暂停新功能。建立技术债务注册表并定期偿还。韧性是特性而非技术债。",
+      "why_important_en": "Balancing resilience learning with new feature development ensures long-term system health",
+      "aws_best_practice_en": "Adopt Google's 20% time or Amazon's 20% rule for resilience improvement. Include resilience work in sprint planning. Use error budget policy: pause new features when SLO is exhausted. Establish a tech debt registry and regularly pay it down. Resilience is a feature, not tech debt."
+    },
+    {
+      "id": 7,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 7：依赖关系文档有多全面？",
+      "question_en": "How comprehensive is your dependency documentation?",
+      "image": "image.png",
+      "why_important": "完整的依赖关系文档是故障分析和恢复规划的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "依赖关系未记录或仅有部分关键依赖",
+          "description_en": "Dependencies not documented or only partial critical dependencies"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的依赖关系文档，但缺少版本信息、SLA或故障模式",
+          "description_en": "Basic dependency documentation exists but lacking version info, SLAs or failure modes"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的依赖关系文档：所有内外部依赖、版本、SLA、故障模式、降级策略、定期更新",
+          "description_en": "Complete dependency documentation: all internal/external dependencies, versions, SLAs, failure modes, degradation strategies, regularly updated"
+        }
+      ],
+      "aws_best_practice": "维护依赖关系清单包含：服务名称、版本、所有者、SLA、硬/软依赖分类、故障影响、降级策略。使用 CloudWatch ServiceLens 自动生成服务地图。在架构图中标注依赖关系。定期审查依赖健康度。",
+      "why_important_en": "Comprehensive dependency documentation is the foundation for failure analysis and recovery planning",
+      "aws_best_practice_en": "Maintain a dependency inventory including: service name, version, owner, SLA, hard/soft dependency classification, failure impact, degradation strategy. Use CloudWatch ServiceLens to auto-generate service maps. Annotate dependencies in architecture diagrams. Regularly review dependency health."
+    },
+    {
+      "id": 8,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 8：如何解决与依赖关系的耦合问题？",
+      "question_en": "How do you address coupling with dependencies?",
+      "image": "image.png",
+      "why_important": "管理耦合度降低级联故障风险",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未识别或管理依赖关系的耦合问题",
+          "description_en": "Coupling with dependencies not identified or managed"
+        },
+        {
+          "level": 2,
+          "description_zh": "识别了耦合问题，但缺少系统性的解耦策略",
+          "description_en": "Coupling issues identified but lacking systematic decoupling strategies"
+        },
+        {
+          "level": 3,
+          "description_zh": "主动管理耦合：使用队列/事件解耦、异步通信、断路器、缓存、超时策略",
+          "description_en": "Proactive coupling management: queues/events for decoupling, async communication, circuit breakers, caching, timeout strategies"
+        }
+      ],
+      "aws_best_practice": "使用松耦合架构模式：1) SQS/SNS异步消息；2) EventBridge事件驱动；3) API Gateway缓存；4) Lambda异步调用；5) Step Functions编排。实施断路器模式（App Mesh）。避免分布式事务。",
+      "why_important_en": "Managing coupling reduces the risk of cascading failures",
+      "aws_best_practice_en": "Use loose coupling architecture patterns: 1) SQS/SNS async messaging; 2) EventBridge event-driven; 3) API Gateway caching; 4) Lambda async invocation; 5) Step Functions orchestration. Implement circuit breaker pattern (App Mesh). Avoid distributed transactions."
+    },
+    {
+      "id": 9,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 9：如何创建和利用清单？",
+      "question_en": "How do you create and leverage inventories?",
+      "image": "image.png",
+      "why_important": "清单是变更管理和一致性验证的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无系统的资源清单或依赖人工记忆",
+          "description_en": "No systematic resource inventory or relying on human memory"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本清单，但不完整或更新不及时",
+          "description_en": "Basic inventory exists but incomplete or not kept up-to-date"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动化的资源清单：所有基础设施、应用、配置，自动发现和更新，与CMDB集成",
+          "description_en": "Automated resource inventory: all infrastructure, applications, configurations, auto-discovery and updates, CMDB integration"
+        }
+      ],
+      "aws_best_practice": "使用 AWS Config 自动跟踪所有资源配置。使用 Systems Manager Inventory 收集实例信息。使用 Resource Groups 和标签策略组织资源。集成 Service Catalog 管理批准的配置。定期审计清单完整性。",
+      "why_important_en": "Inventories are the foundation for change management and consistency verification",
+      "aws_best_practice_en": "Use AWS Config to automatically track all resource configurations. Use Systems Manager Inventory to collect instance information. Use Resource Groups and tagging strategies to organize resources. Integrate Service Catalog to manage approved configurations. Regularly audit inventory completeness."
+    },
+    {
+      "id": 10,
+      "priority": "P2",
+      "category": "韧性分析",
+      "category_en": "Resilience Analysis",
+      "question_zh": "问题 10：使用哪种方法对故障情景进行建模？",
+      "question_en": "What methods do you use to model failure scenarios?",
+      "image": "image.png",
+      "why_important": "故障场景建模帮助识别单点故障和设计缓解措施",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未进行故障场景建模或仅凭经验判断",
+          "description_en": "No failure scenario modeling or only experience-based judgment"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的故障模式分析（FMEA），但覆盖不全或未定期更新",
+          "description_en": "Basic FMEA exists but incomplete coverage or not regularly updated"
+        },
+        {
+          "level": 3,
+          "description_zh": "系统化的故障建模：FMEA、故障树分析（FTA）、场景测试、持续更新",
+          "description_en": "Systematic failure modeling: FMEA, Fault Tree Analysis (FTA), scenario testing, continuous updates"
+        }
+      ],
+      "aws_best_practice": "使用 FMEA 方法：识别故障模式、评估影响和可能性、确定检测方法、设计缓解措施。使用 AWS FIS (Fault Injection Simulator) 验证故障场景。使用 Resilience Hub 自动化故障场景分析。",
+      "why_important_en": "Failure scenario modeling helps identify single points of failure and design mitigations",
+      "aws_best_practice_en": "Use FMEA methodology: identify failure modes, assess impact and likelihood, determine detection methods, design mitigations. Use AWS FIS (Fault Injection Simulator) to validate failure scenarios. Use Resilience Hub to automate failure scenario analysis."
+    },
+    {
+      "id": 11,
+      "priority": "P2",
+      "category": "韧性容量",
+      "category_en": "Resilience Capacity",
+      "question_zh": "问题 11：如何预测应用程序在高负载条件下的性能？",
+      "question_en": "How do you forecast application performance under high-load conditions?",
+      "image": "image.png",
+      "why_important": "容量预测确保系统能够应对高负载而不影响可用性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未进行容量预测或仅基于经验估计",
+          "description_en": "No capacity forecasting or only experience-based estimation"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的负载测试，但不代表生产环境或未测试峰值场景",
+          "description_en": "Basic load testing exists but not representative of production or peak scenarios not tested"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的容量规划：生产级负载测试、压力测试、峰值场景测试、自动化性能监控",
+          "description_en": "Comprehensive capacity planning: production-grade load testing, stress testing, peak scenario testing, automated performance monitoring"
+        }
+      ],
+      "aws_best_practice": "进行定期负载测试：使用与生产相同的配置。测试场景包括：正常负载、峰值负载（2-3x）、压力测试（直到失败）。使用 CloudWatch 跟踪资源利用率趋势。实施自动扩展策略。",
+      "why_important_en": "Capacity forecasting ensures the system can handle high loads without impacting availability",
+      "aws_best_practice_en": "Conduct regular load testing using production-identical configurations. Test scenarios include: normal load, peak load (2-3x), stress testing (until failure). Use CloudWatch to track resource utilization trends. Implement auto-scaling strategies."
+    },
+    {
+      "id": 12,
+      "priority": "P2",
+      "category": "韧性容量",
+      "category_en": "Resilience Capacity",
+      "question_zh": "问题 12：如何准备应用程序以处理负载变化？",
+      "question_en": "How do you prepare your application to handle load changes?",
+      "image": "image.png",
+      "why_important": "应对负载变化的能力是可用性和成本效率的关键",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无自动扩展能力或完全依赖手动干预",
+          "description_en": "No auto-scaling capability or fully relying on manual intervention"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的自动扩展，但扩展速度慢或缺少预测性扩展",
+          "description_en": "Basic auto-scaling exists but slow scaling or lacking predictive scaling"
+        },
+        {
+          "level": 3,
+          "description_zh": "先进的负载管理：预测性扩展、多层扩展策略、快速扩展能力、负载测试验证",
+          "description_en": "Advanced load management: predictive scaling, multi-tier scaling strategies, rapid scaling capability, load test validation"
+        }
+      ],
+      "aws_best_practice": "使用 Auto Scaling：目标跟踪扩展策略（CPU/内存/请求数）。实施预测性扩展（基于CloudWatch历史数据）。设置最小容量确保基线可用性。使用 Application Auto Scaling 扩展多种资源（ECS、DynamoDB等）。",
+      "why_important_en": "The ability to handle load changes is critical for availability and cost efficiency",
+      "aws_best_practice_en": "Use Auto Scaling: target tracking scaling policies (CPU/memory/request count). Implement predictive scaling (based on CloudWatch historical data). Set minimum capacity to ensure baseline availability. Use Application Auto Scaling to scale multiple resources (ECS, DynamoDB, etc.)."
+    }
+  ]
+}

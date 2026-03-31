@@ -1,0 +1,430 @@
+{
+  "metadata": {
+    "group": 2,
+    "name_en": "Observability & Monitoring",
+    "name_zh": "可观测性",
+    "question_count": 14
+  },
+  "questions": [
+    {
+      "id": 13,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 13：如何为应用程序建立指标（日志、指标、跟踪、警报）？",
+      "question_en": "How do you establish instrumentation (logs, metrics, traces, alerts) for your application?",
+      "image": "image.png",
+      "why_important": "完整的可观察性是快速检测和诊断问题的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "仅有基础日志，无结构化指标或跟踪",
+          "description_en": "Only basic logging, no structured metrics or tracing"
+        },
+        {
+          "level": 2,
+          "description_zh": "有日志和基本指标，但缺少分布式跟踪或综合告警",
+          "description_en": "Have logs and basic metrics, but missing distributed tracing or comprehensive alerting"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的可观察性：结构化日志、CloudWatch指标、X-Ray跟踪、主动告警，全部集成",
+          "description_en": "Complete observability: structured logs, CloudWatch metrics, X-Ray tracing, proactive alerting, all integrated"
+        }
+      ],
+      "aws_best_practice": "建立三大支柱：日志（CloudWatch Logs）、指标（CloudWatch Metrics）、跟踪（AWS X-Ray）。使用统一的命名规范和标签策略。设置金字塔告警模型：症状告警（用户影响）> 原因告警（根本原因）。",
+      "why_important_en": "Complete observability is the foundation for rapid problem detection and diagnosis",
+      "aws_best_practice_en": "Establish three pillars: Logs (CloudWatch Logs), Metrics (CloudWatch Metrics), Traces (AWS X-Ray). Use unified naming conventions and tagging strategies. Set up pyramid alerting model: symptom alerts (user impact) > cause alerts (root cause)."
+    },
+    {
+      "id": 14,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 14：如何确保日志可访问且功能正常？",
+      "question_en": "How do you ensure logs are accessible and functional?",
+      "image": "image.png",
+      "why_important": "日志是故障排查的关键依据，必须保证可用性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "日志存储在本地，无中央化管理或可能在故障时丢失",
+          "description_en": "Logs stored locally, no centralization or may be lost during failures"
+        },
+        {
+          "level": 2,
+          "description_zh": "集中化日志，但缺少访问控制、检索能力有限或保留期不足",
+          "description_en": "Centralized logs but lacking access controls, limited search capability or insufficient retention"
+        },
+        {
+          "level": 3,
+          "description_zh": "中央化日志系统（CloudWatch Logs Insights），有适当保留期、访问控制、快速检索、备份策略",
+          "description_en": "Centralized log system (CloudWatch Logs Insights) with appropriate retention, access controls, fast search, backup strategy"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch Logs 集中管理日志，配置适当的保留期（生产日志建议30-90天）。使用 CloudWatch Logs Insights 进行快速查询。关键日志导出到 S3 长期存档。实施日志完整性验证。",
+      "why_important_en": "Logs are critical evidence for troubleshooting and must be reliably available",
+      "aws_best_practice_en": "Use CloudWatch Logs for centralized log management with appropriate retention periods (30-90 days recommended for production logs). Use CloudWatch Logs Insights for fast querying. Export critical logs to S3 for long-term archival. Implement log integrity validation."
+    },
+    {
+      "id": 15,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 15：如何设置从日志中检索数据？",
+      "question_en": "How do you set up data retrieval from logs?",
+      "image": "image.png",
+      "why_important": "高效的日志检索能力加快故障排查速度",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "日志检索困难，依赖手动搜索或命令行工具",
+          "description_en": "Difficult log retrieval, relying on manual search or CLI tools"
+        },
+        {
+          "level": 2,
+          "description_zh": "有集中化日志查询，但查询语法复杂或性能较慢",
+          "description_en": "Centralized log querying exists but complex syntax or slow performance"
+        },
+        {
+          "level": 3,
+          "description_zh": "高效的日志检索：CloudWatch Logs Insights、保存的查询模板、快速全文搜索、可视化仪表板",
+          "description_en": "Efficient log retrieval: CloudWatch Logs Insights, saved query templates, fast full-text search, visualization dashboards"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch Logs Insights 进行结构化查询。创建常用查询模板（如错误统计、慢请求）。使用字段提取和聚合。集成 CloudWatch Dashboards 可视化。考虑 OpenSearch 用于复杂分析。",
+      "why_important_en": "Efficient log retrieval capability accelerates troubleshooting",
+      "aws_best_practice_en": "Use CloudWatch Logs Insights for structured queries. Create common query templates (e.g., error statistics, slow requests). Use field extraction and aggregation. Integrate with CloudWatch Dashboards for visualization. Consider OpenSearch for complex analysis."
+    },
+    {
+      "id": 16,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 16：如何利用跟踪从应用程序中提取数据？",
+      "question_en": "How do you leverage tracing to extract data from your application?",
+      "image": "image.png",
+      "why_important": "分布式跟踪是诊断微服务架构性能问题的关键工具",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未实施分布式跟踪",
+          "description_en": "No distributed tracing implemented"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分服务启用跟踪，但覆盖不完整或缺少关键事务跟踪",
+          "description_en": "Partial tracing enabled but incomplete coverage or missing critical transaction tracing"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的分布式跟踪（X-Ray），覆盖所有服务和外部依赖，包含自定义注释和性能分析",
+          "description_en": "Complete distributed tracing (X-Ray) covering all services and external dependencies, with custom annotations and performance profiling"
+        }
+      ],
+      "aws_best_practice": "使用 AWS X-Ray 实施端到端跟踪。为关键事务添加自定义段和注释。集成 X-Ray 与 CloudWatch ServiceLens 获得完整的服务地图。设置跟踪采样率（生产建议5-10%采样）。",
+      "why_important_en": "Distributed tracing is a key tool for diagnosing performance issues in microservice architectures",
+      "aws_best_practice_en": "Implement end-to-end tracing with AWS X-Ray. Add custom segments and annotations for critical transactions. Integrate X-Ray with CloudWatch ServiceLens for complete service maps. Set tracing sampling rate (5-10% recommended for production)."
+    },
+    {
+      "id": 17,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 17：如何使用合成流量监控应用程序？",
+      "question_en": "How do you use synthetic traffic to monitor your application?",
+      "image": "image.png",
+      "why_important": "合成监控提供主动的用户体验监控",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无合成监控，仅依赖真实用户监控或告警",
+          "description_en": "No synthetic monitoring, only relying on real user monitoring or alerts"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的健康检查，但不模拟真实用户行为",
+          "description_en": "Basic health checks exist but not simulating real user behavior"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的合成监控：模拟关键用户路径、多地域监控、可视化用户体验、性能基线",
+          "description_en": "Complete synthetic monitoring: simulate critical user paths, multi-region monitoring, visualized user experience, performance baselines"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch Synthetics 创建 Canary 脚本模拟用户交互。监控关键路径（登录、购买、搜索）。从多个地域运行。设置延迟和可用性告警。使用 Puppeteer 或 Selenium 编写复杂场景。",
+      "why_important_en": "Synthetic monitoring provides proactive user experience monitoring",
+      "aws_best_practice_en": "Use CloudWatch Synthetics to create Canary scripts simulating user interactions. Monitor critical paths (login, purchase, search). Run from multiple regions. Set latency and availability alerts. Use Puppeteer or Selenium for complex scenarios."
+    },
+    {
+      "id": 18,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 18：如何将指标与故障域保持一致？",
+      "question_en": "How do you align metrics with fault domains?",
+      "image": "image.png",
+      "why_important": "按故障域分组的指标有助于快速隔离问题范围",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "指标未按故障域（AZ、Region、服务）分组",
+          "description_en": "Metrics not grouped by fault domains (AZ, Region, Service)"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分指标按故障域分组，但不完整或缺少跨域对比",
+          "description_en": "Partial metrics grouped by fault domains but incomplete or missing cross-domain comparison"
+        },
+        {
+          "level": 3,
+          "description_zh": "所有关键指标按故障域（AZ/Region/Cell）分组，有自动化的异常检测和对比分析",
+          "description_en": "All critical metrics grouped by fault domains (AZ/Region/Cell) with automated anomaly detection and comparative analysis"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch 维度按 AZ、Region、InstanceId 分组指标。设置跨AZ对比告警以检测部分故障。对于单元化架构，按Cell分组指标。使用 CloudWatch Anomaly Detection 自动识别异常。",
+      "why_important_en": "Metrics grouped by fault domain help quickly isolate the scope of issues",
+      "aws_best_practice_en": "Use CloudWatch dimensions to group metrics by AZ, Region, InstanceId. Set cross-AZ comparison alerts to detect partial failures. For cell-based architectures, group metrics by Cell. Use CloudWatch Anomaly Detection to automatically identify anomalies."
+    },
+    {
+      "id": 19,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 19：如何跟踪可用性和延迟指标？",
+      "question_en": "How do you track availability and latency metrics?",
+      "image": "image.png",
+      "why_important": "可用性和延迟是SLO的核心指标，必须持续监控",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未系统性跟踪可用性或延迟，或仅依赖基础设施指标",
+          "description_en": "No systematic tracking of availability or latency, or only relying on infrastructure metrics"
+        },
+        {
+          "level": 2,
+          "description_zh": "跟踪基本的可用性和延迟，但未按用户体验或关键路径分组",
+          "description_en": "Track basic availability and latency but not grouped by user experience or critical paths"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整跟踪：按API/用户路径的可用性和多个百分位延迟（P50/P95/P99），对比SLO目标",
+          "description_en": "Complete tracking: availability and multi-percentile latency (P50/P95/P99) by API/user paths, compared against SLO targets"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch Synthetics 进行合成监控，模拟真实用户交互。跟踪错误率（4xx/5xx）和延迟百分位数。使用 CloudWatch SLI/SLO 功能跟踪错误预算。对关键API设置<100ms P95延迟告警。",
+      "why_important_en": "Availability and latency are core SLO metrics that must be continuously monitored",
+      "aws_best_practice_en": "Use CloudWatch Synthetics for synthetic monitoring simulating real user interactions. Track error rates (4xx/5xx) and latency percentiles. Use CloudWatch SLI/SLO features to track error budgets. Set <100ms P95 latency alerts for critical APIs."
+    },
+    {
+      "id": 20,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 20：指标在哪些领域提供报告？",
+      "question_en": "In what areas do metrics provide reporting?",
+      "image": "image.png",
+      "why_important": "全面的指标报告提供完整的系统洞察",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "指标报告零散，缺少统一视图",
+          "description_en": "Scattered metric reporting, lacking unified view"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的仪表板，但未涵盖所有关键领域",
+          "description_en": "Basic dashboards exist but not covering all critical areas"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的指标报告：应用、基础设施、业务指标，按团队/服务/环境组织，实时更新",
+          "description_en": "Comprehensive metric reporting: application, infrastructure, business metrics, organized by team/service/environment, real-time updates"
+        }
+      ],
+      "aws_best_practice": "创建层次化仪表板：1) 高层次：业务指标和SLO；2) 服务级：服务健康和依赖；3) 资源级：基础设施指标。使用 CloudWatch Dashboards 和 Grafana。按团队和服务组织。包含故障分析视图。",
+      "why_important_en": "Comprehensive metric reporting provides complete system insights",
+      "aws_best_practice_en": "Create hierarchical dashboards: 1) High-level: business metrics and SLOs; 2) Service-level: service health and dependencies; 3) Resource-level: infrastructure metrics. Use CloudWatch Dashboards and Grafana. Organize by team and service. Include failure analysis views."
+    },
+    {
+      "id": 21,
+      "priority": "P1",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 21：如何跟踪依赖关系并在依赖关系受威胁时发出警报？",
+      "question_en": "How do you track dependencies and alert when dependencies are at risk?",
+      "image": "image.png",
+      "why_important": "依赖关系故障是导致级联故障的常见原因",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "未系统性跟踪依赖关系健康状况",
+          "description_en": "No systematic tracking of dependency health"
+        },
+        {
+          "level": 2,
+          "description_zh": "跟踪部分关键依赖，但缺少完整的依赖地图或主动告警",
+          "description_en": "Track some critical dependencies but lacking complete dependency map or proactive alerting"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的依赖关系监控：服务地图、健康检查、延迟/错误率告警、依赖降级策略",
+          "description_en": "Complete dependency monitoring: service map, health checks, latency/error rate alerts, dependency degradation strategies"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch ServiceLens 可视化服务依赖关系。为每个依赖设置健康检查（Route 53 Health Checks）。跟踪依赖的延迟和错误率。实施断路器模式（AWS App Mesh）以防止级联故障。",
+      "why_important_en": "Dependency failures are a common cause of cascading failures",
+      "aws_best_practice_en": "Use CloudWatch ServiceLens to visualize service dependencies. Set health checks for each dependency (Route 53 Health Checks). Track dependency latency and error rates. Implement circuit breaker pattern (AWS App Mesh) to prevent cascading failures."
+    },
+    {
+      "id": 22,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 22：指标何时提供有关故障场景的信息？",
+      "question_en": "When do metrics provide information about failure scenarios?",
+      "image": "image.png",
+      "why_important": "故障场景指标帮助快速诊断和隔离问题",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "指标仅显示正常状态，故障时缺少诊断信息",
+          "description_en": "Metrics only show normal state, lacking diagnostic info during failures"
+        },
+        {
+          "level": 2,
+          "description_zh": "有错误率指标，但缺少详细的故障模式分类",
+          "description_en": "Error rate metrics exist but lacking detailed failure mode classification"
+        },
+        {
+          "level": 3,
+          "description_zh": "详细的故障指标：按错误类型、依赖、影响范围分类，关联日志和跟踪",
+          "description_en": "Detailed failure metrics: classified by error type, dependency, impact scope, correlated with logs and traces"
+        }
+      ],
+      "aws_best_practice": "跟踪多维度故障指标：错误类型（4xx/5xx/超时/依赖）、受影响API、用户影响百分比。使用 CloudWatch Contributor Insights 识别top错误。关联X-Ray跟踪分析根本原因。",
+      "why_important_en": "Failure scenario metrics help rapidly diagnose and isolate problems",
+      "aws_best_practice_en": "Track multi-dimensional failure metrics: error types (4xx/5xx/timeout/dependency), affected APIs, user impact percentage. Use CloudWatch Contributor Insights to identify top errors. Correlate with X-Ray traces for root cause analysis."
+    },
+    {
+      "id": 23,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 23：选择警报的策略是什么？",
+      "question_en": "What is the strategy for selecting alerts?",
+      "image": "image.png",
+      "why_important": "告警策略确保及时发现问题而不产生告警疲劳",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "告警策略不清晰，产生大量噪音或遗漏关键告警",
+          "description_en": "Unclear alerting strategy, generating noise or missing critical alerts"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的告警规则，但未区分严重程度或缺少升级路径",
+          "description_en": "Basic alert rules exist but not distinguishing severity or lacking escalation paths"
+        },
+        {
+          "level": 3,
+          "description_zh": "完善的告警策略：症状导向、严重程度分级、降噪机制、智能聚合、可操作性",
+          "description_en": "Comprehensive alerting strategy: symptom-oriented, severity classification, noise reduction, intelligent aggregation, actionable"
+        }
+      ],
+      "aws_best_practice": "遵循告警最佳实践：1) 基于症状而非原因；2) 分级（P0-P3）；3) 可操作性（每个告警有runbook）；4) 避免告警风暴（聚合）；5) 定期审查和优化。使用 CloudWatch Composite Alarms 减少噪音。",
+      "why_important_en": "Alert strategy ensures timely problem detection without alert fatigue",
+      "aws_best_practice_en": "Follow alerting best practices: 1) Symptom-based, not cause-based; 2) Severity classification (P0-P3); 3) Actionable (each alert has a runbook); 4) Avoid alert storms (aggregation); 5) Regular review and optimization. Use CloudWatch Composite Alarms to reduce noise."
+    },
+    {
+      "id": 24,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 24：警报阈值的适应性如何？",
+      "question_en": "How adaptive are alert thresholds?",
+      "image": "image.png",
+      "why_important": "自适应阈值减少误报并适应系统变化",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "告警阈值固定，经常产生误报或漏报",
+          "description_en": "Fixed alert thresholds, frequently generating false positives or misses"
+        },
+        {
+          "level": 2,
+          "description_zh": "手动调整阈值，但调整频率低或依赖经验",
+          "description_en": "Manual threshold adjustments but infrequent or experience-based"
+        },
+        {
+          "level": 3,
+          "description_zh": "自适应阈值：基于历史数据、机器学习、自动调整、季节性模式识别",
+          "description_en": "Adaptive thresholds: based on historical data, machine learning, automatic adjustment, seasonal pattern recognition"
+        }
+      ],
+      "aws_best_practice": "使用 CloudWatch Anomaly Detection 自动学习指标模式并生成动态阈值。考虑时间因素（工作日vs周末、白天vs夜间）。使用百分位数而非平均值。定期review告警质量（准确率、误报率）。",
+      "why_important_en": "Adaptive thresholds reduce false positives and adapt to system changes",
+      "aws_best_practice_en": "Use CloudWatch Anomaly Detection to automatically learn metric patterns and generate dynamic thresholds. Consider time factors (weekdays vs. weekends, day vs. night). Use percentiles rather than averages. Regularly review alert quality (accuracy, false positive rate)."
+    },
+    {
+      "id": 25,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 25：使用什么方法来中继警报通知？",
+      "question_en": "What methods are used to relay alert notifications?",
+      "image": "image.png",
+      "why_important": "多渠道告警确保关键告警能够送达",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "单一告警渠道，存在单点故障风险",
+          "description_en": "Single alert channel, single point of failure risk"
+        },
+        {
+          "level": 2,
+          "description_zh": "多个告警渠道，但未根据严重程度区分",
+          "description_en": "Multiple alert channels but not differentiated by severity"
+        },
+        {
+          "level": 3,
+          "description_zh": "智能告警路由：根据严重程度、时间、on-call轮值自动路由，多渠道备份",
+          "description_en": "Intelligent alert routing: automatic routing based on severity, time, on-call rotation, multi-channel backup"
+        }
+      ],
+      "aws_best_practice": "使用 SNS 实现多渠道通知：邮件、SMS、Slack/Teams、PagerDuty。根据告警级别路由（P0→SMS+电话，P1→Slack，P2→邮件）。使用 EventBridge 实现复杂路由逻辑。确保关键告警有备用通道。",
+      "why_important_en": "Multi-channel alerting ensures critical alerts are delivered",
+      "aws_best_practice_en": "Use SNS for multi-channel notifications: email, SMS, Slack/Teams, PagerDuty. Route by alert level (P0 -> SMS+phone, P1 -> Slack, P2 -> email). Use EventBridge for complex routing logic. Ensure critical alerts have backup channels."
+    },
+    {
+      "id": 26,
+      "priority": "P2",
+      "category": "可观察性",
+      "category_en": "Observability",
+      "question_zh": "问题 26：如何自动响应警报？",
+      "question_en": "How do you automate alert responses?",
+      "image": "image.png",
+      "why_important": "自动响应减少MTTR并降低人为错误",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "所有告警需要人工响应",
+          "description_en": "All alerts require manual response"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分告警有自动响应，但覆盖有限",
+          "description_en": "Some alerts have auto-response but limited coverage"
+        },
+        {
+          "level": 3,
+          "description_zh": "广泛的自动响应：自动扩展、自动重启、自动隔离、自动回滚、人工确认后执行",
+          "description_en": "Extensive auto-response: auto-scaling, auto-restart, auto-isolation, auto-rollback, execute after human confirmation"
+        }
+      ],
+      "aws_best_practice": "使用 Systems Manager Automation 实现自动响应。常见场景：1) 高CPU→自动扩展；2) 实例不健康→自动替换；3) 磁盘满→自动清理；4) 错误率高→自动回滚。使用 Lambda 实现自定义响应逻辑。",
+      "why_important_en": "Automated response reduces MTTR and lowers human error",
+      "aws_best_practice_en": "Use Systems Manager Automation for auto-response. Common scenarios: 1) High CPU -> auto-scale; 2) Unhealthy instance -> auto-replace; 3) Disk full -> auto-cleanup; 4) High error rate -> auto-rollback. Use Lambda for custom response logic."
+    }
+  ]
+}

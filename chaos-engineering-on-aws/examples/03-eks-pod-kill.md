@@ -1,27 +1,27 @@
-# 示例 3: EKS Pod Kill — 微服务自愈验证
+# Example 3: EKS Pod Kill — Microservice Self-Healing Validation
 
-**架构模式**：EKS 微服务（Deployment + Service + Ingress）
-**工具**：Chaos Mesh PodChaos（需集群已安装）
-**验证点**：ReplicaSet 自动重建 Pod，流量通过 Service 无损切换
+**Architecture pattern**: EKS microservices (Deployment + Service + Ingress)
+**Tool**: Chaos Mesh PodChaos (requires cluster installation)
+**Validation target**: ReplicaSet auto-recreates Pod, traffic switches seamlessly via Service
 
 ---
 
-## 前提
+## Prerequisites
 
-- 集群已安装 Chaos Mesh：`kubectl get crd | grep chaos-mesh`
-- 目标 Deployment replicas >= 2
+- Cluster has Chaos Mesh installed: `kubectl get crd | grep chaos-mesh`
+- Target Deployment replicas >= 2
 
-如果 Chaos Mesh 未安装，可用 FIS `aws:eks:terminate-nodegroup-instances` 做**节点级**故障替代（爆炸半径更大）。
+If Chaos Mesh is not installed, use FIS `aws:eks:terminate-nodegroup-instances` for **node-level** fault as an alternative (larger blast radius).
 
-> ⚠️ 不推荐用 FIS `aws:eks:pod-delete` 做 Pod 级故障——需额外 K8s ServiceAccount + RBAC + EKS access entry，且 fault injector Pod 初始化慢（>2min）。Pod 级故障首选 Chaos Mesh。
+> ⚠️ Not recommended to use FIS `aws:eks:pod-delete` for Pod-level faults — requires additional K8s ServiceAccount + RBAC + EKS access entry, and fault injector Pod initialization is slow (>2min). Prefer Chaos Mesh for Pod-level faults.
 
-## 稳态假设
+## Steady-State Hypothesis
 
-当杀死目标服务的 1 个 Pod 后：
-- Service 请求成功率 >= 99.9%
-- P99 延迟 <= 300ms
-- Pod 在 60s 内重建并进入 Ready 状态
-- 无请求丢失（其他 Pod 接管流量）
+After killing 1 Pod of the target service:
+- Service request success rate >= 99.9%
+- P99 latency <= 300ms
+- Pod rebuilt and enters Ready state within 60s
+- Zero request loss (other Pods take over traffic)
 
 ## Chaos Mesh Manifest
 
@@ -43,10 +43,10 @@ spec:
   gracePeriod: 0
 ```
 
-## 使用 MCP（如可用）
+## Using MCP (if available)
 
 ```python
-# chaosmesh-mcp 调用
+# chaosmesh-mcp call
 pod_kill(
     service="web-frontend",
     duration="30s",
@@ -55,38 +55,38 @@ pod_kill(
 )
 ```
 
-## 执行命令
+## Execution Commands
 
 ```bash
-# 检查目标 Pod 数量
+# Check target Pod count
 kubectl get pods -n production -l app=web-frontend
 
-# 注入故障
+# Inject fault
 kubectl apply -f examples/pod-kill-web-frontend.yaml
 
-# 观察 Pod 重建
+# Observe Pod recreation
 kubectl get pods -n production -l app=web-frontend -w
 
-# 清理（到期自动清理，或手动）
+# Cleanup (auto-cleans on expiry, or manual)
 kubectl delete -f examples/pod-kill-web-frontend.yaml
 ```
 
-## 观测指标
+## Observation Metrics
 
-| 指标 | 来源 | 说明 |
+| Metric | Source | Description |
 |------|------|------|
-| Pod Ready 数量 | `kubectl get pods` | 应快速恢复到期望值 |
-| 请求成功率 | Ingress / ALB metrics | 不应低于 99.9% |
-| P99 延迟 | 应用 metrics / CloudWatch | 不应显著上升 |
-| Pod 重启次数 | `kubectl describe pod` | 验证重建而非反复崩溃 |
+| Pod Ready count | `kubectl get pods` | Should quickly recover to desired count |
+| Request success rate | Ingress / ALB metrics | Should not drop below 99.9% |
+| P99 latency | Application metrics / CloudWatch | Should not significantly increase |
+| Pod restart count | `kubectl describe pod` | Verify recreation, not repeated crashes |
 
-## 预期结果
+## Expected Results
 
-| 阶段 | 时间 | 预期 |
+| Phase | Time | Expected |
 |------|------|------|
-| 注入 | T+0s | 目标 Pod 被杀死 |
-| 检测 | T+1-5s | Service endpoint 移除该 Pod |
-| 重建 | T+5-30s | ReplicaSet 创建新 Pod |
-| 恢复 | T+30-60s | 新 Pod Ready，endpoint 加回 |
+| Injection | T+0s | Target Pod killed |
+| Detection | T+1-5s | Service endpoint removes the Pod |
+| Recreation | T+5-30s | ReplicaSet creates new Pod |
+| Recovery | T+30-60s | New Pod Ready, endpoint added back |
 
-**如果失败**：常见原因——replicas=1（无冗余）、readinessProbe 过长、PodDisruptionBudget 过严、镜像拉取慢（无 imagePullPolicy: IfNotPresent）。
+**If failed**: Common causes — replicas=1 (no redundancy), readinessProbe too long, PodDisruptionBudget too strict, slow image pull (missing imagePullPolicy: IfNotPresent).

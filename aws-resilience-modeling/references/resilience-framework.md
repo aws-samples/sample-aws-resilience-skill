@@ -1,123 +1,123 @@
-# AWS Resilience Analysis Framework 详细参考
+# AWS Resilience Analysis Framework - Detailed Reference
 
-本文档基于 2025 年最新的系统韧性领域知识，整合了 AWS Well-Architected Framework、AWS 韧性分析框架和混沌工程的最佳实践。
+This document is based on the latest 2025 knowledge in system resilience, integrating best practices from the AWS Well-Architected Framework, AWS Resilience Analysis Framework, and Chaos Engineering.
 
-## 目录
+## Table of Contents
 
-- [1. AWS Well-Architected Framework - 可靠性支柱 (2025)](#1-aws-well-architected-framework---可靠性支柱-2025)
-- [2. AWS 韧性分析核心原则](#2-aws-韧性分析核心原则)
-- [3. 混沌工程方法论](#3-混沌工程方法论)
-- [4. 现代可观测性标准](#4-现代可观测性标准)
-- [5. 云设计模式（韧性相关）](#5-云设计模式韧性相关)
-- [总结](#总结)
+- [1. AWS Well-Architected Framework - Reliability Pillar (2025)](#1-aws-well-architected-framework---reliability-pillar-2025)
+- [2. AWS Resilience Analysis Core Principles](#2-aws-resilience-analysis-core-principles)
+- [3. Chaos Engineering Methodology](#3-chaos-engineering-methodology)
+- [4. Modern Observability Standards](#4-modern-observability-standards)
+- [5. Cloud Design Patterns (Resilience-Related)](#5-cloud-design-patterns-resilience-related)
+- [Summary](#summary)
 
 ---
 
-## 1. AWS Well-Architected Framework - 可靠性支柱 (2025)
+## 1. AWS Well-Architected Framework - Reliability Pillar (2025)
 
-### 1.1 五大设计原则
+### 1.1 Five Design Principles
 
-#### 原则 1：自动从故障中恢复 (Automatically Recover from Failure)
+#### Principle 1: Automatically Recover from Failure
 
-**核心理念**：
-- 通过监控关键性能指标 (KPIs) 实现自动化故障检测和恢复
-- KPIs 应衡量业务价值而非技术细节
-- 启用自动通知、追踪和恢复流程
-- 使用预测性自动化提前修复故障
+**Core Concept**:
+- Achieve automated failure detection and recovery by monitoring Key Performance Indicators (KPIs)
+- KPIs should measure business value, not technical details
+- Enable automated notification, tracking, and recovery workflows
+- Use predictive automation to proactively fix failures
 
-**实施要点**：
+**Implementation Points**:
 ```yaml
-监控策略:
-  业务指标:
-    - 订单完成率
-    - 用户登录成功率
-    - 交易处理时间
+Monitoring Strategy:
+  Business Metrics:
+    - Order completion rate
+    - User login success rate
+    - Transaction processing time
 
-  技术指标:
-    - CPU/内存利用率
-    - 网络吞吐量
-    - 错误率
+  Technical Metrics:
+    - CPU/memory utilization
+    - Network throughput
+    - Error rate
 
-自动恢复:
-  - Auto Scaling Groups (自动替换故障实例)
-  - RDS Multi-AZ (自动故障转移)
-  - Route 53 Health Checks (DNS 故障转移)
-  - Lambda Dead Letter Queues (失败重试)
+Auto Recovery:
+  - Auto Scaling Groups (automatic replacement of failed instances)
+  - RDS Multi-AZ (automatic failover)
+  - Route 53 Health Checks (DNS failover)
+  - Lambda Dead Letter Queues (failure retry)
 ```
 
-#### 原则 2：测试恢复流程 (Test Recovery Procedures)
+#### Principle 2: Test Recovery Procedures
 
-**核心理念**：
-- 在云环境中主动验证恢复策略
-- 使用自动化模拟各种故障场景
-- 重现历史故障场景
-- 在真实故障发生前发现并修复问题路径
+**Core Concept**:
+- Proactively validate recovery strategies in cloud environments
+- Use automation to simulate various failure scenarios
+- Reproduce historical failure scenarios
+- Discover and fix problem paths before real failures occur
 
-**实施工具**：
+**Implementation Tools**:
 - AWS Fault Injection Simulator (FIS)
 - GameDays / Disaster Recovery Drills
 
-**测试频率**：
-- 混沌实验：每周（Staging）
-- DR 切换演练：每月（部分流量）
-- 完整 DR 演练：每季度（生产环境）
-- 桌面演练：每月（理论场景）
+**Test Frequency**:
+- Chaos experiments: Weekly (Staging)
+- DR failover drills: Monthly (partial traffic)
+- Full DR drills: Quarterly (Production)
+- Tabletop exercises: Monthly (theoretical scenarios)
 
-#### 原则 3：水平扩展 (Scale Horizontally)
+#### Principle 3: Scale Horizontally
 
-**核心理念**：
-- 使用多个小资源替代单个大资源
-- 降低单点故障影响
-- 跨多个小资源分发请求
-- 避免共享单点故障
+**Core Concept**:
+- Replace single large resources with multiple smaller resources
+- Reduce single point of failure impact
+- Distribute requests across multiple smaller resources
+- Avoid shared single points of failure
 
-**架构模式**：
+**Architecture Patterns**:
 ```
-反模式（垂直扩展）:
-┌─────────────────┐
-│  单个大型 EC2   │  ← 单点故障
-│  (m5.24xlarge)  │
-└─────────────────┘
+Anti-pattern (Vertical Scaling):
++-----------------+
+| Single Large    |  <- Single point of failure
+| EC2 (m5.24xl)  |
++-----------------+
 
-最佳实践（水平扩展）:
-┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐
-│ EC2  │ │ EC2  │ │ EC2  │ │ EC2  │  ← 冗余和容错
-│(m5.xl)│(m5.xl)│(m5.xl)│(m5.xl)│
-└──────┘ └──────┘ └──────┘ └──────┘
+Best Practice (Horizontal Scaling):
++------+ +------+ +------+ +------+
+| EC2  | | EC2  | | EC2  | | EC2  |  <- Redundancy and fault tolerance
+|(m5.xl)|(m5.xl)|(m5.xl)|(m5.xl)|
++------+ +------+ +------+ +------+
 ```
 
-#### 原则 4：停止猜测容量 (Stop Guessing Capacity)
+#### Principle 4: Stop Guessing Capacity
 
-**核心理念**：
-- 基于监控自动调整资源
-- 监控需求和利用率
-- 自动添加或移除资源
-- 维持最优利用率
-- 管理服务配额和约束
+**Core Concept**:
+- Automatically adjust resources based on monitoring
+- Monitor demand and utilization
+- Automatically add or remove resources
+- Maintain optimal utilization
+- Manage service quotas and constraints
 
-**AWS 服务**：
-- AWS Auto Scaling（EC2、ECS、DynamoDB）
+**AWS Services**:
+- AWS Auto Scaling (EC2, ECS, DynamoDB)
 - Application Auto Scaling
-- Predictive Scaling（基于 ML 预测）
-- Service Quotas（配额管理）
+- Predictive Scaling (ML-based prediction)
+- Service Quotas (quota management)
 
-#### 原则 5：通过自动化管理变更 (Manage Change Through Automation)
+#### Principle 5: Manage Change Through Automation
 
-**核心理念**：
-- 所有基础设施变更通过自动化进行
-- 使用基础设施即代码 (IaC)
-- 可追踪和审查的变更过程
-- 减少人为错误
+**Core Concept**:
+- All infrastructure changes through automation
+- Use Infrastructure as Code (IaC)
+- Traceable and reviewable change processes
+- Reduce human errors
 
-**实施工具**：
+**Implementation Tools**:
 ```yaml
-IaC 工具:
+IaC Tools:
   - AWS CloudFormation
   - Terraform
   - AWS CDK (TypeScript/Python)
   - Pulumi
 
-CI/CD 工具:
+CI/CD Tools:
   - AWS CodePipeline
   - GitHub Actions
   - GitLab CI
@@ -128,252 +128,254 @@ GitOps:
   - Flux CD
 ```
 
-### 1.2 灾难恢复策略
+### 1.2 Disaster Recovery Strategies
 
-AWS 提供四种主要灾难恢复策略，按成本和复杂度递增：
+AWS provides four primary disaster recovery strategies, in order of increasing cost and complexity:
 
-| 策略 | RTO | RPO | 成本 | 复杂度 | 适用场景 |
-|------|-----|-----|------|--------|---------|
-| **备份与恢复** | 小时-天 | 小时-天 | $ | 低 | 数据丢失或损坏场景 |
-| **导航灯 (Pilot Light)** | 10分钟-小时 | 分钟 | $$ | 中 | 区域灾难 |
-| **温备份 (Warm Standby)** | 分钟 | 秒-分钟 | $$$ | 中-高 | 关键业务系统 |
-| **多站点主动-主动** | 秒-分钟 | 秒 | $$$$ | 高 | 任务关键系统 |
+| Strategy | RTO | RPO | Cost | Complexity | Use Case |
+|----------|-----|-----|------|-----------|---------|
+| **Backup & Restore** | Hours-Days | Hours-Days | $ | Low | Data loss or corruption scenarios |
+| **Pilot Light** | 10 min-Hours | Minutes | $$ | Medium | Regional disasters |
+| **Warm Standby** | Minutes | Seconds-Minutes | $$$ | Medium-High | Critical business systems |
+| **Multi-Site Active-Active** | Seconds-Minutes | Seconds | $$$$ | High | Mission-critical systems |
 
-#### 策略 1：备份与恢复 (Backup and Restore)
+#### Strategy 1: Backup and Restore
 
-**架构**：
+**Architecture**:
 ```
-┌─────────────────────────────────────────────────┐
-│ 主区域 (us-east-1)                              │
-│  ┌──────────┐      定期备份     ┌────────────┐ │
-│  │ RDS/EBS  │ ──────────────────>│ S3 Backups │ │
-│  └──────────┘                    └────────────┘ │
-└─────────────────────────────────────────────────┘
-                       │ 跨区域复制
-                       ▼
-┌─────────────────────────────────────────────────┐
-│ DR 区域 (us-west-2)                             │
-│                    ┌────────────┐               │
-│                    │ S3 Backups │               │
-│                    └────────────┘               │
-│                         │ 灾难时恢复             │
-│                         ▼                        │
-│                    ┌──────────┐                 │
-│                    │ RDS/EBS  │                 │
-│                    └──────────┘                 │
-└─────────────────────────────────────────────────┘
++--------------------------------------------------+
+| Primary Region (us-east-1)                        |
+|  +----------+      Periodic Backup +------------+ |
+|  | RDS/EBS  | ------------------->| S3 Backups  | |
+|  +----------+                     +------------+ |
++--------------------------------------------------+
+                       | Cross-region replication
+                       v
++--------------------------------------------------+
+| DR Region (us-west-2)                             |
+|                    +------------+                 |
+|                    | S3 Backups |                 |
+|                    +------------+                 |
+|                         | Restore on disaster     |
+|                         v                         |
+|                    +----------+                   |
+|                    | RDS/EBS  |                   |
+|                    +----------+                   |
++--------------------------------------------------+
 ```
 
-**实施要点**：
-- 使用 AWS Backup 集中管理
-- 跨区域复制 (S3 CRR)
-- 必须使用 IaC 部署 (CloudFormation/CDK)
-- 定期测试恢复流程
+**Implementation Points**:
+- Use AWS Backup for centralized management
+- Cross-Region Replication (S3 CRR)
+- Must deploy with IaC (CloudFormation/CDK)
+- Regularly test restore procedures
 
-**AWS 服务**：
+**AWS Services**:
 - AWS Backup
 - S3 Cross-Region Replication
 - CloudFormation StackSets
-- AWS Backup Vault Lock (合规)
+- AWS Backup Vault Lock (compliance)
 
-#### 策略 2：导航灯 (Pilot Light)
+#### Strategy 2: Pilot Light
 
-**架构**：
+**Architecture**:
 ```
-主区域 (us-east-1) - 完整运行
-┌─────────────────────────────────────┐
-│ ┌─────┐  ┌─────┐  ┌─────┐          │
-│ │ EC2 │  │ EC2 │  │ EC2 │  ← 运行  │
-│ └─────┘  └─────┘  └─────┘          │
-│      │       │       │              │
-│      └───────┴───────┘              │
-│              │                      │
-│      ┌───────────────┐              │
-│      │ RDS Primary   │  ← 运行     │
-│      └───────────────┘              │
-└─────────────────────────────────────┘
-            │ 数据复制
-            ▼
-DR 区域 (us-west-2) - 核心始终在线
-┌─────────────────────────────────────┐
-│ ┌─────┐  ┌─────┐                   │
-│ │ EC2 │  │ EC2 │  ← 已配置但关闭   │
-│ └─────┘  └─────┘                   │
-│                                     │
-│      ┌───────────────┐              │
-│      │ RDS Replica   │  ← 运行     │
-│      └───────────────┘              │
-└─────────────────────────────────────┘
+Primary Region (us-east-1) - Full Operation
++-------------------------------------+
+| +-----+  +-----+  +-----+          |
+| | EC2 |  | EC2 |  | EC2 |  <- Running |
+| +-----+  +-----+  +-----+          |
+|      |       |       |              |
+|      +-------+-------+              |
+|              |                      |
+|      +---------------+              |
+|      | RDS Primary   |  <- Running  |
+|      +---------------+              |
++-------------------------------------+
+            | Data replication
+            v
+DR Region (us-west-2) - Core Always On
++-------------------------------------+
+| +-----+  +-----+                    |
+| | EC2 |  | EC2 |  <- Configured but stopped |
+| +-----+  +-----+                    |
+|                                      |
+|      +---------------+              |
+|      | RDS Replica   |  <- Running  |
+|      +---------------+              |
++-------------------------------------+
 ```
 
-**核心特点**：
-- 核心基础设施始终在线（数据库、存储）
-- 应用服务器已配置但关闭
-- 故障时快速启动应用层（10-30 分钟）
-- 数据持续复制，RPO 低
+**Key Characteristics**:
+- Core infrastructure always on (databases, storage)
+- Application servers configured but stopped
+- Rapid application layer startup on failure (10-30 minutes)
+- Continuous data replication, low RPO
 
-**AWS 服务**：
+**AWS Services**:
 - Aurora Global Database
 - DynamoDB Global Tables
 - S3 Cross-Region Replication
 - AMIs + Launch Templates
 
-#### 策略 3：温备份 (Warm Standby)
+#### Strategy 3: Warm Standby
 
-**架构**：
+**Architecture**:
 ```
-主区域 (us-east-1) - 完整容量
-┌─────────────────────────────────────┐
-│ Route 53 (100% 流量)                │
-│         │                            │
-│    ┌────▼─────┐                     │
-│    │   ALB    │                     │
-│    └────┬─────┘                     │
-│ ┌───────┴────────┐                 │
-│ │ ASG (10 实例)  │  ← 完整容量     │
-│ └────────────────┘                 │
-│         │                            │
-│    ┌────▼──────┐                    │
-│    │ Aurora DB │                    │
-│    └───────────┘                    │
-└─────────────────────────────────────┘
-            │ 持续复制
-            ▼
-DR 区域 (us-west-2) - 缩小规模运行
-┌─────────────────────────────────────┐
-│ Route 53 (0% 流量，健康检查待命)   │
-│         │                            │
-│    ┌────▼─────┐                     │
-│    │   ALB    │                     │
-│    └────┬─────┘                     │
-│ ┌───────┴────────┐                 │
-│ │ ASG (2 实例)   │  ← 25% 容量     │
-│ └────────────────┘                 │
-│         │                            │
-│    ┌────▼──────┐                    │
-│    │ Aurora DB │                    │
-│    └───────────┘                    │
-└─────────────────────────────────────┘
-```
-
-**核心特点**：
-- DR 区域拥有缩小规模的完整环境（通常 25-50%）
-- 无需启动即可处理请求
-- 故障时仅需扩展容量（5-10 分钟）
-- 持续数据同步，RPO 非常低
-
-**故障转移流程**：
-1. Route 53 检测主区域故障（健康检查失败）
-2. 自动将 DNS 流量路由到 DR 区域
-3. DR 区域 Auto Scaling 自动扩展到完整容量
-4. 无数据丢失（持续复制）
-
-#### 策略 4：多站点主动-主动 (Multi-Site Active-Active)
-
-**架构**：
-```
-┌────────────────────────────────────────────────┐
-│ Global Accelerator / CloudFront                │
-│  (智能流量路由：延迟最低 + 健康检查)           │
-└────────────────────────────────────────────────┘
-         │                          │
-    50% 流量                    50% 流量
-         │                          │
-    ┌────▼─────────────┐    ┌──────▼──────────┐
-    │ us-east-1        │    │ us-west-2       │
-    │ (完整容量)        │    │ (完整容量)       │
-    │                  │    │                 │
-    │ ┌──────────────┐ │    │ ┌─────────────┐│
-    │ │ ASG (10实例) │ │    │ │ ASG (10实例)││
-    │ └──────┬───────┘ │    │ └──────┬──────┘│
-    │        │          │    │        │       │
-    │ ┌──────▼────────┐│    │ ┌──────▼──────┐│
-    │ │ Aurora Global ││◄───┼─┤Aurora Global││
-    │ │ (Writer)      ││双向││ │(Read Replica││
-    │ └───────────────┘│同步││ │可晋升为Writer│
-    └───────────────────┘    └─────────────────┘
+Primary Region (us-east-1) - Full Capacity
++-------------------------------------+
+| Route 53 (100% traffic)             |
+|         |                           |
+|    +----v-----+                     |
+|    |   ALB    |                     |
+|    +----+-----+                     |
+| +-------+--------+                  |
+| | ASG (10 inst.) |  <- Full capacity|
+| +----------------+                  |
+|         |                           |
+|    +----v------+                    |
+|    | Aurora DB |                    |
+|    +-----------+                    |
++-------------------------------------+
+            | Continuous replication
+            v
+DR Region (us-west-2) - Scaled Down
++-------------------------------------+
+| Route 53 (0% traffic, health check standby) |
+|         |                           |
+|    +----v-----+                     |
+|    |   ALB    |                     |
+|    +----+-----+                     |
+| +-------+--------+                  |
+| | ASG (2 inst.)  |  <- 25% capacity|
+| +----------------+                  |
+|         |                           |
+|    +----v------+                    |
+|    | Aurora DB |                    |
+|    +-----------+                    |
++-------------------------------------+
 ```
 
-**核心特点**：
-- 所有区域同时处理流量（无"主"概念）
-- 使用 Route 53 或 Global Accelerator 智能路由
+**Key Characteristics**:
+- DR region has a scaled-down complete environment (typically 25-50%)
+- Can handle requests without startup
+- Only need to scale capacity on failure (5-10 minutes)
+- Continuous data sync, very low RPO
+
+**Failover Process**:
+1. Route 53 detects primary region failure (health check fails)
+2. Automatically routes DNS traffic to DR region
+3. DR region Auto Scaling automatically scales to full capacity
+4. No data loss (continuous replication)
+
+#### Strategy 4: Multi-Site Active-Active
+
+**Architecture**:
+```
++------------------------------------------------+
+| Global Accelerator / CloudFront                 |
+|  (Intelligent traffic routing: lowest latency   |
+|   + health checks)                              |
++------------------------------------------------+
+         |                          |
+    50% traffic                 50% traffic
+         |                          |
+    +----v-----------------+  +-----v--------------+
+    | us-east-1            |  | us-west-2          |
+    | (Full capacity)      |  | (Full capacity)    |
+    |                      |  |                    |
+    | +--------------+     |  | +-------------+    |
+    | | ASG (10 inst)|     |  | | ASG (10 inst)|   |
+    | +------+-------+     |  | +------+------+   |
+    |        |             |  |        |          |
+    | +------v--------+   |  | +------v------+   |
+    | | Aurora Global  |<--+--+| Aurora Global|   |
+    | | (Writer)       | bi- | | (Read Replica|   |
+    | +----------------+ dir | | can promote  |   |
+    +----------------------+ | | to Writer)   |   |
+                             +-+---------------+--+
+```
+
+**Key Characteristics**:
+- All regions handle traffic simultaneously (no "primary" concept)
+- Route 53 or Global Accelerator for intelligent routing
 - DynamoDB Global Tables / Aurora Global Database
-- RTO < 1 分钟，RPO < 1 秒
-- 成本最高（2x 或更多）
+- RTO < 1 minute, RPO < 1 second
+- Highest cost (2x or more)
 
-**AWS 服务**：
+**AWS Services**:
 - AWS Global Accelerator
 - Route 53 with Latency-based Routing
 - Aurora Global Database
 - DynamoDB Global Tables
 - CloudFront
 
-### 1.3 故障隔离与多位置部署
+### 1.3 Fault Isolation and Multi-Location Deployment
 
-#### 多可用区 (Multi-AZ) 架构
+#### Multi-AZ Architecture
 
-**物理隔离特性**：
-- 独立电力供应
-- 独立网络连接
-- 物理距离：数公里到数十公里
-- 低延迟：个位数毫秒 (< 2ms)
-- 支持同步复制
+**Physical Isolation Characteristics**:
+- Independent power supply
+- Independent network connectivity
+- Physical distance: kilometers to tens of kilometers
+- Low latency: single-digit milliseconds (< 2ms)
+- Supports synchronous replication
 
-**实施方式**：
+**Implementation**:
 ```yaml
-计算层:
+Compute Layer:
   Auto Scaling:
-    - 跨至少 3 个 AZ 部署
-    - 使用 AZ Rebalancing
-    - 健康检查：ELB + EC2
+    - Deploy across at least 3 AZs
+    - Use AZ Rebalancing
+    - Health checks: ELB + EC2
 
   ECS/EKS:
-    - 任务/Pod 跨 AZ 分布
-    - Service Mesh 故障转移
+    - Tasks/Pods distributed across AZs
+    - Service Mesh failover
 
-负载均衡:
+Load Balancing:
   ALB/NLB:
-    - 至少 2 个 AZ
-    - Cross-Zone Load Balancing 启用
-    - 健康检查配置
+    - At least 2 AZs
+    - Cross-Zone Load Balancing enabled
+    - Health check configuration
 
-数据层:
+Data Layer:
   RDS Multi-AZ:
-    - 同步复制
-    - 自动故障转移 (60-120 秒)
+    - Synchronous replication
+    - Automatic failover (60-120 seconds)
 
   Aurora:
-    - 6 副本跨 3 AZ
-    - 自愈存储
-    - 故障转移 < 30 秒
+    - 6 replicas across 3 AZs
+    - Self-healing storage
+    - Failover < 30 seconds
 ```
 
-#### 多区域 (Multi-Region) 架构
+#### Multi-Region Architecture
 
-**适用场景**：
-- 关键基础设施（金融、医疗）
-- 严格 SLA 要求（99.99%+）
-- 全球用户低延迟
-- 合规要求（数据驻留）
+**Applicable Scenarios**:
+- Critical infrastructure (finance, healthcare)
+- Strict SLA requirements (99.99%+)
+- Global users requiring low latency
+- Compliance requirements (data residency)
 
-**关键组件**：
+**Key Components**:
 
-| 需求 | AWS 服务 | 说明 |
-|------|---------|------|
-| 基础设施复制 | CloudFormation StackSets | 跨区域部署相同基础设施 |
-| 数据复制 | DynamoDB Global Tables | 多主复制，< 1s 延迟 |
-| | Aurora Global Database | 跨区域复制，< 1s 延迟 |
-| | S3 Cross-Region Replication | 对象存储复制 |
-| 流量路由 | Route 53 | 健康检查 + 故障转移 |
-| | Global Accelerator | Anycast IP + 自动故障转移 |
+| Requirement | AWS Service | Description |
+|-------------|-----------|-------------|
+| Infrastructure Replication | CloudFormation StackSets | Deploy identical infrastructure across regions |
+| Data Replication | DynamoDB Global Tables | Multi-master replication, < 1s latency |
+| | Aurora Global Database | Cross-region replication, < 1s latency |
+| | S3 Cross-Region Replication | Object storage replication |
+| Traffic Routing | Route 53 | Health checks + failover |
+| | Global Accelerator | Anycast IP + automatic failover |
 | | CloudFront | CDN + Origin Failover |
-| DR 编排 | AWS Resilience Hub | 自动评估和改进建议 |
-| | Application Recovery Controller | 跨区域流量控制 |
+| DR Orchestration | AWS Resilience Hub | Automated assessment and recommendations |
+| | Application Recovery Controller | Cross-region traffic control |
 
-**实施示例（Active-Passive）**：
+**Implementation Example (Active-Passive)**:
 
 ```yaml
-# CloudFormation StackSet 参数
+# CloudFormation StackSet Parameters
 Regions:
   Primary: us-east-1
   Secondary: us-west-2
@@ -385,7 +387,7 @@ Deployment:
 
   Secondary:
     Capacity: 25%
-    TrafficWeight: 0%  # 待命
+    TrafficWeight: 0%  # Standby
 
 Failover:
   Trigger: Route 53 Health Check Failure
@@ -396,714 +398,713 @@ Failover:
   ExpectedRTO: 5 minutes
 ```
 
-### 1.4 变更管理
+### 1.4 Change Management
 
-**三大最佳实践领域**：
+**Three Key Best Practice Areas**:
 
-#### 1. 监控工作负载资源
+#### 1. Monitor Workload Resources
 
-**关键监控指标**：
+**Key Monitoring Signals**:
 
-| 信号 | 描述 | CloudWatch 指标 | 告警阈值 |
-|------|------|----------------|---------|
-| **延迟** | 请求响应时间 | TargetResponseTime | P95 > 200ms |
-| **流量** | 系统需求 | RequestCount | 突增 > 200% |
-| **错误** | 失败请求率 | HTTPCode_5XX_Count | > 1% |
-| **饱和度** | 资源利用率 | CPUUtilization | > 80% |
+| Signal | Description | CloudWatch Metric | Alarm Threshold |
+|--------|-------------|-------------------|-----------------|
+| **Latency** | Request response time | TargetResponseTime | P95 > 200ms |
+| **Traffic** | System demand | RequestCount | Spike > 200% |
+| **Errors** | Failed request rate | HTTPCode_5XX_Count | > 1% |
+| **Saturation** | Resource utilization | CPUUtilization | > 80% |
 
-**实施**：
+**Implementation**:
 ```yaml
-CloudWatch 仪表板:
-  - 黄金信号概览
-  - 按服务分组
-  - 实时和历史趋势
-  - 关联日志和追踪
+CloudWatch Dashboard:
+  - Golden signals overview
+  - Grouped by service
+  - Real-time and historical trends
+  - Correlated logs and traces
 
 CloudWatch Alarms:
-  - 复合告警（多指标）
-  - 异常检测（ML 驱动）
-  - 多窗口告警（避免抖动）
+  - Composite alarms (multi-metric)
+  - Anomaly detection (ML-driven)
+  - Multi-window alarms (avoid flapping)
 
 X-Ray:
-  - 分布式追踪
-  - 服务地图
-  - 延迟分析
+  - Distributed tracing
+  - Service map
+  - Latency analysis
 ```
 
-#### 2. 设计自适应工作负载
+#### 2. Design Adaptive Workloads
 
-**弹性模式**：
+**Elasticity Patterns**:
 
 ```yaml
-Auto Scaling 策略:
+Auto Scaling Strategies:
   Target Tracking:
-    - CPU 利用率目标：70%
-    - ALB 请求计数：1000/实例
-    - 自定义指标（队列深度）
+    - CPU utilization target: 70%
+    - ALB request count: 1000/instance
+    - Custom metrics (queue depth)
 
   Step Scaling:
-    - 快速响应突发流量
-    - 阶梯式扩展
+    - Rapid response to burst traffic
+    - Stepped scaling
 
   Scheduled Scaling:
-    - 已知高峰时段
-    - 提前扩容
+    - Known peak periods
+    - Pre-scaling
 
   Predictive Scaling:
-    - ML 预测未来负载
-    - 提前扩容
+    - ML-predicted future load
+    - Pre-scaling
 
-负载均衡:
-  - ALB：HTTP/HTTPS 应用
-  - NLB：TCP/UDP，极低延迟
-  - GWLB：安全设备集成
-  - Connection Draining：优雅停止
+Load Balancing:
+  - ALB: HTTP/HTTPS applications
+  - NLB: TCP/UDP, ultra-low latency
+  - GWLB: Security appliance integration
+  - Connection Draining: Graceful shutdown
 ```
 
-#### 3. 实施变更
+#### 3. Implement Changes
 
-**结构化变更管理流程**：
+**Structured Change Management Process**:
 
 ```mermaid
 graph TD
-    A[变更请求] --> B{风险评估}
-    B -->|高风险| C[需要 CAB 批准]
-    B -->|低风险| D[自动化审批]
-    C --> E[计划变更窗口]
-    D --> F[CI/CD 流水线]
+    A[Change Request] --> B{Risk Assessment}
+    B -->|High Risk| C[Requires CAB Approval]
+    B -->|Low Risk| D[Automated Approval]
+    C --> E[Plan Change Window]
+    D --> F[CI/CD Pipeline]
     E --> F
-    F --> G[蓝绿部署]
-    G --> H{健康检查}
-    H -->|通过| I[切换流量]
-    H -->|失败| J[自动回滚]
-    I --> K[验证]
+    F --> G[Blue-Green Deployment]
+    G --> H{Health Check}
+    H -->|Pass| I[Switch Traffic]
+    H -->|Fail| J[Auto Rollback]
+    I --> K[Validation]
     J --> K
-    K --> L[事后复盘]
+    K --> L[Postmortem]
 ```
 
-**应急措施（REL05-BP07）**：
+**Emergency Measures (REL05-BP07)**:
 
 ```yaml
-回滚计划:
-  自动回滚触发器:
-    - 错误率 > 1%
-    - 延迟 P95 > 2x 基线
-    - 健康检查失败 > 20%
+Rollback Plan:
+  Automatic Rollback Triggers:
+    - Error rate > 1%
+    - Latency P95 > 2x baseline
+    - Health check failures > 20%
 
-  回滚方法:
-    - 蓝绿部署：切换流量到旧版本
-    - 金丝雀：停止推出，回退
-    - CloudFormation：StackSet 回滚
+  Rollback Methods:
+    - Blue-green deployment: Switch traffic to previous version
+    - Canary: Stop rollout, rollback
+    - CloudFormation: StackSet rollback
 
-  回滚时间目标: < 5 分钟
+  Rollback Time Target: < 5 minutes
 
-熔断机制:
-  - 每次变更影响 < 10% 流量
-  - 分阶段推出（1% → 10% → 50% → 100%）
-  - 每阶段验证期：30 分钟
-  - 任何阶段失败自动停止
+Circuit Breaking:
+  - Each change impacts < 10% traffic
+  - Phased rollout (1% -> 10% -> 50% -> 100%)
+  - Validation period per phase: 30 minutes
+  - Auto-stop on any phase failure
 ```
 
 ---
 
-## 2. AWS 韧性分析核心原则
+## 2. AWS Resilience Analysis Core Principles
 
-### 2.1 错误预算 (Error Budget)
+### 2.1 Error Budget
 
-**核心哲学**：
-> "拒绝追求 100% 可靠性。平衡不可用风险与创新速度和运营效率"
+**Core Philosophy**:
+> "Reject the pursuit of 100% reliability. Balance unavailability risk with innovation speed and operational efficiency."
 
-**计算公式**：
+**Calculation Formula**:
 
 ```
-Error Budget = (1 - SLO) × 时间周期
+Error Budget = (1 - SLO) x Time Period
 
-示例：
-SLO = 99.9%（月度）
-Error Budget = (1 - 0.999) × 30 天 × 24 小时 × 60 分钟
-             = 0.001 × 43,200 分钟
-             = 43.2 分钟/月
+Example:
+SLO = 99.9% (monthly)
+Error Budget = (1 - 0.999) x 30 days x 24 hours x 60 minutes
+             = 0.001 x 43,200 minutes
+             = 43.2 minutes/month
 ```
 
-**错误预算政策**：
+**Error Budget Policy**:
 
-| 错误预算状态 | 剩余 | 行动 |
-|------------|------|------|
-| 🟢 健康 | > 50% | 加速功能发布，进行混沌实验 |
-| 🟡 警告 | 20-50% | 减缓发布节奏，增加测试 |
-| 🔴 耗尽 | < 20% | 冻结功能发布，专注可靠性 |
-| ⛔ 超支 | < 0% | 完全冻结，事后复盘，强制可靠性改进 |
+| Error Budget Status | Remaining | Action |
+|--------------------|-----------|--------|
+| Healthy | > 50% | Accelerate feature releases, conduct chaos experiments |
+| Warning | 20-50% | Slow release cadence, increase testing |
+| Exhausted | < 20% | Freeze feature releases, focus on reliability |
+| Overspent | < 0% | Complete freeze, postmortem, mandatory reliability improvements |
 
-**战略优势**：
-- 协调产品开发（速度）和 SRE（可靠性）激励
-- 通过客观测量消除发布决策政治化
-- 预算耗尽时团队自我管控
-- 在预算内合法化冒险
+**Strategic Advantages**:
+- Aligns product development (velocity) and SRE (reliability) incentives
+- Depoliticizes release decisions through objective measurement
+- Teams self-regulate when budget is exhausted
+- Legitimizes risk-taking within budget
 
 ### 2.2 SLI/SLO/SLA
 
-**定义**：
+**Definitions**:
 
 ```yaml
 SLI (Service Level Indicator):
-  定义: 服务性能的定量测量
-  格式: 成功事件数 / 总事件数 (0-100%)
-  示例:
-    - 延迟 < 100ms 的请求百分比
-    - HTTP 200 响应的请求百分比
-    - 可用性（正常运行时间百分比）
+  Definition: Quantitative measurement of service performance
+  Format: Successful events / Total events (0-100%)
+  Examples:
+    - Percentage of requests with latency < 100ms
+    - Percentage of requests returning HTTP 200
+    - Availability (uptime percentage)
 
 SLO (Service Level Objective):
-  定义: 目标可靠性水平
-  示例:
-    - 99.9% 的请求在 100ms 内完成
-    - 99.99% 的请求返回成功（非 5xx）
-  用途: 内部目标设定，错误预算计算
+  Definition: Target reliability level
+  Examples:
+    - 99.9% of requests complete within 100ms
+    - 99.99% of requests return success (non-5xx)
+  Purpose: Internal goal setting, error budget calculation
 
 SLA (Service Level Agreement):
-  定义: 与客户的合同协议
-  示例:
-    - 月度可用性 99.9%，否则退款 10%
-  特点:
-    - 违反有财务后果
-    - 通常低于 SLO（留有缓冲）
-    - 法律合同，需谨慎承诺
+  Definition: Contractual agreement with customers
+  Examples:
+    - Monthly availability 99.9%, otherwise 10% refund
+  Characteristics:
+    - Financial consequences for violations
+    - Typically lower than SLO (leave buffer)
+    - Legal contract, commit cautiously
 ```
 
-**关系**：
+**Relationship**:
 
 ```
-SLA (对外承诺)    99.9%  ◄─ 客户合同
-                   │
-                   │ 缓冲（避免违约）
-                   ▼
-SLO (内部目标)    99.95% ◄─ 内部工程目标
-                   │
-                   │ 错误预算
-                   ▼
-SLI (实际测量)    99.97% ◄─ 实时监控
+SLA (External Promise)  99.9%  <- Customer contract
+                         |
+                         | Buffer (avoid breach)
+                         v
+SLO (Internal Target)  99.95% <- Internal engineering target
+                         |
+                         | Error budget
+                         v
+SLI (Actual Measurement) 99.97% <- Real-time monitoring
 ```
 
-**SLI 选择指南**：
+**SLI Selection Guide**:
 
-| 服务类型 | 推荐 SLI | 不推荐 SLI |
-|---------|---------|-----------|
-| **请求驱动** | 可用性、延迟、吞吐量 | CPU、内存（内部指标）|
-| **存储** | 持久性、可用性、延迟 | 磁盘利用率 |
-| **批处理** | 吞吐量、端到端延迟 | 任务队列长度 |
-| **流处理** | 新鲜度、正确性 | Kafka lag（中间指标）|
+| Service Type | Recommended SLI | Not Recommended SLI |
+|-------------|-----------------|---------------------|
+| **Request-driven** | Availability, latency, throughput | CPU, memory (internal metrics) |
+| **Storage** | Durability, availability, latency | Disk utilization |
+| **Batch** | Throughput, end-to-end latency | Task queue length |
+| **Stream Processing** | Freshness, correctness | Kafka lag (intermediate metric) |
 
-### 2.3 四大黄金信号
+### 2.3 Four Golden Signals
 
-| 信号 | 描述 | 测量方式 | 告警阈值 |
-|------|------|---------|---------|
-| **延迟 (Latency)** | 请求响应时间 | P50, P95, P99 延迟 | P95 > 2x 基线 |
-| **流量 (Traffic)** | 系统需求 | 请求/秒、会话数 | 突增 > 3x 基线 |
-| **错误 (Errors)** | 失败请求率 | 5xx 错误 / 总请求 | > 1% |
-| **饱和度 (Saturation)** | 资源利用率 | CPU、内存、磁盘、网络 | > 80% |
+| Signal | Description | Measurement | Alarm Threshold |
+|--------|-------------|-------------|-----------------|
+| **Latency** | Request response time | P50, P95, P99 latency | P95 > 2x baseline |
+| **Traffic** | System demand | Requests/second, sessions | Spike > 3x baseline |
+| **Errors** | Failed request rate | 5xx errors / total requests | > 1% |
+| **Saturation** | Resource utilization | CPU, memory, disk, network | > 80% |
 
-**重要区分**：
-- **成功请求延迟 vs 失败请求延迟**：失败通常更快（快速失败），但也可能超时
-- **显式错误 vs 隐式错误 vs 策略性错误**：
-  - 显式：HTTP 500
-  - 隐式：HTTP 200 但内容错误
-  - 策略性：限流（HTTP 429）
+**Important Distinctions**:
+- **Successful request latency vs. failed request latency**: Failures are usually faster (fail fast), but may also timeout
+- **Explicit errors vs. implicit errors vs. policy errors**:
+  - Explicit: HTTP 500
+  - Implicit: HTTP 200 but wrong content
+  - Policy: Throttling (HTTP 429)
 
-### 2.4 监控方法
+### 2.4 Monitoring Methods
 
-**白盒监控 vs 黑盒监控**：
+**White-Box Monitoring vs. Black-Box Monitoring**:
 
-| 特性 | 白盒监控 | 黑盒监控 |
-|------|---------|---------|
-| **数据源** | 内部指标、日志、性能分析 | 外部探针、用户模拟 |
-| **检测时机** | 早期（预测故障） | 活跃故障时 |
-| **覆盖范围** | 全面（包括隐藏问题） | 用户可见问题 |
-| **告警频率** | 高（预警） | 低（实际影响） |
-| **示例** | CPU 接近饱和 | 健康检查失败 |
+| Characteristic | White-Box | Black-Box |
+|---------------|-----------|-----------|
+| **Data Source** | Internal metrics, logs, profiling | External probes, user simulation |
+| **Detection Timing** | Early (predict failures) | Active failures |
+| **Coverage** | Comprehensive (including hidden issues) | User-visible issues |
+| **Alert Frequency** | High (early warning) | Low (actual impact) |
+| **Example** | CPU approaching saturation | Health check failure |
 
-**推荐策略**：
-- 大量白盒监控（预测和诊断）
-- 关键黑盒监控（用户影响验证）
-- 白盒检测 → 黑盒验证
+**Recommended Strategy**:
+- Extensive white-box monitoring (prediction and diagnosis)
+- Critical black-box monitoring (user impact verification)
+- White-box detection -> Black-box verification
 
-**实施**：
+**Implementation**:
 ```yaml
-白盒监控:
+White-Box Monitoring:
   CloudWatch:
-    - CPU、内存、磁盘、网络
-    - 应用指标（自定义）
-    - 日志分析
+    - CPU, memory, disk, network
+    - Application metrics (custom)
+    - Log analysis
 
   X-Ray:
-    - 分布式追踪
-    - 服务依赖图
+    - Distributed tracing
+    - Service dependency map
 
   Container Insights:
-    - ECS/EKS 容器指标
+    - ECS/EKS container metrics
 
-黑盒监控:
+Black-Box Monitoring:
   Route 53 Health Checks:
-    - HTTPS 端点检查
-    - 多区域探针
-    - 字符串匹配
+    - HTTPS endpoint checks
+    - Multi-region probes
+    - String matching
 
   CloudWatch Synthetics:
-    - Canary 脚本（用户旅程）
-    - 定期执行
-    - 截图和HAR文件
+    - Canary scripts (user journeys)
+    - Periodic execution
+    - Screenshots and HAR files
 
-  第三方:
+  Third-party:
     - Pingdom
     - Datadog Synthetics
 ```
 
-### 2.5 有效告警哲学
+### 2.5 Effective Alerting Philosophy
 
-**有效告警标准**：
-1. 检测到未被发现的紧急可操作条件
-2. 表示实际用户影响
-3. 需要智能响应（非机械修复）
-4. 解决新问题
+**Effective Alert Criteria**:
+1. Detects an undiscovered urgent actionable condition
+2. Indicates actual user impact
+3. Requires intelligent response (not mechanical fix)
+4. Addresses a new problem
 
-**原则**：
-- 告警应足够稀有以维持紧迫性
-- 频繁告警导致疲劳和错过关键告警
-- "如果告警每周触发，就不应该是告警，应该是自动化修复或ticket"
+**Principles**:
+- Alerts should be rare enough to maintain urgency
+- Frequent alerts cause fatigue and missed critical alerts
+- "If an alert fires weekly, it shouldn't be an alert -- it should be automated remediation or a ticket"
 
-**告警层级**：
+**Alert Tiers**:
 
-| 优先级 | 描述 | 响应 SLA | 影响 | 示例 |
-|--------|------|---------|------|------|
-| **P0 (Critical)** | 影响所有用户 | 立即（15 分钟） | 完全中断 | 数据库不可用 |
-| **P1 (High)** | 影响部分用户 | 1 小时 | 降级服务 | 单 AZ 故障 |
-| **P2 (Medium)** | 影响内部或预警 | 当天 | 潜在问题 | 磁盘空间 < 30% |
-| **P3 (Low)** | 信息性 | 正常工作时间 | 无直接影响 | 证书 30 天后过期 |
+| Priority | Description | Response SLA | Impact | Example |
+|----------|-------------|-------------|--------|---------|
+| **P0 (Critical)** | Affects all users | Immediate (15 min) | Complete outage | Database unavailable |
+| **P1 (High)** | Affects some users | 1 hour | Degraded service | Single AZ failure |
+| **P2 (Medium)** | Affects internal or early warning | Same day | Potential issue | Disk space < 30% |
+| **P3 (Low)** | Informational | Normal business hours | No direct impact | Certificate expires in 30 days |
 
-**告警疲劳避免**：
+**Alert Fatigue Prevention**:
 ```yaml
-策略:
-  告警聚合:
-    - 多个相关告警合并为一个
-    - 避免"告警风暴"
+Strategies:
+  Alert Aggregation:
+    - Merge multiple related alerts into one
+    - Avoid "alert storms"
 
-  多窗口告警:
-    - 短窗口（5 分钟）+ 长窗口（30 分钟）
-    - 避免瞬时抖动
+  Multi-Window Alerts:
+    - Short window (5 min) + long window (30 min)
+    - Avoid transient flapping
 
-  告警抑制:
-    - 维护窗口自动抑制
-    - 依赖关系（数据库故障抑制应用告警）
+  Alert Suppression:
+    - Auto-suppress during maintenance windows
+    - Dependencies (database failure suppresses app alerts)
 
-  渐进升级:
-    - 5 分钟：Slack 通知
-    - 15 分钟：寻呼机告警
-    - 30 分钟：升级到高级 SRE
+  Progressive Escalation:
+    - 5 minutes: Slack notification
+    - 15 minutes: Pager alert
+    - 30 minutes: Escalate to senior SRE
 ```
 
-### 2.6 事后复盘文化 (Postmortem Culture)
+### 2.6 Postmortem Culture
 
-**核心原则：无责任文化 (Blameless)**
+**Core Principle: Blameless**
 
 ```yaml
-无责任原则:
-  - 专注于识别促成因素
-  - 不指责个人或团队
-  - 源自医疗和航空等高风险行业
-  - 假设每个人都怀有良好意图
+Blameless Principles:
+  - Focus on identifying contributing factors
+  - Do not blame individuals or teams
+  - Derived from high-risk industries like healthcare and aviation
+  - Assume everyone had good intentions
 
-理念:
+Philosophy:
   "Human error is a symptom, not a cause"
-  （人为错误是症状，而非原因）
 
-  根本原因通常是：
-  - 系统设计缺陷
-  - 流程不足
-  - 工具缺失
-  - 培训不够
+  Root causes are typically:
+  - System design flaws
+  - Process deficiencies
+  - Missing tools
+  - Insufficient training
 ```
 
-**事后复盘模板**：
+**Postmortem Template**:
 
 ```markdown
-# 事故复盘：[标题]
+# Incident Postmortem: [Title]
 
-## 元数据
-- 日期：2025-02-17
-- 严重程度：P1（高）
-- 持续时间：45 分钟
-- 影响：30% 用户无法登录
-- 作者：[Name]
-- 审查人：[Name]
+## Metadata
+- Date: 2025-02-17
+- Severity: P1 (High)
+- Duration: 45 minutes
+- Impact: 30% of users unable to log in
+- Author: [Name]
+- Reviewer: [Name]
 
-## 执行摘要
-（2-3 句话概述发生了什么、影响、根因、修复）
+## Executive Summary
+(2-3 sentences summarizing what happened, impact, root cause, fix)
 
-## 时间线
-| 时间 | 事件 | 行动 |
-|------|------|------|
-| 10:00 | 检测到登录失败率上升 | 自动告警触发 |
-| 10:05 | On-call 工程师收到告警 | 开始调查 |
-| 10:15 | 识别为 RDS 连接池耗尽 | 决策增加连接池 |
-| 10:30 | 增加连接池大小到 1000 | 执行配置变更 |
-| 10:45 | 服务完全恢复 | 关闭事故 |
+## Timeline
+| Time | Event | Action |
+|------|-------|--------|
+| 10:00 | Login failure rate increase detected | Auto-alert triggered |
+| 10:05 | On-call engineer receives alert | Begins investigation |
+| 10:15 | Identified as RDS connection pool exhaustion | Decision to increase pool |
+| 10:30 | Increased pool size to 1000 | Config change executed |
+| 10:45 | Service fully recovered | Incident closed |
 
-## 根本原因
-RDS 连接数达到最大值（500），应用无法创建新连接。
-促成因素：
-1. 流量突增（比平时高 3 倍）
-2. 应用代码存在连接泄漏
-3. 连接池监控不足
+## Root Cause
+RDS connections reached maximum (500), application unable to create new connections.
+Contributing factors:
+1. Traffic spike (3x normal)
+2. Application code connection leak
+3. Insufficient connection pool monitoring
 
-## 影响
-- 用户影响：30%（约 1000 用户）
-- SLO 影响：违反 99.9% SLO，消耗 15 分钟错误预算
-- 业务影响：估计损失 $5000 收入
+## Impact
+- User impact: 30% (approx. 1000 users)
+- SLO impact: Violated 99.9% SLO, consumed 15 minutes of error budget
+- Business impact: Estimated $5000 revenue loss
 
-## 检测
-✅ 做得好：
-- CloudWatch 告警按预期工作（5 分钟检测）
-- On-call 及时响应
+## Detection
+What went well:
+- CloudWatch alert worked as expected (5 min detection)
+- On-call responded promptly
 
-❌ 需改进：
-- 未提前检测到连接泄漏
-- 未监控连接池利用率
+Needs improvement:
+- Connection leak not detected proactively
+- Connection pool utilization not monitored
 
-## 响应
-✅ 做得好：
-- 15 分钟内识别根因
-- 沟通透明（状态页更新）
-- 回滚计划执行顺利
+## Response
+What went well:
+- Root cause identified within 15 minutes
+- Transparent communication (status page updated)
+- Rollback plan executed smoothly
 
-❌ 需改进：
-- 初期诊断方向错误（浪费 5 分钟）
-- Runbook 不完整
+Needs improvement:
+- Initial diagnosis went in wrong direction (wasted 5 min)
+- Incomplete runbook
 
-## 恢复
-- 恢复时间：45 分钟（目标：30 分钟）
-- 恢复方法：增加连接池 + 重启应用
-- 用户影响持续到完全恢复
+## Recovery
+- Recovery time: 45 minutes (target: 30 minutes)
+- Recovery method: Increased connection pool + application restart
+- User impact continued until full recovery
 
-## 行动项
-| 优先级 | 行动 | 负责人 | 截止日期 | 状态 |
-|--------|------|--------|---------|------|
-| P0 | 添加连接池利用率告警 | @SRE-team | 2025-02-20 | ✅ 完成 |
-| P0 | 修复应用连接泄漏 | @Dev-team | 2025-02-24 | 🔄 进行中 |
-| P1 | 更新 Runbook（连接池故障） | @SRE-team | 2025-02-27 | ⏳ 待办 |
-| P2 | 进行负载测试 | @QA-team | 2025-03-01 | ⏳ 待办 |
-| P2 | 实施 Circuit Breaker | @Dev-team | 2025-03-15 | ⏳ 待办 |
+## Action Items
+| Priority | Action | Owner | Due Date | Status |
+|----------|--------|-------|----------|--------|
+| P0 | Add connection pool utilization alert | @SRE-team | 2025-02-20 | Done |
+| P0 | Fix application connection leak | @Dev-team | 2025-02-24 | In progress |
+| P1 | Update runbook (connection pool failure) | @SRE-team | 2025-02-27 | To do |
+| P2 | Conduct load testing | @QA-team | 2025-03-01 | To do |
+| P2 | Implement Circuit Breaker | @Dev-team | 2025-03-15 | To do |
 
-## 经验教训
-1. 连接池是有状态资源，需要特别监控
-2. 流量突增需要 Auto Scaling + 资源配额预留
-3. 应用必须优雅处理资源耗尽（快速失败）
-4. Runbook 必须定期审查和更新
+## Lessons Learned
+1. Connection pools are stateful resources requiring dedicated monitoring
+2. Traffic spikes need Auto Scaling + resource quota reservations
+3. Applications must gracefully handle resource exhaustion (fail fast)
+4. Runbooks must be reviewed and updated regularly
 
-## 支持数据
-（附加图表、日志片段、指标截图）
+## Supporting Data
+(Attach charts, log fragments, metric screenshots)
 ```
 
-**最佳实践**：
+**Best Practices**:
 
 ```yaml
-协作:
-  - 实时协作工具（Wiki、文档协作平台）
-  - 评论系统（所有人可以添加见解）
-  - 跨团队参与（开发、运维、产品）
+Collaboration:
+  - Real-time collaboration tools (Wiki, document collaboration platforms)
+  - Comment system (everyone can add insights)
+  - Cross-team participation (development, operations, product)
 
-审查:
-  "未经审查的事后复盘形同虚设"
-  - 至少 2 名审查人（技术 + 管理）
-  - 验证行动项的可操作性
-  - 确保无责任原则
+Review:
+  "An unreviewed postmortem is wasted effort"
+  - At least 2 reviewers (technical + management)
+  - Verify action items are actionable
+  - Ensure blameless principles
 
-可见化:
-  - 庆祝良好实践（表彰透明和诚实）
-  - 领导层参与（显示重视）
-  - 公开分享（内部知识库）
-  - 月度复盘分享会
+Visibility:
+  - Celebrate good practices (acknowledge transparency and honesty)
+  - Leadership participation (show importance)
+  - Public sharing (internal knowledge base)
+  - Monthly postmortem sharing sessions
 
-反馈:
-  - 定期调查流程有效性
-  - 跟踪行动项完成率
-  - 测量类似事故重复率
+Feedback:
+  - Regularly survey process effectiveness
+  - Track action item completion rate
+  - Measure similar incident recurrence rate
 ```
 
-**文化推广活动**：
+**Culture Promotion Activities**:
 
 ```yaml
-月度复盘分享:
-  - 选择最有学习价值的复盘
-  - 全公司午餐分享
-  - Q&A 环节
+Monthly Postmortem Sharing:
+  - Select the most educational postmortem
+  - Company-wide lunch sharing
+  - Q&A session
 
-读书俱乐部:
-  - 讨论历史事件（航空事故、医疗事故）
-  - 应用到技术系统
-  - 识别系统性问题
+Book Club:
+  - Discuss historical events (aviation accidents, medical incidents)
+  - Apply to technical systems
+  - Identify systemic issues
 
-灾难角色扮演 (Wheel of Misfortune):
-  - 模拟真实事故场景
-  - 轮换 On-call 角色
-  - 练习事故响应流程
-  - 识别 Runbook 差距
+Wheel of Misfortune:
+  - Simulate real incident scenarios
+  - Rotate on-call roles
+  - Practice incident response processes
+  - Identify runbook gaps
 ```
 
-### 2.7 有效故障排查
+### 2.7 Effective Troubleshooting
 
-**方法论：假设-演绎法**
+**Methodology: Hypothetico-Deductive Method**
 
-**关键阶段**：
+**Key Phases**:
 
 ```mermaid
 graph TD
-    A[问题报告] --> B[分类 Triage]
-    B --> C[检查 Examine]
-    C --> D[诊断 Diagnose]
-    D --> E[测试与治疗]
-    E --> F{问题解决?}
-    F -->|是| G[文档化]
-    F -->|否| D
+    A[Problem Report] --> B[Triage]
+    B --> C[Examine]
+    C --> D[Diagnose]
+    D --> E[Test & Treat]
+    E --> F{Problem Resolved?}
+    F -->|Yes| G[Document]
+    F -->|No| D
 ```
 
-**1. 问题报告**
+**1. Problem Report**
 
 ```yaml
-必需信息:
-  - 期望行为：应该发生什么？
-  - 实际行为：实际发生了什么？
-  - 复现方法：如何重现问题？
-  - 影响范围：有多少用户受影响？
-  - 开始时间：何时开始的？
+Required Information:
+  - Expected behavior: What should happen?
+  - Actual behavior: What actually happened?
+  - Reproduction method: How to reproduce the issue?
+  - Impact scope: How many users are affected?
+  - Start time: When did it start?
 
-来源:
-  - 用户报告
-  - 监控告警
-  - 健康检查失败
+Sources:
+  - User reports
+  - Monitoring alerts
+  - Health check failures
 ```
 
-**2. 分类 (Triage)**
+**2. Triage**
 
 ```yaml
-首要职责: "让飞机安全着陆"
+Primary Duty: "Land the plane safely"
 
-优先级排序:
-  1. 止血（停止出血）
-     - 切换到备用系统
-     - 限流保护核心服务
-     - 回滚错误变更
+Priority Order:
+  1. Stop the bleeding
+     - Switch to backup systems
+     - Rate-limit to protect core services
+     - Roll back erroneous changes
 
-  2. 恢复服务
-     - 即使不知道根因
-     - 临时解决方案 OK
+  2. Restore service
+     - Even without knowing root cause
+     - Temporary solutions are OK
 
-  3. 根因分析
-     - 服务恢复后再深入
-     - 事后复盘详细调查
+  3. Root cause analysis
+     - Dig deep after service is restored
+     - Detailed investigation in postmortem
 
-快速决策:
-  - 5 分钟决定是否回滚
-  - 15 分钟决定是否升级
+Quick Decisions:
+  - 5 minutes to decide whether to roll back
+  - 15 minutes to decide whether to escalate
 ```
 
-**3. 检查 (Examine)**
+**3. Examine**
 
 ```yaml
-收集数据:
-  时间序列指标:
+Collect Data:
+  Time Series Metrics:
     - CloudWatch Metrics
-    - 对比故障前后
-    - 识别异常模式
+    - Compare before and after failure
+    - Identify anomalous patterns
 
-  日志:
+  Logs:
     - CloudWatch Logs Insights
-    - 错误日志、应用日志
-    - 关联请求 ID
+    - Error logs, application logs
+    - Correlate by request ID
 
-  追踪:
+  Traces:
     - X-Ray Traces
-    - 识别慢服务
-    - 找到故障点
+    - Identify slow services
+    - Find failure points
 
-  当前状态:
-    - 健康检查端点
-    - AWS 服务健康仪表板
-    - 资源利用率
+  Current State:
+    - Health check endpoints
+    - AWS Service Health Dashboard
+    - Resource utilization
 
-工具:
+Tools:
   - CloudWatch Dashboards
   - X-Ray Service Map
-  - CloudTrail（变更审计）
-  - AWS Config（配置变更）
+  - CloudTrail (change audit)
+  - AWS Config (configuration changes)
 ```
 
-**4. 诊断 (Diagnose)**
+**4. Diagnose**
 
-**策略**：
+**Strategies**:
 
-| 策略 | 描述 | 何时使用 |
-|------|------|---------|
-| **简化和化简** | 逐步移除组件，识别问题所在 | 复杂系统 |
-| **二分法** | 将系统分两半，确定问题在哪一半 | 长流程 |
-| **追问"什么""哪里""为什么"** | 系统性询问 | 根因分析 |
-| **查看最近变更** | 80% 故障源于变更 | 首要检查 |
+| Strategy | Description | When to Use |
+|----------|-------------|-------------|
+| **Simplify and Reduce** | Incrementally remove components to identify the problem | Complex systems |
+| **Bisection** | Split the system in half, determine which half has the problem | Long processes |
+| **Ask "What", "Where", "Why"** | Systematic questioning | Root cause analysis |
+| **Check Recent Changes** | 80% of failures stem from changes | First check |
 
-**示例：二分法**
+**Example: Bisection Method**
 
 ```
-用户请求 → API Gateway → Lambda → DynamoDB → 返回
-            ^                ^          ^
-            |                |          |
-       慢在这里?        慢在这里?    慢在这里?
+User Request -> API Gateway -> Lambda -> DynamoDB -> Response
+                ^                ^          ^
+                |                |          |
+           Slow here?       Slow here?    Slow here?
 
-测试 1: 直接调用 Lambda（绕过 API Gateway）
-结果：仍然慢 → 问题不在 API Gateway
+Test 1: Call Lambda directly (bypass API Gateway)
+Result: Still slow -> Problem not in API Gateway
 
-测试 2: Lambda 直接查询 DynamoDB
-结果：快速 → 问题在 Lambda 业务逻辑
+Test 2: Lambda directly queries DynamoDB
+Result: Fast -> Problem is in Lambda business logic
 
-测试 3: 分析 Lambda 代码各部分
-结果：发现 N+1 查询问题
+Test 3: Analyze each part of Lambda code
+Result: Found N+1 query problem
 ```
 
-**5. 测试与治疗**
+**5. Test and Treat**
 
 ```yaml
-假设驱动:
-  1. 形成假设
-     示例："RDS 连接池耗尽导致超时"
+Hypothesis-Driven:
+  1. Form hypothesis
+     Example: "RDS connection pool exhaustion causing timeouts"
 
-  2. 设计测试
-     - 检查 RDS 连接数指标
-     - 查看应用连接池配置
-     - 检查是否有连接泄漏
+  2. Design test
+     - Check RDS connection count metrics
+     - Review application connection pool configuration
+     - Check for connection leaks
 
-  3. 执行测试
-     - 收集数据
-     - 分析结果
+  3. Execute test
+     - Collect data
+     - Analyze results
 
-  4. 验证或反驳
-     - 假设正确 → 实施修复
-     - 假设错误 → 新假设
+  4. Validate or refute
+     - Hypothesis correct -> Implement fix
+     - Hypothesis incorrect -> New hypothesis
 
-文档化:
-  - 记录每个假设
-  - 记录测试方法
-  - 记录结果
-  - 记录推理过程
+Document:
+  - Record each hypothesis
+  - Record test methods
+  - Record results
+  - Record reasoning process
 ```
 
-**常见陷阱**：
+**Common Pitfalls**:
 
 ```yaml
-关注无关症状:
-  ❌ "CPU 高，所以慢"
-  ✅ "慢的原因是什么？CPU 高是结果还是原因？"
+Focusing on Irrelevant Symptoms:
+  Bad: "CPU is high, so it's slow"
+  Good: "What's causing the slowness? Is high CPU the result or cause?"
 
-过度依赖过去问题原因:
-  ❌ "上次是数据库，这次肯定也是"
-  ✅ "让数据引导，而非假设"
+Over-Relying on Past Causes:
+  Bad: "Last time it was the database, must be the same"
+  Good: "Let data guide, not assumptions"
 
-追逐虚假相关性:
-  ❌ "部署后出问题，肯定是部署的问题"
-  ✅ "时间相关性 ≠ 因果关系，需要证据"
+Chasing False Correlations:
+  Bad: "Problem appeared after deployment, must be the deployment"
+  Good: "Temporal correlation != causation, need evidence"
 
-忽视简单解释:
-  ❌ 复杂的理论（网络分区、宇宙射线）
-  ✅ 奥卡姆剃刀：最简单的解释通常是正确的
+Ignoring Simple Explanations:
+  Bad: Complex theories (network partition, cosmic rays)
+  Good: Occam's Razor: The simplest explanation is usually correct
 ```
 
 ---
 
-## 3. 混沌工程方法论
+## 3. Chaos Engineering Methodology
 
-### 3.1 核心定义
+### 3.1 Core Definition
 
-> "混沌工程是通过在系统上进行实验来建立对系统能力的信心，使其能够承受生产环境中的动荡条件"
+> "Chaos Engineering is the discipline of experimenting on a system to build confidence in the system's capability to withstand turbulent conditions in production."
 >
-> —— Principles of Chaos Engineering
+> -- Principles of Chaos Engineering
 
-**目标**：
-- 发现系统弱点在造成实际影响前
-- 建立对系统韧性的信心
-- 验证监控和告警是否有效
-- 改进事故响应流程
+**Goals**:
+- Discover system weaknesses before they cause real impact
+- Build confidence in system resilience
+- Verify monitoring and alerting effectiveness
+- Improve incident response processes
 
-### 3.2 四步实验流程
+### 3.2 Four-Step Experiment Process
 
 ```yaml
-步骤 1: 建立稳态基线
-  定义:
-    - "稳态"为可测量的系统输出
-    - 表示正常行为
+Step 1: Establish Steady-State Baseline
+  Definition:
+    - "Steady state" is a measurable system output
+    - Represents normal behavior
 
-  示例:
-    - 请求成功率: > 99.9%
-    - P95 延迟: < 200ms
-    - 吞吐量: 1000 req/s
-    - 错误率: < 0.1%
+  Examples:
+    - Request success rate: > 99.9%
+    - P95 latency: < 200ms
+    - Throughput: 1000 req/s
+    - Error rate: < 0.1%
 
-步骤 2: 形成假设
-  预测:
-    - 稳态将在控制组和实验组中持续
-    - 基于系统理解
+Step 2: Form Hypothesis
+  Prediction:
+    - Steady state will continue in both control and experimental groups
+    - Based on system understanding
 
-  示例:
-    "假设：终止 2 个 EC2 实例后，
-     Auto Scaling 将在 5 分钟内恢复容量，
-     用户体验影响 < 1%"
+  Example:
+    "Hypothesis: After terminating 2 EC2 instances,
+     Auto Scaling will restore capacity within 5 minutes,
+     user experience impact < 1%"
 
-步骤 3: 引入变量
-  模拟真实世界破坏:
-    - 服务器崩溃
-    - 网络故障
-    - 磁盘满
-    - 时钟偏移
+Step 3: Introduce Variables
+  Simulate Real-World Disruptions:
+    - Server crashes
+    - Network failures
+    - Disk full
+    - Clock skew
 
-  评估影响:
-    - 观测稳态指标
-    - 记录系统行为
+  Assess Impact:
+    - Observe steady-state metrics
+    - Record system behavior
 
-步骤 4: 验证或反驳
-  对比:
-    - 控制组 vs 实验组
-    - 识别稳态偏差
+Step 4: Validate or Refute
+  Compare:
+    - Control group vs. experimental group
+    - Identify steady-state deviations
 
-  结果:
-    - 假设正确：系统韧性得到验证
-    - 假设错误：发现弱点，改进系统
+  Results:
+    - Hypothesis correct: System resilience verified
+    - Hypothesis incorrect: Weakness discovered, improve system
 ```
 
-### 3.3 高级实施原则
+### 3.3 Advanced Implementation Principles
 
-| 原则 | 说明 | 实践 |
-|------|------|------|
-| **稳态关注** | 测量系统输出，而非内部机制 | 监控用户可见指标（延迟、错误） |
-| **真实世界事件** | 变量应镜像实际运营中断 | 参考历史故障（EC2 故障、AZ 中断） |
-| **生产测试** | "采样真实流量是唯一可靠方式" | 在生产环境中进行（受控） |
-| **持续自动化** | 手动实验不可持续 | 自动化实现持续验证（每周/每月） |
-| **控制爆炸半径** | 最小化客户影响 | 限制影响范围（单 AZ、10% 流量） |
+| Principle | Description | Practice |
+|-----------|-------------|----------|
+| **Steady-State Focus** | Measure system output, not internal mechanics | Monitor user-visible metrics (latency, errors) |
+| **Real-World Events** | Variables should mirror actual operational disruptions | Reference historical failures (EC2 failures, AZ outages) |
+| **Production Testing** | "Sampling real traffic is the only reliable approach" | Test in production (controlled) |
+| **Continuous Automation** | Manual experiments are not sustainable | Automate for continuous verification (weekly/monthly) |
+| **Control Blast Radius** | Minimize customer impact | Limit impact scope (single AZ, 10% traffic) |
 
-### 3.4 常见混沌实验场景
+### 3.4 Common Chaos Experiment Scenarios
 
-#### AWS 环境常见场景：
+#### Common AWS Scenarios:
 
-| 实验类别 | 场景 | AWS FIS 操作 | 预期系统行为 |
-|---------|------|-------------|-------------|
-| **实例故障** | 终止 EC2 实例 | `aws:ec2:terminate-instances` | Auto Scaling 自动替换 |
-| | 停止 EC2 实例 | `aws:ec2:stop-instances` | 健康检查失败，流量转移 |
-| **网络故障** | 网络延迟 | `aws:ec2:api-network-latency` | 请求超时，重试机制触发 |
-| | 网络丢包 | `aws:ec2:api-packet-loss` | 断路器打开，降级服务 |
-| **AZ 故障** | 模拟 AZ 不可用 | 组合实验（终止所有 AZ 实例） | 流量转移到其他 AZ |
-| **数据库** | RDS 故障转移 | `aws:rds:failover-db-cluster` | 应用自动重连，短暂中断 |
-| **容器** | ECS 任务终止 | `aws:ecs:stop-task` | ECS 重启任务 |
-| | EKS Pod 删除 | `aws:eks:pod-delete` | Deployment 重建 Pod |
-| **资源耗尽** | CPU 压力 | `aws:ec2:cpu-stress` | Auto Scaling 扩容 |
-| | 内存压力 | `aws:ec2:memory-stress` | OOM kill，容器重启 |
-| | 磁盘满 | `aws:ec2:disk-fill` | 告警触发，清理流程启动 |
+| Experiment Category | Scenario | AWS FIS Action | Expected System Behavior |
+|--------------------|----------|----------------|-------------------------|
+| **Instance Failure** | Terminate EC2 instances | `aws:ec2:terminate-instances` | Auto Scaling automatically replaces |
+| | Stop EC2 instances | `aws:ec2:stop-instances` | Health check fails, traffic shifts |
+| **Network Failure** | Network latency | `aws:ec2:api-network-latency` | Request timeout, retry mechanism triggers |
+| | Packet loss | `aws:ec2:api-packet-loss` | Circuit breaker opens, service degrades |
+| **AZ Failure** | Simulate AZ unavailability | Combined experiment (terminate all AZ instances) | Traffic shifts to other AZs |
+| **Database** | RDS failover | `aws:rds:failover-db-cluster` | Application auto-reconnects, brief interruption |
+| **Containers** | ECS task termination | `aws:ecs:stop-task` | ECS restarts task |
+| | EKS Pod deletion | `aws:eks:pod-delete` | Deployment rebuilds Pod |
+| **Resource Exhaustion** | CPU stress | `aws:ec2:cpu-stress` | Auto Scaling scales out |
+| | Memory stress | `aws:ec2:memory-stress` | OOM kill, container restarts |
+| | Disk full | `aws:ec2:disk-fill` | Alert triggers, cleanup process starts |
 
-### 3.5 AWS FIS 实验模板示例
+### 3.5 AWS FIS Experiment Template Examples
 
-**实验 1：EC2 实例终止**
+**Experiment 1: EC2 Instance Termination**
 
 ```json
 {
@@ -1146,7 +1147,7 @@ graph TD
 }
 ```
 
-**实验 2：网络延迟注入**
+**Experiment 2: Network Latency Injection**
 
 ```json
 {
@@ -1184,7 +1185,7 @@ graph TD
 }
 ```
 
-**实验 3：RDS 故障转移**
+**Experiment 3: RDS Failover**
 
 ```json
 {
@@ -1224,71 +1225,71 @@ graph TD
 
 ---
 
-## 4. 现代可观测性标准
+## 4. Modern Observability Standards
 
 ### 4.1 OpenTelemetry
 
-**核心定义**：
-> "旨在促进遥测数据（追踪、指标、日志）的生成、导出和收集的可观测性框架和工具包"
+**Core Definition**:
+> "An observability framework and toolkit designed to facilitate the generation, export, and collection of telemetry data (traces, metrics, logs)."
 
-**关键原则**：
-- **数据所有权**：用户完全控制遥测数据
-- **统一学习曲线**：一套 API 和约定
-- **供应商中立**：避免供应商锁定
+**Key Principles**:
+- **Data Ownership**: Users have full control over telemetry data
+- **Unified Learning Curve**: One set of APIs and conventions
+- **Vendor Neutral**: Avoid vendor lock-in
 
-**主要组件**：
+**Main Components**:
 
 ```yaml
-规范和协议:
+Specification and Protocol:
   - OTLP (OpenTelemetry Protocol)
-  - 统一的遥测数据格式
+  - Unified telemetry data format
 
-语言 SDK:
+Language SDKs:
   - Java, Python, Go, .NET, JavaScript
   - Ruby, PHP, Rust, C++
-  - 自动插桩 + 手动插桩
+  - Auto-instrumentation + manual instrumentation
 
-预构建插桩库:
-  - HTTP 客户端/服务器
-  - 数据库（MySQL, PostgreSQL, DynamoDB）
-  - 消息队列（Kafka, SQS, SNS）
-  - RPC 框架（gRPC）
+Pre-built Instrumentation Libraries:
+  - HTTP clients/servers
+  - Databases (MySQL, PostgreSQL, DynamoDB)
+  - Message queues (Kafka, SQS, SNS)
+  - RPC frameworks (gRPC)
 
 OpenTelemetry Collector:
-  - 接收遥测数据
-  - 处理、过滤、转换
-  - 导出到多个后端
-  - 支持多种格式
+  - Receive telemetry data
+  - Process, filter, transform
+  - Export to multiple backends
+  - Support multiple formats
 
-Kubernetes 集成:
+Kubernetes Integration:
   - Operator
   - Helm Charts
-  - 自动注入（Sidecar）
+  - Auto-injection (Sidecar)
 ```
 
-**架构**：
+**Architecture**:
 
 ```
-应用程序
-    │
-    │ OpenTelemetry SDK
-    │ (插桩)
-    ▼
+Application
+    |
+    | OpenTelemetry SDK
+    | (Instrumentation)
+    v
 OpenTelemetry Collector
-    │
-    │ 处理和路由
-    │
-    ├──────────┬──────────┬──────────┐
-    ▼          ▼          ▼          ▼
+    |
+    | Processing and Routing
+    |
+    +----------+----------+----------+
+    v          v          v          v
 CloudWatch  X-Ray   Prometheus  Jaeger
-(指标)     (追踪)    (指标)     (追踪)
+(Metrics)  (Traces)  (Metrics)  (Traces)
 ```
 
-### 4.2 三大支柱
+### 4.2 Three Pillars
 
-#### 1. 日志 (Logs)
+#### 1. Logs
 
-**结构化日志最佳实践**：
+**Structured Logging Best Practices**:
 
 ```json
 {
@@ -1313,258 +1314,258 @@ CloudWatch  X-Ray   Prometheus  Jaeger
 }
 ```
 
-**最佳实践**：
-- 使用 JSON 格式（易于解析）
-- 包含上下文（请求 ID、用户 ID、trace ID）
-- 包含时间戳和严重性
-- 避免敏感信息（密码、信用卡号）
-- 使用日志级别（DEBUG、INFO、WARN、ERROR、FATAL）
-- 集中日志聚合（CloudWatch Logs、ELK）
+**Best Practices**:
+- Use JSON format (easy to parse)
+- Include context (request ID, user ID, trace ID)
+- Include timestamp and severity
+- Avoid sensitive information (passwords, credit card numbers)
+- Use log levels (DEBUG, INFO, WARN, ERROR, FATAL)
+- Centralize log aggregation (CloudWatch Logs, ELK)
 
-**AWS 实施**：
+**AWS Implementation**:
 
 ```yaml
 CloudWatch Logs:
-  收集:
+  Collection:
     - CloudWatch Logs Agent
     - Firelens (ECS/EKS)
-    - Lambda 自动收集
+    - Lambda automatic collection
 
-  分析:
+  Analysis:
     - CloudWatch Logs Insights
-    - 查询语言（类似 SQL）
-    - 可视化图表
+    - Query language (SQL-like)
+    - Visualization charts
 
-  保留:
-    - 设置保留策略（7 天、30 天、1 年）
-    - 归档到 S3（低成本长期存储）
-    - Lifecycle 策略
+  Retention:
+    - Set retention policy (7 days, 30 days, 1 year)
+    - Archive to S3 (low-cost long-term storage)
+    - Lifecycle policies
 
-告警:
-  - Metric Filters（提取指标）
-  - Subscription Filters（实时处理）
-  - Lambda 触发器
+Alerting:
+  - Metric Filters (extract metrics)
+  - Subscription Filters (real-time processing)
+  - Lambda triggers
 ```
 
-#### 2. 指标 (Metrics)
+#### 2. Metrics
 
-**指标类型**：
+**Metric Types**:
 
-| 类型 | 描述 | 示例 | 聚合方式 |
-|------|------|------|---------|
-| **Counter** | 递增计数 | 请求总数、错误总数 | Sum, Rate |
-| **Gauge** | 瞬时值 | CPU 使用率、内存使用 | Average, Max, Min |
-| **Histogram** | 分布 | 请求延迟分布 | P50, P95, P99 |
-| **Summary** | 分位数 | 预计算的 P95、P99 | N/A（客户端计算） |
+| Type | Description | Example | Aggregation |
+|------|-------------|---------|-------------|
+| **Counter** | Incrementing count | Total requests, total errors | Sum, Rate |
+| **Gauge** | Instantaneous value | CPU usage, memory usage | Average, Max, Min |
+| **Histogram** | Distribution | Request latency distribution | P50, P95, P99 |
+| **Summary** | Quantiles | Pre-computed P95, P99 | N/A (client-computed) |
 
-**关键监控指标**：
+**Key Monitoring Metrics**:
 
 ```yaml
-延迟 (Latency):
-  指标:
+Latency:
+  Metrics:
     - request_duration_seconds (Histogram)
     - request_latency_p95
     - request_latency_p99
 
-  告警:
-    - P95 > 200ms 持续 5 分钟
+  Alerts:
+    - P95 > 200ms for 5 minutes
     - P99 > 1s
 
-流量 (Traffic):
-  指标:
+Traffic:
+  Metrics:
     - requests_per_second (Counter)
     - active_connections (Gauge)
     - throughput_bytes (Counter)
 
-  告警:
-    - 流量突降 > 50%（可能故障）
-    - 流量突增 > 300%（可能攻击）
+  Alerts:
+    - Traffic drop > 50% (possible failure)
+    - Traffic spike > 300% (possible attack)
 
-错误 (Errors):
-  指标:
+Errors:
+  Metrics:
     - errors_total (Counter)
     - error_rate (Gauge)
     - http_5xx_count (Counter)
 
-  告警:
-    - 错误率 > 1%
+  Alerts:
+    - Error rate > 1%
 
-饱和度 (Saturation):
-  指标:
+Saturation:
+  Metrics:
     - cpu_utilization (Gauge)
     - memory_utilization (Gauge)
     - disk_usage_percent (Gauge)
     - connection_pool_utilization (Gauge)
 
-  告警:
-    - CPU > 80% 持续 10 分钟
-    - 内存 > 90%
-    - 磁盘 > 85%
+  Alerts:
+    - CPU > 80% for 10 minutes
+    - Memory > 90%
+    - Disk > 85%
 ```
 
-**AWS 实施**：
+**AWS Implementation**:
 
 ```yaml
 CloudWatch Metrics:
-  标准指标:
+  Standard Metrics:
     - EC2: CPUUtilization, NetworkIn/Out
     - RDS: DatabaseConnections, ReadLatency
     - ALB: TargetResponseTime, HTTPCode_5XX
 
-  自定义指标:
+  Custom Metrics:
     - PutMetricData API
     - CloudWatch Agent
     - EMF (Embedded Metric Format)
 
-  数学表达式:
-    - 错误率 = errors / total * 100
-    - 可用性 = (total - errors) / total * 100
+  Math Expressions:
+    - Error rate = errors / total * 100
+    - Availability = (total - errors) / total * 100
 
 Prometheus + Grafana:
-  收集:
+  Collection:
     - Prometheus Exporter
-    - Service Discovery（ECS、EKS）
+    - Service Discovery (ECS, EKS)
 
-  存储:
+  Storage:
     - Amazon Managed Prometheus (AMP)
 
-  可视化:
+  Visualization:
     - Amazon Managed Grafana (AMG)
 ```
 
-#### 3. 追踪 (Traces)
+#### 3. Traces
 
-**分布式追踪概念**：
+**Distributed Tracing Concepts**:
 
 ```yaml
-Trace (追踪):
-  定义: 完整的请求路径
-  示例: 用户请求 → API Gateway → Lambda → DynamoDB
+Trace:
+  Definition: Complete request path
+  Example: User request -> API Gateway -> Lambda -> DynamoDB
 
-Span (跨度):
-  定义: 单个操作
-  示例: "Lambda 执行"、"DynamoDB 查询"
+Span:
+  Definition: Single operation
+  Example: "Lambda execution", "DynamoDB query"
 
-  属性:
-    - span_id: 唯一标识符
-    - parent_span_id: 父 Span
-    - trace_id: 所属 Trace
-    - operation_name: 操作名称
-    - start_time: 开始时间
-    - duration: 持续时间
-    - tags: 元数据（http.method, db.statement）
+  Attributes:
+    - span_id: Unique identifier
+    - parent_span_id: Parent Span
+    - trace_id: Owning Trace
+    - operation_name: Operation name
+    - start_time: Start time
+    - duration: Duration
+    - tags: Metadata (http.method, db.statement)
 
-Context (上下文):
-  定义: 跨服务传播的元数据
-  传播方式:
+Context:
+  Definition: Metadata propagated across services
+  Propagation:
     - HTTP Headers: traceparent, tracestate
-    - 消息队列: Message Attributes
+    - Message Queues: Message Attributes
 
-Baggage (行李):
-  定义: 用户定义的元数据
-  示例: user_id, request_id, feature_flag
+Baggage:
+  Definition: User-defined metadata
+  Example: user_id, request_id, feature_flag
 ```
 
-**用途**：
-- 识别性能瓶颈（哪个服务最慢？）
-- 理解服务依赖（调用图）
-- 诊断延迟问题（哪个操作耗时最长？）
-- 可视化请求流（Waterfall 图）
+**Use Cases**:
+- Identify performance bottlenecks (which service is slowest?)
+- Understand service dependencies (call graph)
+- Diagnose latency issues (which operation takes longest?)
+- Visualize request flow (Waterfall diagram)
 
-**AWS X-Ray 实施**：
+**AWS X-Ray Implementation**:
 
 ```yaml
-插桩:
-  自动插桩:
-    - AWS SDK 调用（DynamoDB、S3、SQS）
-    - HTTP 调用（通过 X-Ray SDK）
-    - SQL 查询（通过 X-Ray SDK）
+Instrumentation:
+  Auto-Instrumentation:
+    - AWS SDK calls (DynamoDB, S3, SQS)
+    - HTTP calls (via X-Ray SDK)
+    - SQL queries (via X-Ray SDK)
 
-  手动插桩:
-    - 自定义 Subsegments
-    - 添加 Annotations（可搜索）
-    - 添加 Metadata（详细信息）
+  Manual Instrumentation:
+    - Custom Subsegments
+    - Add Annotations (searchable)
+    - Add Metadata (detailed info)
 
 Lambda:
-  - 自动追踪（启用 Active Tracing）
-  - 自动捕获冷启动
-  - 自动捕获 AWS SDK 调用
+  - Automatic tracing (enable Active Tracing)
+  - Automatic cold start capture
+  - Automatic AWS SDK call capture
 
 ECS/EKS:
   - X-Ray Daemon Sidecar
-  - 应用发送追踪到 Daemon
-  - Daemon 批量上传到 X-Ray
+  - Application sends traces to Daemon
+  - Daemon batch-uploads to X-Ray
 
-分析:
-  - Service Map（服务依赖图）
-  - Trace Timeline（Waterfall 图）
-  - Analytics（查询和过滤）
-  - 告警（延迟异常、错误率）
+Analysis:
+  - Service Map (service dependency diagram)
+  - Trace Timeline (Waterfall diagram)
+  - Analytics (query and filter)
+  - Alerts (latency anomalies, error rate)
 ```
 
-### 4.3 健康模型
+### 4.3 Health Models
 
-**健康状态定义**：
+**Health State Definitions**:
 
 ```yaml
-Healthy (健康):
-  定义: 所有指标在正常范围内
-  指标:
-    - 请求成功率: > 99.9%
-    - 延迟 P95: < 200ms
-    - 错误率: < 0.1%
-    - 资源利用率: < 70%
+Healthy:
+  Definition: All metrics within normal range
+  Metrics:
+    - Request success rate: > 99.9%
+    - Latency P95: < 200ms
+    - Error rate: < 0.1%
+    - Resource utilization: < 70%
 
-  行动: 无，继续监控
+  Action: None, continue monitoring
 
-Degraded (降级):
-  定义: 部分功能受影响
-  指标:
-    - 请求成功率: 99% - 99.9%
-    - 延迟 P95: 200ms - 500ms
-    - 部分依赖不可用
+Degraded:
+  Definition: Some functionality affected
+  Metrics:
+    - Request success rate: 99% - 99.9%
+    - Latency P95: 200ms - 500ms
+    - Some dependencies unavailable
 
-  行动:
-    - 自动触发降级模式
-    - 通知 On-call
-    - 准备回滚
+  Action:
+    - Auto-trigger degradation mode
+    - Notify on-call
+    - Prepare rollback
 
-Unhealthy (不健康):
-  定义: 关键功能失败
-  指标:
-    - 请求成功率: < 99%
-    - 延迟 P95: > 500ms
-    - 主数据库不可用
+Unhealthy:
+  Definition: Critical functionality failed
+  Metrics:
+    - Request success rate: < 99%
+    - Latency P95: > 500ms
+    - Primary database unavailable
 
-  行动:
-    - 立即告警（寻呼机）
-    - 自动故障转移
-    - 事故响应流程
+  Action:
+    - Immediate alert (pager)
+    - Auto failover
+    - Incident response process
 ```
 
-**健康检查类型**：
+**Health Check Types**:
 
-| 类型 | 目的 | 示例 | Kubernetes | AWS |
-|------|------|------|-----------|-----|
-| **Liveness** | 应用是否运行？ | HTTP 200 /health | livenessProbe | ELB Health Check |
-| **Readiness** | 是否准备接受流量？ | 数据库连接成功 | readinessProbe | Target Health |
-| **Startup** | 是否完成启动？ | 初始化完成 | startupProbe | N/A |
+| Type | Purpose | Example | Kubernetes | AWS |
+|------|---------|---------|-----------|-----|
+| **Liveness** | Is the application running? | HTTP 200 /health | livenessProbe | ELB Health Check |
+| **Readiness** | Ready to accept traffic? | Database connection OK | readinessProbe | Target Health |
+| **Startup** | Finished starting? | Initialization complete | startupProbe | N/A |
 
-**实施**：
+**Implementation**:
 
 ```yaml
-健康检查端点:
+Health Check Endpoints:
   /health:
-    - Liveness 检查
-    - 仅检查应用本身
-    - 快速响应（< 100ms）
-    - 示例: { "status": "healthy" }
+    - Liveness check
+    - Only checks the application itself
+    - Fast response (< 100ms)
+    - Example: { "status": "healthy" }
 
   /ready:
-    - Readiness 检查
-    - 检查依赖（数据库、缓存）
-    - 可稍慢（< 1s）
-    - 示例:
+    - Readiness check
+    - Checks dependencies (database, cache)
+    - Can be slightly slower (< 1s)
+    - Example:
       {
         "status": "ready",
         "checks": {
@@ -1574,10 +1575,10 @@ Unhealthy (不健康):
       }
 
   /health/deep:
-    - 深度健康检查
-    - 检查所有依赖
-    - 仅供诊断（不用于自动化）
-    - 示例:
+    - Deep health check
+    - Checks all dependencies
+    - For diagnostics only (not for automation)
+    - Example:
       {
         "status": "healthy",
         "checks": {
@@ -1587,7 +1588,7 @@ Unhealthy (不健康):
         }
       }
 
-负载均衡器集成:
+Load Balancer Integration:
   ALB:
     - Health Check Path: /health
     - Interval: 30s
@@ -1617,67 +1618,67 @@ Unhealthy (不健康):
 
 ---
 
-## 5. 云设计模式（韧性相关）
+## 5. Cloud Design Patterns (Resilience-Related)
 
-### 5.1 容错和韧性模式
+### 5.1 Fault Tolerance and Resilience Patterns
 
-#### Bulkhead 模式（舱壁模式）
+#### Bulkhead Pattern
 
-**目的**：故障隔离
-
-```
-反模式（共享资源池）:
-┌──────────────────────────────┐
-│     共享线程池 (100 线程)     │
-│   ┌─────┬─────┬─────┬─────┐   │
-│   │租户A│租户B│租户C│租户D│   │
-│   └─────┴─────┴─────┴─────┘   │
-└──────────────────────────────┘
-           ↓
-    租户 A 消耗所有线程
-           ↓
-    所有租户受影响 ❌
-
-Bulkhead 模式:
-┌──────────────────────────────┐
-│ ┌────────┐ ┌────────┐        │
-│ │ 租户 A │ │ 租户 B │        │
-│ │25 线程 │ │25 线程 │        │
-│ └────────┘ └────────┘        │
-│ ┌────────┐ ┌────────┐        │
-│ │ 租户 C │ │ 租户 D │        │
-│ │25 线程 │ │25 线程 │        │
-│ └────────┘ └────────┘        │
-└──────────────────────────────┘
-           ↓
-    租户 A 故障仅影响自己 ✅
-```
-
-**AWS 实施**：
-- 每个租户独立 Lambda 函数
-- 每个优先级独立 SQS 队列
-- DynamoDB 表级隔离
-
-#### Circuit Breaker 模式（断路器）
-
-**状态机**：
+**Purpose**: Fault isolation
 
 ```
-Closed (正常)
-    │
-    │ 失败率 > 阈值
-    ▼
-Open (断开)
-    │
-    │ 超时后
-    ▼
-Half-Open (测试)
-    │
-    ├─ 成功 → Closed
-    └─ 失败 → Open
+Anti-pattern (Shared Resource Pool):
++------------------------------+
+|  Shared Thread Pool (100)    |
+| +-----+-----+-----+-----+   |
+| |Ten A|Ten B|Ten C|Ten D|   |
+| +-----+-----+-----+-----+   |
++------------------------------+
+           |
+    Tenant A consumes all threads
+           |
+    All tenants affected
+
+Bulkhead Pattern:
++------------------------------+
+| +--------+ +--------+        |
+| | Tenant A| | Tenant B|      |
+| |25 threads| |25 threads|    |
+| +--------+ +--------+        |
+| +--------+ +--------+        |
+| | Tenant C| | Tenant D|      |
+| |25 threads| |25 threads|    |
+| +--------+ +--------+        |
++------------------------------+
+           |
+    Tenant A failure only affects itself
 ```
 
-**实施示例（伪代码）**：
+**AWS Implementation**:
+- Separate Lambda functions per tenant
+- Separate SQS queues per priority
+- DynamoDB table-level isolation
+
+#### Circuit Breaker Pattern
+
+**State Machine**:
+
+```
+Closed (Normal)
+    |
+    | Failure rate > threshold
+    v
+Open (Broken)
+    |
+    | After timeout
+    v
+Half-Open (Testing)
+    |
+    +-- Success -> Closed
+    +-- Failure -> Open
+```
+
+**Implementation Example (Pseudocode)**:
 
 ```python
 class CircuitBreaker:
@@ -1714,23 +1715,23 @@ class CircuitBreaker:
             self.state = "OPEN"
 ```
 
-**AWS 服务**：
+**AWS Services**:
 - API Gateway Throttling
 - Lambda Reserved Concurrency
 - Application Load Balancer Connection Draining
 
-#### Retry 模式（重试）
+#### Retry Pattern
 
-**策略**：
+**Strategies**:
 
-| 策略 | 描述 | 适用场景 | 实施 |
-|------|------|---------|------|
-| **固定间隔** | 每次重试间隔相同 | 网络抖动 | `sleep(1s)` |
-| **指数退避** | 间隔指数增长 | API 限流 | `sleep(2^n)` |
-| **指数退避+抖动** | 增加随机性 | 避免惊群 | `sleep(2^n + random())` |
-| **渐进间隔** | 自定义间隔序列 | 复杂场景 | `[1s, 5s, 30s]` |
+| Strategy | Description | Use Case | Implementation |
+|----------|-------------|----------|----------------|
+| **Fixed Interval** | Same interval between retries | Network jitter | `sleep(1s)` |
+| **Exponential Backoff** | Exponentially increasing interval | API throttling | `sleep(2^n)` |
+| **Exponential Backoff + Jitter** | Added randomness | Avoid thundering herd | `sleep(2^n + random())` |
+| **Progressive Interval** | Custom interval sequence | Complex scenarios | `[1s, 5s, 30s]` |
 
-**实施示例**：
+**Implementation Example**:
 
 ```python
 def retry_with_exponential_backoff(
@@ -1754,146 +1755,146 @@ def retry_with_exponential_backoff(
             time.sleep(delay)
 ```
 
-**AWS SDK 自动重试**：
-- AWS SDK 内置指数退避
-- DynamoDB：自动重试限流（ProvisionedThroughputExceededException）
-- S3：自动重试 5xx 错误
+**AWS SDK Auto-Retry**:
+- AWS SDK has built-in exponential backoff
+- DynamoDB: Auto-retry on throttling (ProvisionedThroughputExceededException)
+- S3: Auto-retry on 5xx errors
 
-**最佳实践**：
-- 区分临时和永久故障
-- 设置最大重试次数（避免无限重试）
-- 记录重试尝试（审计和调试）
-- 幂等性（确保重试安全）
+**Best Practices**:
+- Distinguish transient from permanent failures
+- Set maximum retry count (avoid infinite retries)
+- Log retry attempts (auditing and debugging)
+- Idempotency (ensure retries are safe)
 
-#### Queue-Based Load Leveling（基于队列的负载均衡）
+#### Queue-Based Load Leveling
 
-**架构**：
+**Architecture**:
 
 ```
-同步（反模式）:
-Client → API → Heavy Processing
-              ↑ 阻塞等待
-        超时 / 失败 ❌
+Synchronous (Anti-pattern):
+Client -> API -> Heavy Processing
+              ^ Blocking wait
+        Timeout / Failure
 
-异步（最佳实践）:
-Client → API → SQS Queue → Worker Pool
-         ↓                    ↓
-      立即返回 ✅          处理任务
+Asynchronous (Best Practice):
+Client -> API -> SQS Queue -> Worker Pool
+         |                    |
+      Immediate return      Process tasks
 ```
 
-**优势**：
-- 解耦生产者和消费者
-- 缓冲突发流量
-- 自动重试（DLQ）
-- 水平扩展 Worker
+**Benefits**:
+- Decouples producers and consumers
+- Buffers burst traffic
+- Automatic retry (DLQ)
+- Horizontally scale workers
 
-**AWS 实施**：
+**AWS Implementation**:
 ```yaml
-架构:
+Architecture:
   Producer:
     - API Gateway + Lambda
-    - 发送消息到 SQS
+    - Send messages to SQS
 
   Queue:
     - SQS Standard Queue
     - Visibility Timeout: 30s
-    - Dead Letter Queue (3 次重试后)
+    - Dead Letter Queue (after 3 retries)
 
   Consumer:
     - Lambda (Event Source Mapping)
-    - 或 ECS/EKS Worker
-    - Auto Scaling 基于队列深度
+    - Or ECS/EKS Worker
+    - Auto Scaling based on queue depth
 
-监控:
+Monitoring:
   - ApproximateNumberOfMessagesVisible
   - ApproximateAgeOfOldestMessage
   - NumberOfMessagesDeleted
 ```
 
-#### Throttling（限流）
+#### Throttling
 
-**目的**：控制资源消耗，防止过载
+**Purpose**: Control resource consumption, prevent overload
 
-**限流算法**：
+**Throttling Algorithms**:
 
-| 算法 | 描述 | 优点 | 缺点 |
-|------|------|------|------|
-| **固定窗口** | 每个时间窗口固定配额 | 简单 | 窗口边界突增 |
-| **滑动窗口** | 平滑的时间窗口 | 精确 | 实施复杂 |
-| **漏桶** | 固定速率处理 | 平滑流量 | 不适应突增 |
-| **令牌桶** | 允许突增（令牌积累） | 灵活 | 需维护状态 |
+| Algorithm | Description | Pros | Cons |
+|-----------|-------------|------|------|
+| **Fixed Window** | Fixed quota per time window | Simple | Window boundary spikes |
+| **Sliding Window** | Smooth time window | Precise | Complex implementation |
+| **Leaky Bucket** | Fixed-rate processing | Smooth traffic | Not adaptive to bursts |
+| **Token Bucket** | Allow bursts (token accumulation) | Flexible | Requires state maintenance |
 
-**AWS 实施**：
+**AWS Implementation**:
 
 ```yaml
 API Gateway:
   Rate Limiting:
-    - 每秒请求数（RPS）
-    - 突增容量（Burst）
+    - Requests per second (RPS)
+    - Burst capacity
 
   Throttling:
     - Account-level: 10,000 RPS
-    - Stage-level: 自定义
-    - Method-level: 细粒度控制
+    - Stage-level: Custom
+    - Method-level: Fine-grained control
 
   Usage Plans:
-    - 每个 API Key 独立配额
-    - 按租户限流
+    - Independent quota per API Key
+    - Per-tenant throttling
 
 Lambda:
   Concurrency Limits:
-    - Account-level: 1000 并发（默认）
+    - Account-level: 1000 concurrent (default)
     - Function-level: Reserved Concurrency
-    - Provisioned Concurrency: 预热实例
+    - Provisioned Concurrency: Pre-warmed instances
 
   Throttling:
-    - 超过并发限制时返回 429
+    - Returns 429 when exceeding concurrency limit
 
 DynamoDB:
   Capacity Modes:
-    - Provisioned: 固定 RCU/WCU
-    - On-Demand: 自动扩展
+    - Provisioned: Fixed RCU/WCU
+    - On-Demand: Auto-scaling
 
   Throttling:
-    - 超过容量时返回 ProvisionedThroughputExceededException
-    - Adaptive Capacity: 自动应对热分区
+    - Returns ProvisionedThroughputExceededException when exceeding capacity
+    - Adaptive Capacity: Automatically handles hot partitions
 ```
 
 ---
 
-## 总结
+## Summary
 
-本参考文档整合了 2025 年系统韧性领域的最新知识和最佳实践：
+This reference document integrates the latest 2025 knowledge and best practices in system resilience:
 
-1. **AWS Well-Architected Framework（可靠性支柱）**
-   - 五大设计原则
-   - 四种灾难恢复策略
-   - 多 AZ 和多区域架构
-   - 结构化变更管理
+1. **AWS Well-Architected Framework (Reliability Pillar)**
+   - Five design principles
+   - Four disaster recovery strategies
+   - Multi-AZ and multi-region architectures
+   - Structured change management
 
-2. **AWS 韧性分析核心原则**
-   - 错误预算管理
-   - SLI/SLO/SLA 定义
-   - 关键监控指标
-   - 无责任事后复盘文化
-   - 有效故障排查方法
+2. **AWS Resilience Analysis Core Principles**
+   - Error budget management
+   - SLI/SLO/SLA definitions
+   - Key monitoring signals
+   - Blameless postmortem culture
+   - Effective troubleshooting methods
 
-3. **混沌工程方法论**
-   - 四步实验流程
-   - AWS FIS 实验模板
-   - 持续自动化验证
+3. **Chaos Engineering Methodology**
+   - Four-step experiment process
+   - AWS FIS experiment templates
+   - Continuous automated verification
 
-4. **AWS 可观测性最佳实践**
-   - CloudWatch + X-Ray 统一框架
-   - 三大支柱（日志、指标、追踪）
-   - 健康检查模型
-   - AWS 可观测性服务
+4. **AWS Observability Best Practices**
+   - CloudWatch + X-Ray unified framework
+   - Three Pillars (logs, metrics, traces)
+   - Health check models
+   - AWS observability services
 
-5. **云设计模式**
-   - Bulkhead（故障隔离）
-   - Circuit Breaker（断路器）
-   - Retry（重试）
-   - Queue-Based Load Leveling（异步解耦）
-   - Throttling（限流）
+5. **Cloud Design Patterns**
+   - Bulkhead (fault isolation)
+   - Circuit Breaker
+   - Retry
+   - Queue-Based Load Leveling (async decoupling)
+   - Throttling
 
-在进行 AWS 系统韧性分析时，应综合运用这些框架和模式，根据业务需求和约束条件，设计和实施适合的韧性策略。
+When conducting AWS system resilience analysis, these frameworks and patterns should be applied holistically, designing and implementing appropriate resilience strategies based on business requirements and constraints.

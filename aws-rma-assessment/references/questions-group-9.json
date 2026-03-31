@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "group": 9,
+    "name_en": "Game Days",
+    "name_zh": "游戏日",
+    "question_count": 3
+  },
+  "questions": [
+    {
+      "id": 74,
+      "priority": "P3",
+      "category": "游戏日",
+      "category_en": "Game Days",
+      "question_zh": "问题 74：Game Days对实际环境的模拟程度？",
+      "question_en": "How well do Game Days simulate the real environment?",
+      "image": "image.png",
+      "why_important": "真实的演练环境提供可靠的韧性验证",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "Game Days在简化环境进行，与生产差异大",
+          "description_en": "Game Days in simplified environment, significantly different from production"
+        },
+        {
+          "level": 2,
+          "description_zh": "在预发布环境进行，较接近但仍有差异",
+          "description_en": "Conducted in staging environment, closer but still differences"
+        },
+        {
+          "level": 3,
+          "description_zh": "在生产环境进行：真实流量、真实依赖、真实团队、真实压力",
+          "description_en": "Conducted in production: real traffic, real dependencies, real teams, real pressure"
+        }
+      ],
+      "aws_best_practice": "生产Game Days最佳实践：1) 选择低流量时段；2) 从小规模开始（单个服务/区域）；3) 使用流量百分比控制影响；4) 准备快速回滚；5) 全员参与（不仅是运维）；6) 实时监控用户影响。获得管理层支持。",
+      "why_important_en": "Realistic drill environments provide reliable resilience validation",
+      "aws_best_practice_en": "Production Game Day best practices: 1) Choose low-traffic windows; 2) Start small (single service/region); 3) Use traffic percentage to control impact; 4) Prepare rapid rollback; 5) Full team participation (not just ops); 6) Real-time monitoring of user impact. Secure management support."
+    },
+    {
+      "id": 75,
+      "priority": "P3",
+      "category": "游戏日",
+      "category_en": "Game Days",
+      "question_zh": "问题 75：游戏日的场景有多逼真？",
+      "question_en": "How realistic are Game Day scenarios?",
+      "image": "image.png",
+      "why_important": "逼真的场景提供有价值的学习机会",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "游戏日场景简单，不代表真实威胁",
+          "description_en": "Game Day scenarios simple, not representing real threats"
+        },
+        {
+          "level": 2,
+          "description_zh": "基于常见故障，但缺少复杂性或意外性",
+          "description_en": "Based on common failures but lacking complexity or surprises"
+        },
+        {
+          "level": 3,
+          "description_zh": "高度逼真：基于真实事件、多点故障、级联效应、时间压力、意外挑战",
+          "description_en": "Highly realistic: based on real incidents, multi-point failures, cascading effects, time pressure, unexpected challenges"
+        }
+      ],
+      "aws_best_practice": "设计有效的Game Day场景：1) 基于历史重大事件；2) 包含多个并发故障；3) 测试跨团队协作；4) 引入意外元素（红队攻击）；5) 模拟沟通挑战；6) 测试决策制定。使用 AWS FIS 注入真实故障。",
+      "why_important_en": "Realistic scenarios provide valuable learning opportunities",
+      "aws_best_practice_en": "Design effective Game Day scenarios: 1) Based on historical major incidents; 2) Include multiple concurrent failures; 3) Test cross-team collaboration; 4) Introduce unexpected elements (red team attacks); 5) Simulate communication challenges; 6) Test decision making. Use AWS FIS to inject real failures."
+    },
+    {
+      "id": 76,
+      "priority": "P3",
+      "category": "游戏日",
+      "category_en": "Game Days",
+      "question_zh": "问题 76：游戏日的重现性如何？",
+      "question_en": "How reproducible are Game Days?",
+      "image": "image.png",
+      "why_important": "可重现的Game Days确保持续学习和改进",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "Game Days是一次性活动，难以重复",
+          "description_en": "Game Days are one-time events, difficult to repeat"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的脚本，但需要大量手动准备",
+          "description_en": "Basic scripts exist but require significant manual preparation"
+        },
+        {
+          "level": 3,
+          "description_zh": "完全可重现：自动化场景脚本、标准化评估、版本控制、定期执行",
+          "description_en": "Fully reproducible: automated scenario scripts, standardized assessment, version control, regular execution"
+        }
+      ],
+      "aws_best_practice": "建立Game Day流程：1) 使用AWS FIS模板定义场景；2) 文档化准备清单和角色；3) 标准化评分标准；4) 自动化场景执行；5) 定期安排（季度）；6) 比较前后结果。存储在runbook库中。",
+      "why_important_en": "Reproducible Game Days ensure continuous learning and improvement",
+      "aws_best_practice_en": "Establish Game Day process: 1) Define scenarios using AWS FIS templates; 2) Document preparation checklists and roles; 3) Standardize scoring criteria; 4) Automate scenario execution; 5) Schedule regularly (quarterly); 6) Compare before/after results. Store in runbook library."
+    }
+  ]
+}

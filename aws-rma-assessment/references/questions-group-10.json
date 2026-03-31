@@ -1,0 +1,250 @@
+{
+  "metadata": {
+    "group": 10,
+    "name_en": "Operations Reviews & Organizational Learning",
+    "name_zh": "运营评审与组织学习",
+    "question_count": 8
+  },
+  "questions": [
+    {
+      "id": 58,
+      "priority": "P2",
+      "category": "运营评审",
+      "category_en": "Operations Reviews",
+      "question_zh": "问题 58：谁参加运营审查？",
+      "question_en": "Who participates in operational reviews?",
+      "image": "image.png",
+      "why_important": "多方参与的运营评审提供全面视角",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式运营评审或仅技术团队参与",
+          "description_en": "No formal operational reviews or only technical team participation"
+        },
+        {
+          "level": 2,
+          "description_zh": "有运营评审，但缺少业务或管理层参与",
+          "description_en": "Operational reviews exist but lacking business or management participation"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面参与：技术团队、业务负责人、管理层、客户代表（如适用），结构化议程",
+          "description_en": "Comprehensive participation: technical teams, business owners, management, customer representatives (if applicable), structured agenda"
+        }
+      ],
+      "aws_best_practice": "运营评审参与者应包括：1) 服务所有者；2) SRE/运维团队；3) 业务负责人；4) 高级管理层（季度）；5) 安全和合规团队。使用标准化议程：KPI回顾、事件分析、改进进展、风险评估。",
+      "why_important_en": "Multi-stakeholder operational reviews provide comprehensive perspectives",
+      "aws_best_practice_en": "Operational review participants should include: 1) Service owners; 2) SRE/operations teams; 3) Business owners; 4) Senior management (quarterly); 5) Security and compliance teams. Use standardized agendas: KPI review, incident analysis, improvement progress, risk assessment."
+    },
+    {
+      "id": 59,
+      "priority": "P2",
+      "category": "运营评审",
+      "category_en": "Operations Reviews",
+      "question_zh": "问题 59：运营审查多久进行一次？",
+      "question_en": "How frequently are operational reviews conducted?",
+      "image": "image.png",
+      "why_important": "定期评审确保持续关注运营健康",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "很少或从不进行运营评审",
+          "description_en": "Rarely or never conduct operational reviews"
+        },
+        {
+          "level": 2,
+          "description_zh": "不定期进行，频率取决于事件",
+          "description_en": "Irregularly conducted, frequency depends on incidents"
+        },
+        {
+          "level": 3,
+          "description_zh": "定期评审：每周（团队级）、每月（服务级）、每季度（管理层），结构化流程",
+          "description_en": "Regular reviews: weekly (team level), monthly (service level), quarterly (management level), structured process"
+        }
+      ],
+      "aws_best_practice": "建立分层评审节奏：1) 每周：团队站会，回顾运维指标；2) 每月：服务评审，详细分析趋势；3) 每季度：管理层评审，战略调整。使用 CloudWatch Dashboards 准备数据。记录行动项并跟踪。",
+      "why_important_en": "Regular reviews ensure continuous focus on operational health",
+      "aws_best_practice_en": "Establish layered review cadence: 1) Weekly: team standups reviewing operational metrics; 2) Monthly: service reviews with detailed trend analysis; 3) Quarterly: management reviews for strategic adjustments. Use CloudWatch Dashboards to prepare data. Record action items and track them."
+    },
+    {
+      "id": 60,
+      "priority": "P2",
+      "category": "运营评审",
+      "category_en": "Operations Reviews",
+      "question_zh": "问题 60：运营审查有多彻底？",
+      "question_en": "How thorough are operational reviews?",
+      "image": "image.png",
+      "why_important": "彻底的评审识别深层次问题和改进机会",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "评审流于形式，缺少深度分析",
+          "description_en": "Reviews superficial, lacking deep analysis"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的数据回顾，但缺少根本原因分析",
+          "description_en": "Basic data review but lacking root cause analysis"
+        },
+        {
+          "level": 3,
+          "description_zh": "深入评审：趋势分析、根本原因分析、预测性洞察、可操作的改进建议",
+          "description_en": "Thorough reviews: trend analysis, root cause analysis, predictive insights, actionable improvement recommendations"
+        }
+      ],
+      "aws_best_practice": "运营评审应包含：1) KPI趋势分析（可用性、延迟、错误率）；2) 事件模式分析；3) 容量和成本趋势；4) SLO合规性；5) 改进措施有效性评估；6) 新风险识别。使用数据驱动决策。",
+      "why_important_en": "Thorough reviews identify deep-rooted issues and improvement opportunities",
+      "aws_best_practice_en": "Operational reviews should include: 1) KPI trend analysis (availability, latency, error rates); 2) Incident pattern analysis; 3) Capacity and cost trends; 4) SLO compliance; 5) Improvement measure effectiveness assessment; 6) New risk identification. Use data-driven decision making."
+    },
+    {
+      "id": 61,
+      "priority": "P2",
+      "category": "运营评审",
+      "category_en": "Operations Reviews",
+      "question_zh": "问题 61：如何监控运营绩效？",
+      "question_en": "How do you monitor operational performance?",
+      "image": "image.png",
+      "why_important": "运营绩效监控确保持续改进",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无系统性的运营绩效监控",
+          "description_en": "No systematic operational performance monitoring"
+        },
+        {
+          "level": 2,
+          "description_zh": "跟踪基本指标，但缺少目标或基准对比",
+          "description_en": "Track basic metrics but lacking targets or benchmark comparison"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面的绩效监控：KPI仪表板、目标跟踪、趋势分析、自动化报告、持续改进指标",
+          "description_en": "Comprehensive performance monitoring: KPI dashboards, target tracking, trend analysis, automated reporting, continuous improvement metrics"
+        }
+      ],
+      "aws_best_practice": "定义运营KPI：1) 可用性和性能（SLO合规）；2) 事件指标（MTTR、MTBF、严重事件数）；3) 变更成功率；4) 自动化程度；5) 成本效率。使用 CloudWatch 仪表板和告警跟踪。每月review进展。",
+      "why_important_en": "Operational performance monitoring ensures continuous improvement",
+      "aws_best_practice_en": "Define operational KPIs: 1) Availability and performance (SLO compliance); 2) Incident metrics (MTTR, MTBF, critical incident count); 3) Change success rate; 4) Automation level; 5) Cost efficiency. Track using CloudWatch dashboards and alerts. Review progress monthly."
+    },
+    {
+      "id": 77,
+      "priority": "P3",
+      "category": "组织学习",
+      "category_en": "Organizational Learning",
+      "question_zh": "问题 77：如何培育支持韧性的社区？",
+      "question_en": "How do you foster a community that supports resilience?",
+      "image": "image.png",
+      "why_important": "韧性社区促进知识共享和文化建设",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无韧性社区，知识分散在团队中",
+          "description_en": "No resilience community, knowledge scattered across teams"
+        },
+        {
+          "level": 2,
+          "description_zh": "有非正式小组，但参与度低或影响力有限",
+          "description_en": "Informal group exists but low participation or limited influence"
+        },
+        {
+          "level": 3,
+          "description_zh": "活跃的韧性社区：定期聚会、知识分享、工具和实践、管理层支持、跨团队协作",
+          "description_en": "Active resilience community: regular meetups, knowledge sharing, tools and practices, management support, cross-team collaboration"
+        }
+      ],
+      "aws_best_practice": "建立韧性社区实践：1) 组建CoE（Center of Excellence）；2) 定期聚会（月度tech talk）；3) Slack/Teams频道；4) 内部会议和工作坊；5) 建立导师计划；6) 表彰韧性贡献者。获得高级管理层赞助。",
+      "why_important_en": "Resilience communities promote knowledge sharing and culture building",
+      "aws_best_practice_en": "Build resilience community practices: 1) Form a Center of Excellence (CoE); 2) Regular meetups (monthly tech talks); 3) Slack/Teams channels; 4) Internal conferences and workshops; 5) Establish mentor programs; 6) Recognize resilience contributors. Secure senior management sponsorship."
+    },
+    {
+      "id": 78,
+      "priority": "P3",
+      "category": "组织学习",
+      "category_en": "Organizational Learning",
+      "question_zh": "问题 78：如何定义韧性的角色和责任？",
+      "question_en": "How do you define roles and responsibilities for resilience?",
+      "image": "image.png",
+      "why_important": "明确的角色和责任确保韧性工作有人负责",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "韧性责任不明确，每个人都负责=无人负责",
+          "description_en": "Resilience responsibility unclear, everyone responsible = no one responsible"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本的角色定义，但职责边界模糊",
+          "description_en": "Basic role definitions exist but responsibility boundaries unclear"
+        },
+        {
+          "level": 3,
+          "description_zh": "清晰的角色框架：服务所有者、SRE、韧性工程师、安全团队，明确职责和协作模型",
+          "description_en": "Clear role framework: service owners, SREs, resilience engineers, security team, clear responsibilities and collaboration model"
+        }
+      ],
+      "aws_best_practice": "定义韧性角色：1) 服务所有者：端到端责任；2) SRE：平台和工具；3) 韧性工程师：评估和咨询；4) 安全团队：威胁建模；5) 开发团队：功能韧性。使用RACI矩阵明确责任。采用'you build it, you run it'文化。",
+      "why_important_en": "Clear roles and responsibilities ensure someone is accountable for resilience work",
+      "aws_best_practice_en": "Define resilience roles: 1) Service owners: end-to-end responsibility; 2) SRE: platform and tools; 3) Resilience engineers: assessment and consulting; 4) Security team: threat modeling; 5) Dev teams: feature resilience. Use RACI matrix to clarify responsibilities. Adopt 'you build it, you run it' culture."
+    },
+    {
+      "id": 79,
+      "priority": "P3",
+      "category": "组织学习",
+      "category_en": "Organizational Learning",
+      "question_zh": "问题 79：如何让团队了解弹性概念的最新情况？",
+      "question_en": "How do you keep teams up to date on resilience concepts?",
+      "image": "image.png",
+      "why_important": "持续学习确保团队跟上韧性最佳实践的发展",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无系统的韧性培训或知识更新",
+          "description_en": "No systematic resilience training or knowledge updates"
+        },
+        {
+          "level": 2,
+          "description_zh": "有基本培训，但内容陈旧或更新频率低",
+          "description_en": "Basic training exists but content outdated or infrequent updates"
+        },
+        {
+          "level": 3,
+          "description_zh": "持续学习计划：定期培训、认证项目、会议参与、内部分享、行业跟踪",
+          "description_en": "Continuous learning program: regular training, certification programs, conference participation, internal sharing, industry tracking"
+        }
+      ],
+      "aws_best_practice": "建立学习文化：1) 季度韧性培训（新工具、案例研究）；2) 支持AWS/行业认证（Solutions Architect、SRE）；3) 参加re:Invent和其他会议；4) 订阅AWS架构博客；5) 内部brown bag lunch；6) 建立学习预算。",
+      "why_important_en": "Continuous learning ensures teams keep up with evolving resilience best practices",
+      "aws_best_practice_en": "Build learning culture: 1) Quarterly resilience training (new tools, case studies); 2) Support AWS/industry certifications (Solutions Architect, SRE); 3) Attend re:Invent and other conferences; 4) Subscribe to AWS Architecture Blog; 5) Internal brown bag lunches; 6) Establish learning budgets."
+    },
+    {
+      "id": 80,
+      "priority": "P3",
+      "category": "组织学习",
+      "category_en": "Organizational Learning",
+      "question_zh": "问题 80：如何根据独特情况定制韧性训练？",
+      "question_en": "How do you customize resilience training for unique circumstances?",
+      "image": "image.png",
+      "why_important": "定制化培训提高相关性和有效性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "使用通用培训材料，不适应团队需求",
+          "description_en": "Use generic training materials, not adapted to team needs"
+        },
+        {
+          "level": 2,
+          "description_zh": "有一定定制，但不完全匹配团队环境",
+          "description_en": "Some customization but not fully matching team environment"
+        },
+        {
+          "level": 3,
+          "description_zh": "高度定制：基于实际系统、真实场景、团队角色、技术栈、历史事件",
+          "description_en": "Highly customized: based on actual systems, real scenarios, team roles, tech stack, historical incidents"
+        }
+      ],
+      "aws_best_practice": "定制培训方法：1) 使用团队自己的架构图；2) 基于实际事件的案例研究；3) 针对技术栈的专门培训（如Lambda韧性）；4) 角色特定培训（开发vs运维）；5) 动手实验使用真实环境；6) 由团队成员分享经验。",
+      "why_important_en": "Customized training improves relevance and effectiveness",
+      "aws_best_practice_en": "Customized training approaches: 1) Use the team's own architecture diagrams; 2) Case studies based on real incidents; 3) Tech stack-specific training (e.g., Lambda resilience); 4) Role-specific training (dev vs. ops); 5) Hands-on labs using real environments; 6) Experience sharing by team members."
+    }
+  ]
+}

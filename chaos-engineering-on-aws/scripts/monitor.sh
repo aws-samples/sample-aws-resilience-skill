@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# monitor.sh — 混沌工程实验指标采集脚本
-# 由 chaos-engineering-on-aws Skill Step 5 自动生成并执行
-# 用法：nohup ./monitor.sh &
+# monitor.sh — Chaos engineering experiment metric collection script
+# Auto-generated and executed by chaos-engineering-on-aws Skill Step 5
+# Usage: nohup ./monitor.sh &
 #
-# 需要替换的变量（Agent 生成时填入）：
-#   EXPERIMENT_ID  — FIS 实验 ID
-#   NAMESPACE      — CloudWatch 指标命名空间
-#   METRIC_NAMES   — 要采集的指标名列表
-#   DIMENSIONS     — 指标维度
-#   REGION         — AWS 区域
-#   OUTPUT_FILE    — 输出文件路径
-#   INTERVAL       — 采集间隔（秒）
+# Variables to replace (filled in by Agent at generation time):
+#   EXPERIMENT_ID  — FIS experiment ID
+#   NAMESPACE      — CloudWatch metric namespace
+#   METRIC_NAMES   — List of metrics to collect
+#   DIMENSIONS     — Metric dimensions
+#   REGION         — AWS region
+#   OUTPUT_FILE    — Output file path
+#   INTERVAL       — Collection interval (seconds)
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ REGION="${REGION:-ap-northeast-1}"
 OUTPUT_FILE="${OUTPUT_FILE:-output/step5-metrics.jsonl}"
 INTERVAL="${INTERVAL:-30}"
 
-# 确保输出目录存在
+# Ensure output directory exists
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 echo "[monitor] Started at $(date -u +%FT%TZ), interval=${INTERVAL}s" >&2
@@ -30,18 +30,18 @@ echo "[monitor] Output: $OUTPUT_FILE" >&2
 while true; do
     TIMESTAMP=$(date -u +%FT%TZ)
 
-    # 检查 FIS 实验状态
+    # Check FIS experiment status
     EXP_STATUS=$(aws fis get-experiment \
         --id "$EXPERIMENT_ID" \
         --region "$REGION" \
         --query 'experiment.state.status' \
         --output text 2>/dev/null || echo "UNKNOWN")
 
-    # 采集 CloudWatch 指标
+    # Collect CloudWatch metrics
     END_TIME=$(date -u +%FT%TZ)
     START_TIME=$(date -u -d "-${INTERVAL} seconds" +%FT%TZ 2>/dev/null || date -u -v-${INTERVAL}S +%FT%TZ)
 
-    # Agent 生成时会填入具体的 metric queries
+    # Agent fills in specific metric queries at generation time
     METRICS_JSON=$(aws cloudwatch get-metric-data \
         --region "$REGION" \
         --start-time "$START_TIME" \
@@ -49,7 +49,7 @@ while true; do
         --metric-data-queries file://metric-queries.json \
         --output json 2>/dev/null || echo '{"MetricDataResults":[]}')
 
-    # 写入 JSONL
+    # Write to JSONL
     jq -cn \
         --arg ts "$TIMESTAMP" \
         --arg status "$EXP_STATUS" \
@@ -59,7 +59,7 @@ while true; do
 
     echo "[monitor] $TIMESTAMP status=$EXP_STATUS" >&2
 
-    # 实验结束则退出
+    # Exit if experiment ended
     case "$EXP_STATUS" in
         completed|failed|stopped|cancelled)
             echo "[monitor] Experiment $EXP_STATUS, stopping monitor." >&2

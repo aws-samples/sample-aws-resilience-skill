@@ -1,19 +1,19 @@
-# AWS MCP Server Setup Guide
+# AWS MCP 服务器设置指南
 
-This guide explains how to configure MCP servers for the AWS Resilience Assessment Skill, supporting both **Claude Code** and **Kiro**.
+本指南介绍如何为 AWS 韧性评估 Skill 配置 MCP 服务器，支持 **Claude Code** 和 **Kiro**。
 
-> `awslabs.core-mcp-server` is deprecated (DEPRECATED). Please configure standalone MCP Servers directly.
-> Migration guide: https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+> ⚠️ `awslabs.core-mcp-server` 已废弃（DEPRECATED）。请直接配置独立 MCP Server。
+> 迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
 
 ---
 
-## Required MCP Servers
+## 必需的 MCP Server
 
 ### 1. aws-api-mcp-server
 
-**Purpose**: General AWS API access -- Describe/List operations for EC2, RDS, ELB, S3, Lambda, and other resources, covering resource discovery and configuration checks during resilience assessments.
+**用途**：通用 AWS API 访问 — EC2、RDS、ELB、S3、Lambda 等资源的 Describe/List 操作，覆盖韧性评估中的资源发现和配置检查。
 
-**Installation**: Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+**安装**：需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 #### Claude Code
 
@@ -27,7 +27,7 @@ claude mcp add awslabs-aws-api-mcp-server \
 
 #### Kiro
 
-Edit `.kiro/settings/mcp.json`:
+编辑 `.kiro/settings/mcp.json`：
 
 ```json
 {
@@ -51,7 +51,7 @@ Edit `.kiro/settings/mcp.json`:
 
 ### 2. cloudwatch-mcp-server
 
-**Purpose**: CloudWatch metrics reading, alarm queries, log analysis -- monitoring readiness checks and SLI/SLO analysis during resilience assessments.
+**用途**：CloudWatch 指标读取、告警查询、日志分析 — 韧性评估中的监控就绪度检查和 SLI/SLO 分析。
 
 #### Claude Code
 
@@ -65,18 +65,18 @@ claude mcp add awslabs-cloudwatch-mcp-server \
 
 #### Kiro
 
-Same JSON format as above, replace the package name with `awslabs.cloudwatch-mcp-server@latest`.
+同上格式，替换包名为 `awslabs.cloudwatch-mcp-server@latest`。
 
 ---
 
-## Recommended MCP Servers (Configure As Needed)
+## 推荐的 MCP Server（按需配置）
 
-Based on your AWS architecture, add the following servers as needed:
+根据你的 AWS 架构，按需添加以下服务器：
 
 ### 3. eks-mcp-server
 
-**Condition**: Configure when the target system uses EKS architecture
-**Purpose**: EKS cluster management, K8s resource operations, Pod log viewing
+**条件**：目标系统为 EKS 架构时配置
+**用途**：EKS 集群管理、K8s 资源操作、Pod 日志查看
 
 #### Claude Code
 
@@ -90,14 +90,14 @@ claude mcp add awslabs-eks-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.eks-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.eks-mcp-server@latest`。
 
 ---
 
 ### 4. ecs-mcp-server
 
-**Condition**: Configure when the target system uses ECS/Fargate architecture
-**Purpose**: ECS cluster, service, and task management
+**条件**：目标系统为 ECS/Fargate 架构时配置
+**用途**：ECS 集群、服务、任务管理
 
 #### Claude Code
 
@@ -111,14 +111,14 @@ claude mcp add awslabs-ecs-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.ecs-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.ecs-mcp-server@latest`。
 
 ---
 
 ### 5. dynamodb-mcp-server
 
-**Condition**: Configure when the target system uses DynamoDB
-**Purpose**: DynamoDB table operations and queries
+**条件**：目标系统使用 DynamoDB 时配置
+**用途**：DynamoDB 表操作和查询
 
 #### Claude Code
 
@@ -132,14 +132,14 @@ claude mcp add awslabs-dynamodb-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.dynamodb-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.dynamodb-mcp-server@latest`。
 
 ---
 
 ### 6. lambda-tool-mcp-server
 
-**Condition**: Configure when the target system uses Lambda
-**Purpose**: Lambda function operations
+**条件**：目标系统使用 Lambda 时配置
+**用途**：Lambda 函数操作
 
 #### Claude Code
 
@@ -153,14 +153,14 @@ claude mcp add awslabs-lambda-tool-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.lambda-tool-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.lambda-tool-mcp-server@latest`。
 
 ---
 
 ### 7. elasticache-mcp-server
 
-**Condition**: Configure when the target system uses ElastiCache
-**Purpose**: ElastiCache cluster management
+**条件**：目标系统使用 ElastiCache 时配置
+**用途**：ElastiCache 集群管理
 
 #### Claude Code
 
@@ -174,14 +174,14 @@ claude mcp add awslabs-elasticache-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.elasticache-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.elasticache-mcp-server@latest`。
 
 ---
 
 ### 8. iam-mcp-server
 
-**Condition**: Configure when IAM policy and role auditing is needed
-**Purpose**: IAM List/Get operations (read-only)
+**条件**：需要 IAM 策略和角色审计时配置
+**用途**：IAM List/Get 操作（只读）
 
 #### Claude Code
 
@@ -195,14 +195,14 @@ claude mcp add awslabs-iam-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.iam-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.iam-mcp-server@latest`。
 
 ---
 
 ### 9. cloudtrail-mcp-server
 
-**Condition**: Configure when audit log queries are needed
-**Purpose**: CloudTrail event queries
+**条件**：需要审计日志查询时配置
+**用途**：CloudTrail 事件查询
 
 #### Claude Code
 
@@ -216,13 +216,13 @@ claude mcp add awslabs-cloudtrail-mcp-server \
 
 #### Kiro
 
-Same JSON format as the required servers, replace the package name with `awslabs.cloudtrail-mcp-server@latest`.
+同必需服务器的 JSON 格式，替换包名为 `awslabs.cloudtrail-mcp-server@latest`。
 
 ---
 
-## Complete Configuration Example
+## 完整配置示例
 
-The following is the recommended full MCP configuration for resilience assessments (covering common scenarios):
+以下是韧性评估的推荐完整 MCP 配置（覆盖常见场景）：
 
 ```json
 {
@@ -294,40 +294,40 @@ The following is the recommended full MCP configuration for resilience assessmen
 }
 ```
 
-> Remove servers you don't need. Minimum configuration requires only `aws-api-mcp-server` + `cloudwatch-mcp-server`.
+> 按需删除不需要的服务器。最小配置只需 `aws-api-mcp-server` + `cloudwatch-mcp-server`。
 
 ---
 
-## Read-Only Security Notes
+## 只读安全说明
 
-Resilience assessments only require **read-only access**. Read-only characteristics of each MCP Server:
+韧性评估只需要**只读访问**。各 MCP Server 的只读特性：
 
-| MCP Server | Read-Only Behavior |
-|-----------|-------------------|
-| aws-api-mcp-server | Read-only by default (Describe/Get/List operations only) |
-| cloudwatch-mcp-server | Read-only by default (Describe/Get/List operations only) |
-| cloudtrail-mcp-server | Read-only by default (event queries only) |
-| iam-mcp-server | Read-only by default (List/Get operations only) |
-| eks-mcp-server | Read-only by default (Describe/List operations only) |
-| ecs-mcp-server | Read-only by default (Describe/List operations only) |
-| dynamodb-mcp-server | Read-only by default (Describe/List/Query operations only) |
+| MCP Server | 只读行为 |
+|-----------|---------|
+| aws-api-mcp-server | 默认只读（仅 Describe/Get/List 操作） |
+| cloudwatch-mcp-server | 默认只读（仅 Describe/Get/List 操作） |
+| cloudtrail-mcp-server | 默认只读（仅查询事件） |
+| iam-mcp-server | 默认只读（仅 List/Get 操作） |
+| eks-mcp-server | 默认只读（仅 Describe/List 操作） |
+| ecs-mcp-server | 默认只读（仅 Describe/List 操作） |
+| dynamodb-mcp-server | 默认只读（仅 Describe/List/Query 操作） |
 
 ---
 
-## Configure AWS Credentials
+## 配置 AWS 凭证
 
 ```bash
-# Method 1: Using AWS CLI configuration
+# 方式 1：使用 AWS CLI 配置
 aws configure
 
-# Method 2: Using AWS SSO
+# 方式 2：使用 AWS SSO
 aws configure sso
 
-# Verify credentials
+# 验证凭证
 aws sts get-caller-identity
 ```
 
-### Minimum IAM Permission Policy (Read-Only Access)
+### 最小 IAM 权限策略（只读访问）
 
 ```json
 {
@@ -379,59 +379,59 @@ aws sts get-caller-identity
 
 ---
 
-## Verify Configuration
+## 验证配置
 
-| Tool | Verification Method |
-|------|-------------------|
-| Kiro | Kiro Feature Panel -> MCP Server View, confirm status is "running" |
-| Claude Code | Run `claude mcp list` or type `/mcp` in conversation |
+| 工具 | 验证方式 |
+|------|---------|
+| Kiro | Kiro 功能面板 -> MCP Server 视图，确认状态为 "running" |
+| Claude Code | 运行 `claude mcp list` 或在对话中输入 `/mcp` |
 
 ```bash
-# Verify AWS credentials
+# 验证 AWS 凭证
 aws sts get-caller-identity
 
-# Verify CloudWatch permissions
+# 验证 CloudWatch 权限
 aws cloudwatch describe-alarms --max-items 1
 
-# Verify EKS (if configured)
+# 验证 EKS（如配置）
 aws eks list-clusters
 
-# Verify ECS (if configured)
+# 验证 ECS（如配置）
 aws ecs list-clusters
 ```
 
 ---
 
-## Troubleshooting
+## 故障排查
 
-### MCP Server Not Connected
+### MCP 服务器未连接
 
 ```bash
-# Verify uv is installed
+# 验证 uv 已安装
 uv --version
 
-# Manually test MCP server startup (15 second timeout)
+# 手动测试 MCP 服务器启动（15 秒超时）
 timeout 15s uvx awslabs.aws-api-mcp-server@latest 2>&1 || echo "Command completed or timed out"
 
-# Verify AWS credentials
+# 验证 AWS 凭证
 aws sts get-caller-identity
 ```
 
-### Graceful Degradation Without MCP
+### 无 MCP 降级
 
-If MCP Servers are not configured or unavailable, the Skill automatically falls back to these alternatives:
-- Analyze IaC code (Terraform/CloudFormation)
-- Analyze architecture documentation
-- Interactive Q&A
-- Direct AWS CLI commands
+如果 MCP Server 未配置或不可用，Skill 自动降级为以下备用方式：
+- 分析 IaC 代码（Terraform/CloudFormation）
+- 分析架构文档
+- 交互式问答
+- 直接使用 AWS CLI 命令
 
 ---
 
-## Advanced Configuration
+## 高级配置
 
-### Multiple AWS Accounts
+### 多 AWS 账户
 
-Create separate MCP server instances for different accounts:
+为不同账户创建独立的 MCP 服务器实例：
 
 ```json
 {
@@ -460,12 +460,12 @@ Create separate MCP server instances for different accounts:
 
 ---
 
-## Migrating from core-mcp-server
+## 从 core-mcp-server 迁移
 
-If you previously used `awslabs.core-mcp-server`, here is the role-to-standalone-server mapping:
+如果之前使用 `awslabs.core-mcp-server`，以下是角色到独立服务器的映射：
 
-| Former core-mcp-server Role | Replacement Standalone MCP Server |
-|-----------------------------|----------------------------------|
+| 原 core-mcp-server 角色 | 替代的独立 MCP Server |
+|------------------------|---------------------|
 | `aws-foundation` | aws-api-mcp-server |
 | `monitoring-observability` | cloudwatch-mcp-server, cloudtrail-mcp-server |
 | `solutions-architect` | aws-pricing-mcp-server |
@@ -475,31 +475,31 @@ If you previously used `awslabs.core-mcp-server`, here is the role-to-standalone
 | `nosql-db-specialist` | dynamodb-mcp-server |
 | `caching-performance` | elasticache-mcp-server |
 
-Full migration guide: https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+完整迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
 
 ---
 
-## Configuration File Quick Reference
+## 配置文件速查表
 
-| Item | Claude Code | Kiro |
+| 项目 | Claude Code | Kiro |
 |------|-------------|------|
-| Workspace config path | `.claude/settings.local.json` | `.kiro/settings/mcp.json` |
-| User-level config path | `~/.config/claude/settings.json` | `~/.kiro/settings/mcp.json` |
-| Check MCP status | `claude mcp list` or `/mcp` | Feature Panel -> MCP Server View |
+| 工作区配置路径 | `.claude/settings.local.json` | `.kiro/settings/mcp.json` |
+| 用户级配置路径 | `~/.config/claude/settings.json` | `~/.kiro/settings/mcp.json` |
+| 查看 MCP 状态 | `claude mcp list` 或 `/mcp` | 功能面板 -> MCP Server 视图 |
 
 ---
 
-## Reference Resources
+## 参考资源
 
-- [AWS MCP Servers (Official Repository)](https://github.com/awslabs/mcp)
-- [core-mcp-server Migration Guide](https://github.com/awslabs/mcp/blob/main/docs/migration-core.md)
+- [AWS MCP Servers（官方仓库）](https://github.com/awslabs/mcp)
+- [core-mcp-server 迁移指南](https://github.com/awslabs/mcp/blob/main/docs/migration-core.md)
 - [CloudWatch MCP Server](https://github.com/awslabs/mcp/tree/main/src/cloudwatch-mcp-server)
 - [AWS API MCP Server](https://github.com/awslabs/mcp/tree/main/src/aws-api-mcp-server)
 - [EKS MCP Server](https://github.com/awslabs/mcp/tree/main/src/eks-mcp-server)
-- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
-- [AWS CLI Configuration Documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
-- [uv Installation Guide](https://docs.astral.sh/uv/getting-started/installation/)
+- [Model Context Protocol 文档](https://modelcontextprotocol.io/)
+- [AWS CLI 配置文档](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+- [uv 安装指南](https://docs.astral.sh/uv/getting-started/installation/)
 
 ---
 
-**Updated: 2026-03-24**
+**更新日期：** 2026-03-24

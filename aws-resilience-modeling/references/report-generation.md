@@ -1,152 +1,152 @@
-# 报告生成详细指南
+# Report Generation Detailed Guide
 
-> 本文件包含 AWS 韧性评估报告的完整生成流程、模板代码和质量检查清单。
-> 主流程概述见 [SKILL.md](../SKILL.md) 的"报告生成要求"章节。
+> This document contains the complete generation workflow, template code, and quality checklist for AWS resilience assessment reports.
+> For the main workflow overview, see the "Report Generation Requirements" section in [SKILL_EN.md](../SKILL_EN.md).
 
 ---
 
-## 自动生成报告流程
+## Automated Report Generation Workflow
 
-### 1. 生成 Markdown 格式报告
+### 1. Generate Markdown Report
 
-使用 Write 工具创建完整的 markdown 报告文件：
+Use the Write tool to create a complete markdown report file:
 
 ```markdown
-文件名格式：{项目名称}-resilience-assessment-{日期}.md
-例如：ecommerce-resilience-assessment-2026-02-28.md
+Filename Format: {project-name}-resilience-assessment-{date}.md
+Example: ecommerce-resilience-assessment-2026-02-28.md
 
-报告应包含：
-- 完整的目录结构（TOC）
-- 所有 8 个分析任务的结果
-- 所有 Mermaid 图表
-- 表格、代码块、告警配置
-- 执行摘要和关键发现
-- 实施路线图
-- 附录和参考资料
+The report should include:
+- Complete table of contents (TOC)
+- Results from all 8 analysis tasks
+- All Mermaid diagrams
+- Tables, code blocks, alarm configurations
+- Executive summary and key findings
+- Implementation roadmap
+- Appendices and references
 ```
 
-### 2. 生成 HTML 格式报告（使用美观模板）
+### 2. Generate HTML Report (Using Template)
 
-**推荐方法：使用交互式HTML模板**
+**Recommended Method: Using the Interactive HTML Template**
 
-使用预制的美观HTML模板（`assets/html-report-template.html`），该模板包含：
-- AWS品牌设计风格（橙色主题）
-- Chart.js交互式图表（雷达图、甜甜圈图、柱状图、散点图）
-- Mermaid架构图支持
-- 响应式设计，支持移动端和打印
-- 时间轴可视化
-- 风险卡片颜色编码
+Use the pre-built HTML template (`assets/html-report-template.html`), which includes:
+- AWS brand design style (orange theme)
+- Chart.js interactive charts (radar, doughnut, bar, scatter)
+- Mermaid architecture diagram support
+- Responsive design supporting mobile and print
+- Timeline visualization
+- Color-coded risk cards
 
-**生成步骤**：
+**Generation Steps**:
 
 ```python
-# 使用Python脚本填充模板数据并生成HTML报告
+# Use Python script to populate template data and generate HTML report
 python3 << 'EOF'
 import json
 from pathlib import Path
 
-# 1. 读取HTML模板
+# 1. Read HTML template
 template_path = Path(__file__).parent / 'assets/html-report-template.html'
 with open(template_path, 'r', encoding='utf-8') as f:
     html_template = f.read()
 
-# 2. 准备评估数据（从分析结果中提取）
+# 2. Prepare assessment data (extracted from analysis results)
 assessment_data = {
-    "projectName": "{项目名称}",
-    "assessmentDate": "{评估日期}",
-    "overallScore": {总体评分},  # 1-5的评分
+    "projectName": "{project name}",
+    "assessmentDate": "{assessment date}",
+    "overallScore": {overall score},  # 1-5 score
 
-    # 统计数据
+    # Statistics
     "stats": {
-        "totalRisks": {风险总数},
-        "criticalRisks": {严重风险数},
-        "currentRTO": "{当前RTO}",
-        "estimatedCost": {预估月度成本}
+        "totalRisks": {total risk count},
+        "criticalRisks": {critical risk count},
+        "currentRTO": "{current RTO}",
+        "estimatedCost": {estimated monthly cost}
     },
 
-    # 韧性维度评分（9个维度）
+    # Resilience dimension scores (9 dimensions)
     "resilienceDimensions": {
-        "redundancy": {冗余设计评分},      # 1-5
-        "azFaultTolerance": {AZ容错评分},
-        "timeoutRetry": {超时重试评分},
-        "circuitBreaker": {断路器评分},
-        "autoScaling": {自动扩展评分},
-        "configProtection": {配置防护评分},
-        "faultIsolation": {故障隔离评分},
-        "backupRecovery": {备份恢复评分},
-        "bestPractices": {最佳实践评分}
+        "redundancy": {redundancy design score},      # 1-5
+        "azFaultTolerance": {AZ fault tolerance score},
+        "timeoutRetry": {timeout retry score},
+        "circuitBreaker": {circuit breaker score},
+        "autoScaling": {auto scaling score},
+        "configProtection": {config protection score},
+        "faultIsolation": {fault isolation score},
+        "backupRecovery": {backup recovery score},
+        "bestPractices": {best practices score}
     },
 
-    # 风险分布
+    # Risk distribution
     "riskDistribution": {
-        "critical": {严重风险数},
-        "high": {高风险数},
-        "medium": {中风险数},
-        "low": {低风险数}
+        "critical": {critical risk count},
+        "high": {high risk count},
+        "medium": {medium risk count},
+        "low": {low risk count}
     },
 
-    # 风险清单（按优先级排序）
+    # Risk inventory (sorted by priority)
     "risks": [
         {
             "id": "R-001",
-            "title": "{风险标题}",
-            "category": "{故障类别}",  # SPOF/过度延迟/过度负载/错误配置/共享命运
+            "title": "{risk title}",
+            "category": "{failure category}",  # SPOF/Excessive Latency/Excessive Load/Misconfiguration/Shared Fate
             "severity": "critical",     # critical/high/medium/low
-            "probability": {概率评分},   # 1-5
-            "impact": {影响评分},       # 1-5
-            "detectionDifficulty": {检测难度}, # 1-5
-            "remediationComplexity": {修复复杂度}, # 1-5
-            "riskScore": {风险得分},
-            "currentState": "{当前状态描述}",
-            "recommendation": "{改进建议}",
-            "estimatedCost": "{预估成本}",
-            "implementation": "{实施时间}"
+            "probability": {probability score},   # 1-5
+            "impact": {impact score},       # 1-5
+            "detectionDifficulty": {detection difficulty}, # 1-5
+            "remediationComplexity": {remediation complexity}, # 1-5
+            "riskScore": {risk score},
+            "currentState": "{current state description}",
+            "recommendation": "{improvement recommendation}",
+            "estimatedCost": "{estimated cost}",
+            "implementation": "{implementation timeline}"
         }
-        // ... 更多风险
+        // ... more risks
     ],
 
-    # 实施路线图（时间轴数据）
+    # Implementation roadmap (timeline data)
     "roadmap": [
         {
-            "phase": "第一阶段：基础韧性",
+            "phase": "Phase 1: Foundation Resilience",
             "startDate": "2026-03-01",
-            "duration": "2个月",
+            "duration": "2 months",
             "tasks": [
-                "Multi-AZ部署",
-                "配置自动备份",
-                "实施基础监控"
+                "Multi-AZ deployment",
+                "Configure automated backup",
+                "Implement baseline monitoring"
             ],
-            "milestone": "M1: 基础冗余完成"
+            "milestone": "M1: Baseline redundancy complete"
         }
-        // ... 更多阶段
+        // ... more phases
     ],
 
-    # Mermaid架构图代码
-    "architectureDiagram": "{mermaid图表代码}",
-    "dependencyDiagram": "{依赖关系图代码}"
+    # Mermaid architecture diagram code
+    "architectureDiagram": "{mermaid diagram code}",
+    "dependencyDiagram": "{dependency diagram code}"
 }
 
-# 3. 将数据注入到HTML模板中（替换占位符）
+# 3. Inject data into HTML template (replace placeholders)
 html_output = html_template
 
-# 替换基本信息
+# Replace basic info
 html_output = html_output.replace('{{PROJECT_NAME}}', assessment_data['projectName'])
 html_output = html_output.replace('{{ASSESSMENT_DATE}}', assessment_data['assessmentDate'])
 html_output = html_output.replace('{{OVERALL_SCORE}}', str(assessment_data['overallScore']))
 
-# 替换统计数据
+# Replace statistics
 html_output = html_output.replace('{{TOTAL_RISKS}}', str(assessment_data['stats']['totalRisks']))
 html_output = html_output.replace('{{CRITICAL_RISKS}}', str(assessment_data['stats']['criticalRisks']))
 html_output = html_output.replace('{{CURRENT_RTO}}', assessment_data['stats']['currentRTO'])
 html_output = html_output.replace('{{ESTIMATED_COST}}', str(assessment_data['stats']['estimatedCost']))
 
-# 替换Chart.js数据
+# Replace Chart.js data
 html_output = html_output.replace('{{RESILIENCE_DATA}}', json.dumps(list(assessment_data['resilienceDimensions'].values())))
 html_output = html_output.replace('{{RISK_DISTRIBUTION_DATA}}', json.dumps(list(assessment_data['riskDistribution'].values())))
 
-# 生成风险卡片HTML
+# Generate risk card HTML
 risk_cards_html = ""
-for risk in assessment_data['risks'][:10]:  # 只显示前10个风险
+for risk in assessment_data['risks'][:10]:  # Show only top 10 risks
     severity_class = f"risk-{risk['severity']}"
     risk_cards_html += f"""
     <div class="risk-card {severity_class}">
@@ -157,16 +157,16 @@ for risk in assessment_data['risks'][:10]:  # 只显示前10个风险
         <h3>{risk['title']}</h3>
         <p class="risk-category">{risk['category']}</p>
         <div class="risk-metrics">
-            <div>概率: {risk['probability']}/5</div>
-            <div>影响: {risk['impact']}/5</div>
-            <div>风险得分: {risk['riskScore']:.1f}</div>
+            <div>Probability: {risk['probability']}/5</div>
+            <div>Impact: {risk['impact']}/5</div>
+            <div>Risk Score: {risk['riskScore']:.1f}</div>
         </div>
         <div class="risk-details">
-            <p><strong>当前状态:</strong> {risk['currentState']}</p>
-            <p><strong>改进建议:</strong> {risk['recommendation']}</p>
+            <p><strong>Current State:</strong> {risk['currentState']}</p>
+            <p><strong>Recommendation:</strong> {risk['recommendation']}</p>
             <div class="risk-footer">
-                <span class="badge">成本: {risk['estimatedCost']}</span>
-                <span class="badge">时间: {risk['implementation']}</span>
+                <span class="badge">Cost: {risk['estimatedCost']}</span>
+                <span class="badge">Timeline: {risk['implementation']}</span>
             </div>
         </div>
     </div>
@@ -174,188 +174,194 @@ for risk in assessment_data['risks'][:10]:  # 只显示前10个风险
 
 html_output = html_output.replace('{{RISK_CARDS}}', risk_cards_html)
 
-# 替换Mermaid图表
+# Replace Mermaid diagrams
 html_output = html_output.replace('{{ARCHITECTURE_DIAGRAM}}', assessment_data['architectureDiagram'])
 
-# 4. 保存HTML文件
-output_file = '{项目名称}-resilience-assessment-{日期}.html'
+# 4. Save HTML file
+output_file = '{project-name}-resilience-assessment-{date}.html'
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write(html_output)
 
-print(f'✅ 美观的HTML报告已生成: {output_file}')
-print(f'💡 在浏览器中打开即可查看交互式报告')
+print(f'HTML report generated: {output_file}')
+print(f'Open in browser to view the interactive report')
 EOF
 ```
 
-**备选方法：使用Pandoc进行基础转换**
+**Alternative Method: Basic Conversion with Pandoc**
 
-如果需要快速生成基础HTML版本：
+For a quick basic HTML version:
 
 ```bash
-pandoc {报告文件}.md \
+pandoc {report-file}.md \
   -f gfm \
   -t html5 \
   --standalone \
   --toc \
   --toc-depth=3 \
   --css=https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css \
-  --metadata title="AWS 系统韧性评估报告" \
-  -o {报告文件}-basic.html
+  --metadata title="AWS System Resilience Assessment Report" \
+  -o {report-file}-basic.html
 ```
 
-### 3. 生成混沌工程数据（当用户选择需要时）
+### 3. Generate Chaos Engineering Data (When User Selects)
 
-如果用户选择需要混沌工程测试计划，按照 `references/assessment-output-spec.md` 规范生成结构化数据：
+If the user selects a chaos engineering test plan, generate structured data according to the `references/assessment-output-spec_en.md` specification:
 
-**方式 1：嵌入模式（推荐）**
-在评估报告（Markdown 和 HTML）末尾添加 `## Chaos Engineering Ready Data` 附录章节，一份报告人机共读。
-
-**方式 2：独立文件模式**
+**Method 1: Standalone File Mode (Recommended)**
 ```markdown
-文件名：{项目名称}-chaos-input-{日期}.md
-例如：ecommerce-chaos-input-2026-02-28.md
+Filename: {project-name}-chaos-input-{date}.md
+Example: ecommerce-chaos-input-2026-02-28.md
 
-内容：按照"混沌工程测试计划"部分的规范结构生成，
-包含：项目元数据、AWS 资源清单（含 ARN）、业务功能依赖链、
-风险清单（含可实验性标记和建议注入方式）、风险详情、
-监控就绪度、韧性评分（9 维度）、约束和偏好、开放发现
+Content: Generated according to the assessment-output-spec.md specification structure,
+including all 8 structured sections: project metadata, AWS resource inventory (with ARNs),
+business function dependency chains, risk inventory (with experiment-readiness flags and
+suggested injection methods), risk details, monitoring readiness, resilience scores
+(9 dimensions), constraints and preferences
 ```
 
-**HTML 报告中的混沌工程数据**：
-当用户选择混沌工程测试计划时，HTML 报告中也应包含对应的可视化章节：
-- **可实验风险卡片**：风险卡片增加 `可实验` 标记和 `建议注入方式` 标签
-- **监控就绪度仪表盘**：用甜甜圈图显示就绪状态
-- **注入方式分布图**：用柱状图显示 FIS / Chaos Mesh / 手动 / 不可实验的分布
-- **资源 ARN 清单表**：可折叠的完整资源清单，含复制按钮
-- **实验优先级矩阵**：散点图显示可实验风险的概率 vs 影响
+The main report (Markdown and HTML) should **NOT duplicate the full chaos engineering data**. Instead, add a brief reference at the appropriate location:
+```markdown
+> Chaos engineering test plan details: see standalone file [{project-name}-chaos-input-{date}.md]({project-name}-chaos-input-{date}.md)
+```
 
-### 4. 报告文件位置
+**Method 2: Embedded Mode** (only when user explicitly requests embedding)
+Add a `## Chaos Engineering Ready Data` appendix section at the end of the assessment report (Markdown and HTML), one report readable by both humans and machines.
 
-所有生成的报告文件应保存在当前工作目录：
+**Chaos Engineering Data in HTML Reports**:
+When the user selects a chaos engineering test plan, the HTML report should also include corresponding visualization sections:
+- **Testable risk cards**: Risk cards with `Testable` markers and `Suggested Injection Method` labels
+- **Monitoring readiness dashboard**: Doughnut chart showing readiness status
+- **Injection method distribution chart**: Bar chart showing FIS / Chaos Mesh / Manual / Not Testable distribution
+- **Resource ARN inventory table**: Collapsible complete resource inventory with copy buttons
+- **Experiment priority matrix**: Scatter chart showing testable risk probability vs. impact
+
+### 4. Report File Location
+
+All generated report files should be saved in the current working directory:
 
 ```
-{当前工作目录}/
-├── {项目名称}-resilience-assessment-{日期}.md    (主报告 Markdown)
-├── {项目名称}-resilience-assessment-{日期}.html   (主报告 HTML，含交互式图表)
-└── {项目名称}-chaos-input-{日期}.md              (混沌工程数据，独立文件模式时生成，可选)
+{current-working-directory}/
+├── {project-name}-resilience-assessment-{date}.md    (Main report Markdown)
+├── {project-name}-resilience-assessment-{date}.html   (Main report HTML with interactive charts)
+└── {project-name}-chaos-input-{date}.md              (Chaos engineering data, standalone file, generated by default when user selects chaos engineering)
 ```
 
 ---
 
-## 报告质量检查清单
+## Report Quality Checklist
 
-在生成报告后，确保：
+After generating the report, ensure:
 
-- ✅ 所有 Mermaid 图表语法正确（在 HTML 中可渲染）
-- ✅ 所有表格格式正确对齐
-- ✅ 代码块有正确的语法高亮标记（```bash, ```yaml, ```json 等）
-- ✅ 中文和英文之间有适当的空格（提高可读性）
-- ✅ 所有链接有效（内部锚点和外部 URL）
-- ✅ 风险 ID、任务 ID 等引用一致
-- ✅ HTML 文件在浏览器中显示正常
+- All Mermaid diagrams have correct syntax (renderable in HTML)
+- All table formatting is properly aligned
+- Code blocks have correct syntax highlighting markers (```bash, ```yaml, ```json, etc.)
+- Proper spacing between Chinese and English characters (improves readability)
+- All links are valid (internal anchors and external URLs)
+- Risk IDs, task IDs, and other references are consistent
+- HTML file displays correctly in browser
 
 ---
 
-## 完成提示
+## Completion Prompt
 
-生成报告后，向用户提供：
+After generating the report, provide the user with:
 
 ```markdown
-✅ **AWS 韧性评估报告已生成**
+**AWS Resilience Assessment Report Generated**
 
-📄 **Markdown 格式**：`{文件名}.md`
-🌐 **交互式HTML格式**：`{文件名}.html`
-🧪 **混沌工程数据**：`{文件名}-chaos-input.md`（如用户选择了混沌工程测试计划）
+**Markdown Format**: `{filename}.md`
+**Interactive HTML Format**: `{filename}.html`
+**Chaos Engineering Data**: `{filename}-chaos-input.md` (if user selected chaos engineering test plan)
 
-**HTML报告特性**：
-✨ AWS品牌风格设计（橙色主题）
-📊 交互式Chart.js图表（雷达图、甜甜圈图、柱状图、散点图）
-🎨 风险卡片颜色编码（红色=严重、橙色=高、黄色=中、绿色=低）
-📱 响应式设计，支持手机/平板/电脑查看
-🖨️ 打印友好样式
-⏱️ 时间轴可视化实施路线图
-🏗️ Mermaid架构图支持
-🧪 混沌工程数据可视化（可实验风险标记、监控就绪度、注入方式分布图，如适用）
+**HTML Report Features**:
+- AWS brand style design (orange theme)
+- Interactive Chart.js charts (radar, doughnut, bar, scatter)
+- Color-coded risk cards (red=critical, orange=high, yellow=medium, green=low)
+- Responsive design supporting phone/tablet/desktop viewing
+- Print-friendly styles
+- Timeline visualization for implementation roadmap
+- Mermaid architecture diagram support
+- Chaos engineering data visualization (testable risk markers, monitoring readiness, injection method distribution, if applicable)
 
-**关键发现**：
-1. {关键风险 1}
-2. {关键风险 2}
-3. {关键风险 3}
+**Key Findings**:
+1. {Key risk 1}
+2. {Key risk 2}
+3. {Key risk 3}
 
-**优先建议**：
-1. {建议 1}
-2. {建议 2}
-3. {建议 3}
+**Priority Recommendations**:
+1. {Recommendation 1}
+2. {Recommendation 2}
+3. {Recommendation 3}
 
-**预计投资**：${总成本}/月
-**预期效果**：年度停机时间从 {当前} 降至 {目标}
+**Estimated Investment**: ${total cost}/month
+**Expected Outcome**: Annual downtime reduced from {current} to {target}
 
-您可以：
-- 在浏览器中打开交互式HTML报告，体验动态图表
-- 使用Markdown编辑器编辑和自定义报告
-- 从浏览器打印或导出为PDF用于分享
-- 与团队成员共享HTML文件（无需额外依赖）
-- 将混沌工程数据文件直接传递给 chaos-engineering-on-aws skill 使用（如适用）
+You can:
+- Open the interactive HTML report in browser for dynamic charts
+- Edit and customize the report using a Markdown editor
+- Print or export to PDF from browser for sharing
+- Share the HTML file with team members (no additional dependencies needed)
+- Pass the chaos engineering data file directly to the chaos-engineering-on-aws skill (if applicable)
 ```
 
 ---
 
-## 工具安装检查
+## Tool Installation Check
 
-在尝试生成 HTML 之前，检查必要的工具和模板文件：
+Before attempting HTML generation, check for necessary tools and template files:
 
 ```bash
-# 检查HTML模板文件是否存在
+# Check if HTML template file exists
 TEMPLATE_PATH="$HOME/.claude/skills/aws-resilience-modeling/assets/html-report-template.html"
 
 if [ -f "$TEMPLATE_PATH" ]; then
-    echo "✅ 找到美观的HTML模板"
-    echo "💡 推荐：使用交互式HTML模板生成报告（包含Chart.js可视化）"
-    # 使用推荐的模板方法
+    echo "Found interactive HTML template"
+    echo "Recommended: Use interactive HTML template for report generation (includes Chart.js visualizations)"
+    # Use recommended template method
 elif command -v pandoc &> /dev/null; then
-    echo "✅ 使用 pandoc 生成基础 HTML"
-    echo "⚠️  提示：安装html-report-template.html可获得更美观的报告"
-    # 使用pandoc备选方法
+    echo "Using pandoc for basic HTML generation"
+    echo "Tip: Install html-report-template.html for better-looking reports"
+    # Use pandoc alternative method
 elif python3 -c "import markdown" 2>/dev/null; then
-    echo "✅ 使用 Python markdown 库生成基础 HTML"
-    echo "⚠️  提示：安装html-report-template.html可获得更美观的报告"
-    # 使用Python markdown备选方法
+    echo "Using Python markdown library for basic HTML generation"
+    echo "Tip: Install html-report-template.html for better-looking reports"
+    # Use Python markdown alternative method
 else
-    echo "⚠️  未找到 HTML 生成工具"
-    echo "💡 推荐选项："
-    echo "   1. 下载 html-report-template.html 到 skill 目录（最美观）"
-    echo "   2. 安装 pandoc：brew install pandoc"
-    echo "   3. 安装 Python markdown：pip3 install markdown"
-    echo "📝 已生成 Markdown 报告，HTML 生成跳过"
+    echo "No HTML generation tools found"
+    echo "Recommended options:"
+    echo "   1. Download html-report-template.html to skill directory (best looking)"
+    echo "   2. Install pandoc: brew install pandoc"
+    echo "   3. Install Python markdown: pip3 install markdown"
+    echo "Markdown report generated, HTML generation skipped"
 fi
 ```
 
 ---
 
-## 报告格式注意事项
+## Report Format Notes
 
-**报告结尾格式要求**：
-- 在报告末尾只包含"报告生成日期"和"版本"信息
-- **不要**添加联系方式（如 email 地址）
-- **不要**添加署名或团队信息
-- 保持报告结尾简洁专业
+**Report Ending Format Requirements**:
+- Only include "Report generation date" and "Version" information at the end of the report
+- **Do not** add contact information (e.g., email addresses)
+- **Do not** add signatures or team information
+- Keep the report ending clean and professional
 
-示例正确格式：
+Example correct format:
 ```markdown
 ---
 
-**报告生成日期**: YYYY-MM-DD
-**版本**: 1.0
+**Report Generation Date**: YYYY-MM-DD
+**Version**: 1.0
 ```
 
 ---
 
-## 重要提醒
+## Important Reminder
 
-每次分析结束后，应自动执行报告生成流程，这样用户可以：
-- 在浏览器中轻松查看美观的报告
-- 将报告分享给团队成员和管理层
-- 保存报告作为历史记录
-- 导出为 PDF 用于演示
+After each analysis, the report generation workflow should be executed automatically so users can:
+- Easily view attractive reports in the browser
+- Share reports with team members and management
+- Save reports as historical records
+- Export to PDF for presentations
 
-不要只在对话中输出分析结果，应同时生成文件。
+Do not only output analysis results in conversation -- generate files simultaneously.

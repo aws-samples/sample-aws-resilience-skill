@@ -1,0 +1,250 @@
+{
+  "metadata": {
+    "group": 5,
+    "name_en": "Change Management",
+    "name_zh": "变更管理",
+    "question_count": 8
+  },
+  "questions": [
+    {
+      "id": 40,
+      "priority": "P0",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 40：您如何评估代码部署方法？",
+      "question_en": "How do you evaluate code deployment methods?",
+      "image": "image.png",
+      "why_important": "部署方法直接影响变更风险和恢复能力",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "所有实施的手动变更管理流程",
+          "description_en": "Manual change management process for all implementations"
+        },
+        {
+          "level": 2,
+          "description_zh": "某些实现采用自动部署",
+          "description_en": "Automated deployment is utilized for certain implementations"
+        },
+        {
+          "level": 3,
+          "description_zh": "手动变更管理仅用于关键实施，并实施自动漂移检测",
+          "description_en": "Manual change management reserved solely for critical implementations, with automated drift detection"
+        }
+      ],
+      "aws_best_practice": "使用 CI/CD 自动化部署，采用蓝绿或金丝雀部署策略。关键指标：操作员干预次数、每个版本的变更数量、部署频率。使用 AWS CodePipeline、CodeDeploy 实现自动化部署。",
+      "why_important_en": "Deployment methods directly impact change risk and recovery capability",
+      "aws_best_practice_en": "Use CI/CD for automated deployment with blue-green or canary deployment strategies. Key metrics: operator intervention count, changes per release, deployment frequency. Use AWS CodePipeline and CodeDeploy for automated deployment."
+    },
+    {
+      "id": 41,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 41：使用什么环境来测试部署？",
+      "question_en": "What environments are used to test deployments?",
+      "image": "image.png",
+      "why_important": "适当的测试环境可以在生产前发现问题",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无独立测试环境，直接在生产部署",
+          "description_en": "No separate test environment, deploy directly to production"
+        },
+        {
+          "level": 2,
+          "description_zh": "有测试环境，但与生产环境配置差异大或无预发布环境",
+          "description_en": "Have test environment but significant configuration differences from production or no pre-production staging"
+        },
+        {
+          "level": 3,
+          "description_zh": "完整的环境层次：开发、测试、预发布（与生产一致）、生产，使用IaC确保一致性",
+          "description_en": "Complete environment hierarchy: dev, test, staging (production-like), production, using IaC to ensure consistency"
+        }
+      ],
+      "aws_best_practice": "建议至少3个环境：开发、预发布、生产。使用 IaC 确保环境一致性。预发布环境应尽量接近生产（相同实例类型、配置）。使用 CloudFormation StackSets 或 Terraform workspaces 管理多环境。",
+      "why_important_en": "Proper test environments can catch issues before production",
+      "aws_best_practice_en": "Recommend at least 3 environments: dev, staging, production. Use IaC to ensure environment consistency. Staging should closely match production (same instance types, configuration). Use CloudFormation StackSets or Terraform workspaces for multi-environment management."
+    },
+    {
+      "id": 42,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 42：在生产环境中多久部署一次代码？",
+      "question_en": "How frequently is code deployed to production?",
+      "image": "image.png",
+      "why_important": "部署频率反映了CI/CD成熟度和变更风险管理能力",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "很少部署（月度或更低频率），每次变更量大",
+          "description_en": "Infrequent deployments (monthly or less), large change batches"
+        },
+        {
+          "level": 2,
+          "description_zh": "定期部署（每周或每两周），变更量适中",
+          "description_en": "Regular deployments (weekly or bi-weekly), moderate change batches"
+        },
+        {
+          "level": 3,
+          "description_zh": "高频部署（每日或按需），小批量变更，完全自动化CI/CD",
+          "description_en": "High-frequency deployments (daily or on-demand), small change batches, fully automated CI/CD"
+        }
+      ],
+      "aws_best_practice": "遵循小批量、高频率部署原则。目标：每日部署或按需部署。使用 CI/CD (CodePipeline) 自动化部署流程。采用蓝绿或金丝雀部署降低风险。高部署频率可以降低每次变更的风险和影响。",
+      "why_important_en": "Deployment frequency reflects CI/CD maturity and change risk management capability",
+      "aws_best_practice_en": "Follow small-batch, high-frequency deployment principles. Target: daily or on-demand deployment. Use CI/CD (CodePipeline) to automate the deployment process. Adopt blue-green or canary deployment to reduce risk. High deployment frequency reduces the risk and impact of each change."
+    },
+    {
+      "id": 43,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 43：自动化在多大程度上集成到发布渠道中？",
+      "question_en": "To what extent is automation integrated into the release pipeline?",
+      "image": "image.png",
+      "why_important": "自动化减少人为错误并提高部署速度和一致性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "大部分手动流程，自动化程度低",
+          "description_en": "Mostly manual processes, low automation"
+        },
+        {
+          "level": 2,
+          "description_zh": "部分自动化（如自动构建），但部署和测试仍需人工介入",
+          "description_en": "Partially automated (e.g., automatic builds) but deployment and testing require manual intervention"
+        },
+        {
+          "level": 3,
+          "description_zh": "端到端自动化：构建、测试、安全扫描、部署、验证、回滚全部自动化",
+          "description_en": "End-to-end automation: build, test, security scanning, deployment, validation, rollback all automated"
+        }
+      ],
+      "aws_best_practice": "使用 AWS CodePipeline 实现端到端自动化。集成 CodeBuild (构建)、CodeDeploy (部署)、CodeGuru (代码审查)。添加自动化测试门控（单元测试、集成测试、安全扫描）。使用 CloudFormation 或 CDK 自动化基础设施变更。",
+      "why_important_en": "Automation reduces human error and improves deployment speed and consistency",
+      "aws_best_practice_en": "Use AWS CodePipeline for end-to-end automation. Integrate CodeBuild (build), CodeDeploy (deploy), CodeGuru (code review). Add automated test gates (unit tests, integration tests, security scanning). Use CloudFormation or CDK to automate infrastructure changes."
+    },
+    {
+      "id": 44,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 44：如何回滚失败的部署？",
+      "question_en": "How do you roll back failed deployments?",
+      "image": "image.png",
+      "why_important": "快速回滚能力是减少故障影响时间的关键",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无正式回滚流程，需要手动修复或重新部署旧版本",
+          "description_en": "No formal rollback process, requires manual fixes or redeployment of old version"
+        },
+        {
+          "level": 2,
+          "description_zh": "有回滚能力，但需要手动触发或时间较长",
+          "description_en": "Rollback capability exists but requires manual triggering or takes considerable time"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动回滚：监控触发、一键回滚、自动验证、保留多个版本",
+          "description_en": "Automatic rollback: monitoring triggers, one-click rollback, automatic validation, multiple version retention"
+        }
+      ],
+      "aws_best_practice": "使用 CodeDeploy 的自动回滚功能（基于CloudWatch告警触发）。采用蓝绿部署保持旧版本运行，可即时切换回去。使用 Lambda 版本和别名实现快速回滚。保留至少3个历史版本。设置回滚SLA目标（如<5分钟）。",
+      "why_important_en": "Rapid rollback capability is key to reducing failure impact duration",
+      "aws_best_practice_en": "Use CodeDeploy automatic rollback (triggered by CloudWatch alarms). Adopt blue-green deployment to keep old versions running for instant switchback. Use Lambda versions and aliases for fast rollback. Retain at least 3 historical versions. Set rollback SLA target (e.g., <5 minutes)."
+    },
+    {
+      "id": 45,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 45：如何验证变更是否成功？",
+      "question_en": "How do you verify that changes are successful?",
+      "image": "image.png",
+      "why_important": "变更验证确保部署真正达到预期效果",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "基本或无验证，主要依赖部署脚本成功",
+          "description_en": "Basic or no validation, mainly relying on deployment script success"
+        },
+        {
+          "level": 2,
+          "description_zh": "基本验证（如健康检查），但缺少业务逻辑验证或监控确认",
+          "description_en": "Basic validation (e.g., health checks) but lacking business logic validation or monitoring confirmation"
+        },
+        {
+          "level": 3,
+          "description_zh": "多层验证：健康检查、烟雾测试、关键指标监控、合成测试、逐步流量切换",
+          "description_en": "Multi-layer validation: health checks, smoke tests, key metrics monitoring, synthetic tests, gradual traffic shifting"
+        }
+      ],
+      "aws_best_practice": "实施多层验证：1) 基础设施验证（实例健康）；2) 应用验证（健康端点）；3) 功能验证（自动化烟雾测试）；4) 业务验证（关键指标监控）。使用 CloudWatch 告警和 Synthetics 进行持续验证。采用金丝雀部署逐步验证。",
+      "why_important_en": "Change verification ensures deployments actually achieve the expected results",
+      "aws_best_practice_en": "Implement multi-layer validation: 1) Infrastructure validation (instance health); 2) Application validation (health endpoints); 3) Functional validation (automated smoke tests); 4) Business validation (key metrics monitoring). Use CloudWatch alarms and Synthetics for continuous validation. Adopt canary deployment for gradual verification."
+    },
+    {
+      "id": 46,
+      "priority": "P1",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 46：如何管理系统的版本控制？",
+      "question_en": "How do you manage version control for the system?",
+      "image": "image.png",
+      "why_important": "版本控制是可追溯性和回滚能力的基础",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无系统的版本控制或仅部分代码有版本管理",
+          "description_en": "No systematic version control or only partial code version management"
+        },
+        {
+          "level": 2,
+          "description_zh": "代码有版本控制，但配置或基础设施缺少版本管理",
+          "description_en": "Code has version control but configuration or infrastructure lacks version management"
+        },
+        {
+          "level": 3,
+          "description_zh": "全面版本控制：代码、配置、IaC、文档全部在Git中，有分支策略和标签管理",
+          "description_en": "Comprehensive version control: code, configuration, IaC, documentation all in Git with branching strategy and tag management"
+        }
+      ],
+      "aws_best_practice": "使用 Git (CodeCommit/GitHub) 管理所有资产：应用代码、IaC模板、配置文件、部署脚本、文档。采用 GitFlow 或 trunk-based development 分支策略。使用语义化版本号（如v1.2.3）。所有生产部署必须来自版本控制的tagged release。",
+      "why_important_en": "Version control is the foundation for traceability and rollback capability",
+      "aws_best_practice_en": "Use Git (CodeCommit/GitHub) to manage all assets: application code, IaC templates, configuration files, deployment scripts, documentation. Adopt GitFlow or trunk-based development branching strategy. Use semantic versioning (e.g., v1.2.3). All production deployments must come from version-controlled tagged releases."
+    },
+    {
+      "id": 47,
+      "priority": "P2",
+      "category": "变更管理",
+      "category_en": "Change Management",
+      "question_zh": "问题 47：如何确保代码符合组织标准？",
+      "question_en": "How do you ensure code complies with organizational standards?",
+      "image": "image.png",
+      "why_important": "代码标准确保质量一致性和可维护性",
+      "options": [
+        {
+          "level": 1,
+          "description_zh": "无代码标准或依赖个人习惯",
+          "description_en": "No code standards or relying on individual preferences"
+        },
+        {
+          "level": 2,
+          "description_zh": "有代码标准文档，但缺少自动化检查",
+          "description_en": "Code standards documented but lacking automated checks"
+        },
+        {
+          "level": 3,
+          "description_zh": "自动化的代码标准检查：linting、格式化、安全扫描、代码审查流程、门控检查",
+          "description_en": "Automated code standards checks: linting, formatting, security scanning, code review process, gate checks"
+        }
+      ],
+      "aws_best_practice": "在CI/CD中集成代码质量检查：1) CodeGuru审查代码质量和安全；2) 静态分析工具（SonarQube）；3) 安全扫描（Inspector、GuardDuty）；4) 代码覆盖率要求；5) 强制代码审查。失败则阻止部署。",
+      "why_important_en": "Code standards ensure quality consistency and maintainability",
+      "aws_best_practice_en": "Integrate code quality checks into CI/CD: 1) CodeGuru for code quality and security; 2) Static analysis tools (SonarQube); 3) Security scanning (Inspector, GuardDuty); 4) Code coverage requirements; 5) Mandatory code reviews. Failures block deployment."
+    }
+  ]
+}

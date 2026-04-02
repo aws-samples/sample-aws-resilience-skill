@@ -1,9 +1,10 @@
 # FIS Scenario Library Reference
 
 > ⚠️ **Important**: FIS Scenario Library scenarios are a **console-only experience** — they are not complete experiment templates and cannot be directly imported via API.
-> Two automation paths: (1) Create template via Console Scenario Library, then export with `aws fis get-experiment-template`; (2) Copy scenario content from Console Content tab, manually add missing parameters, and create via `aws fis create-experiment-template` API.
+> Three automation paths: (1) Create template via Console Scenario Library, then export with `aws fis get-experiment-template`; (2) Copy scenario content from Console Content tab, manually add missing parameters, and create via `aws fis create-experiment-template` API;
+> (3) Use the JSON template skeletons below, replace placeholders with actual values, and create directly via `aws fis create-experiment-template --cli-input-json` API — this achieves full automation without any Console interaction.
 > The JSON skeletons below are extracted from AWS documentation for reference — use them to understand the structure,
-> then create the actual experiment through the Console's Scenario Library workflow.
+> or use them directly with the CLI for full automation.
 
 ## Overview
 
@@ -16,7 +17,7 @@ across services to simulate AZ-level or region-level failures.
 | Aspect | Single Action | Scenario Library |
 |--------|--------------|-----------------|
 | Scope | One service, one action | Multiple services, coordinated actions |
-| Template creation | API / CLI / Console | **Console Scenario Library only** |
+| Template creation | API / CLI / Console | Console Scenario Library UI, or manually assemble equivalent multi-action template via API/CLI |
 | Resource targeting | ARN / tag filters | **Mandatory resource tags** (scenario-specific) |
 | Complexity | Simple | Orchestrated multi-phase |
 | Use case | Component-level validation | AZ/region-level resilience validation |
@@ -148,6 +149,20 @@ Resources **must** be tagged for the scenario to target them:
 }
 ```
 
+### CLI Command (API Automation)
+
+Save the JSON template above as `az-power-interruption.json` (replacing all `{{placeholder}}` values), then:
+
+```bash
+aws fis create-experiment-template --cli-input-json file://az-power-interruption.json
+```
+
+After creation, start the experiment:
+
+```bash
+aws fis start-experiment --experiment-template-id <TEMPLATE_ID>
+```
+
 ### Prerequisites
 
 - All target EC2 instances and EBS volumes tagged with `AzImpairmentPower: IceQualified`
@@ -248,6 +263,20 @@ Simulates application-level degradation in a single AZ — network latency and p
 }
 ```
 
+### CLI Command (API Automation)
+
+Save the JSON template above as `az-application-slowdown.json` (replacing all `{{placeholder}}` values), then:
+
+```bash
+aws fis create-experiment-template --cli-input-json file://az-application-slowdown.json
+```
+
+After creation, start the experiment:
+
+```bash
+aws fis start-experiment --experiment-template-id <TEMPLATE_ID>
+```
+
 ### Prerequisites
 
 - Target subnets tagged appropriately
@@ -327,6 +356,20 @@ Simulates degraded network performance between Availability Zones — increased 
     "Scenario": "cross-az-traffic-slowdown"
   }
 }
+```
+
+### CLI Command (API Automation)
+
+Save the JSON template above as `cross-az-traffic-slowdown.json` (replacing all `{{placeholder}}` values), then:
+
+```bash
+aws fis create-experiment-template --cli-input-json file://cross-az-traffic-slowdown.json
+```
+
+After creation, start the experiment:
+
+```bash
+aws fis start-experiment --experiment-template-id <TEMPLATE_ID>
 ```
 
 ### Prerequisites
@@ -416,6 +459,20 @@ Simulates loss of connectivity between AWS Regions — disrupts cross-region tra
 }
 ```
 
+### CLI Command (API Automation)
+
+Save the JSON template above as `cross-region-connectivity.json` (replacing all `{{placeholder}}` values), then:
+
+```bash
+aws fis create-experiment-template --cli-input-json file://cross-region-connectivity.json
+```
+
+After creation, start the experiment:
+
+```bash
+aws fis start-experiment --experiment-template-id <TEMPLATE_ID>
+```
+
 ### Prerequisites
 
 - Multi-region architecture deployed (VPC Peering, TGW, or Direct Connect cross-region)
@@ -447,5 +504,24 @@ Simulates loss of connectivity between AWS Regions — disrupts cross-region tra
 5. Ensure all target resources have the **required tags**
 6. Create the experiment template
 7. Run with stop conditions and monitoring in place
+
+### API/CLI Workflow (Full Automation)
+
+1. Copy the JSON template skeleton from the scenario section above
+2. Replace all `{{placeholder}}` values with actual resource ARNs, AZ names, durations
+3. Save as a JSON file (e.g., `az-power-interruption.json`)
+4. Ensure all target resources have the **required tags**
+5. Create the experiment template:
+   ```bash
+   aws fis create-experiment-template --cli-input-json file://az-power-interruption.json
+   ```
+6. Start the experiment:
+   ```bash
+   aws fis start-experiment --experiment-template-id <TEMPLATE_ID>
+   ```
+7. Monitor and stop if needed:
+   ```bash
+   aws fis stop-experiment --id <EXPERIMENT_ID>
+   ```
 
 > **Reference**: [AWS FIS Scenario Library documentation](https://docs.aws.amazon.com/fis/latest/userguide/scenario-library.html)

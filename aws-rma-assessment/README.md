@@ -21,7 +21,7 @@ An intelligent RMA (Reliability, Maintainability, Availability) resilience asses
 
 ## Features
 
-- ⚡ **Batch Q&A**: 80 questions compressed into 15–20 interactions, dramatically reducing user burden
+- ⚡ **Batch Q&A**: 82 questions compressed into 15–20 interactions, dramatically reducing user burden
 - 🤖 **Smart Analysis**: Automatically reads architecture docs and IaC code, auto-answers 60–70% of questions
 - 🧠 **Context Inference**: Intelligently infers related question answers based on existing responses
 - 📊 **Visual Reports**: Generates detailed assessment reports with radar charts and heatmaps
@@ -100,7 +100,7 @@ After launching, a comparison table of the two versions is displayed:
 
 | Dimension | Lite Version | Full Version | Traditional |
 |-----------|-------------|--------------|-------------|
-| Questions | 36 | 80 | 80 |
+| Questions | 36 | 82 | 80+ |
 | **AI-assisted time** | **20–30 min** | **40–60 min** | **3.5–4 hours** |
 | Interactions | 8–12 | 15–20 | 80+ |
 | Question priority | P0 + P1 | P0 + P1 + P2 + P3 | P0–P3 all |
@@ -134,7 +134,7 @@ If architecture docs or IaC code are provided, the AI will automatically:
 
 ### 4. Batch Interactive Q&A (15–45 minutes)
 
-Related questions are grouped together — **not** 80 individual questions:
+Related questions are grouped together — **not** 82 individual questions:
 - 📦 Lite version: 8–12 batch interactions (3–6 related questions each)
 - 📦 Full version: 15–20 batch interactions
 - Each question provides 3 maturity level options (levels 1–3)
@@ -217,7 +217,7 @@ The report contains the following sections:
 | Assessment Stage | Traditional | AI-Assisted | Time Saved | Efficiency Gain |
 |-----------------|-------------|-------------|-----------|-----------------|
 | **Information Collection** | 30 min (multiple rounds) | 1–2 min (once) | 28 min | **93%** |
-| **Answering Questions** | 2.5–3 hours (80 individual Q&As) | 15–45 min (batch) | 2+ hours | **75–85%** |
+| **Answering Questions** | 2.5–3 hours (82 individual Q&As) | 15–45 min (batch) | 2+ hours | **75–85%** |
 | **Document Analysis** | 1 hour (manual reading) | 5–15 min (auto) | 50 min | **83%** |
 | **Report Generation** | 1 hour (manual compilation) | < 1 min (instant) | 60 min | **99%** |
 | **Total** | **3.5–4 hours** | **20–60 minutes** | **3+ hours** | **75–85%** |
@@ -252,16 +252,16 @@ Current version includes:
 - ✅ **P2 questions (30)**: Complete detailed data
 - ✅ **P3 questions (14)**: Complete detailed data
 
-**🎉 All 80 questions contain complete detailed data!**
+**🎉 All 82 questions contain complete detailed data!**
 
 **Lite version**: P0+P1, 36 questions total — quick assessment of key resilience indicators (20–30 minutes)
-**Full version**: P0+P1+P2+P3, 80 questions total — comprehensive in-depth assessment (40–60 minutes)
+**Full version**: P0+P1+P2+P3, 82 questions total — comprehensive in-depth assessment (40–60 minutes)
 
 ## Version History
 
-- v2.0 (2026-03-03): 🎉 Complete detailed data for all 80 questions; both Lite and Full versions fully available
+- v2.0 (2026-03-03): 🎉 Complete detailed data for all 82 questions; both Lite and Full versions fully available
 - v1.1 (2026-03-03): Complete P1 detailed data; Lite version (36 questions) fully available
-- v1.0 (2026-03-01): Initial release, supporting 80-question framework with dual-version selection
+- v1.0 (2026-03-01): Initial release, supporting 82-question framework with dual-version selection
 
 ## Technical Support
 

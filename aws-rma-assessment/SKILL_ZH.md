@@ -32,7 +32,7 @@
 
 ## AI辅助效率提升
 
-| 模式 | 简约版（36题） | 完整版（80题） | 传统RMA |
+| 模式 | 简约版（36题） | 完整版（82题） | 传统RMA |
 |------|---------------|--------------|---------|
 | 问题数量 | 36（P0+P1） | 80（P0-P3） | 80 |
 | 交互次数 | 8-12 | 15-20 | 80+ |
@@ -167,12 +167,12 @@ options:
 **核心策略**：将相关问题分组，每次提问一组，减少交互次数。
 
 - **简约版（36题）**：6组，8-12次交互
-- **完整版（80题）**：额外4组，15-20次交互
+- **完整版（82题）**：额外4组，15-20次交互
 
 分组原则：按主题领域聚合相关问题（恢复目标、灾难恢复、高可用性、变更管理、事件管理、可观察性等）；每组内P0问题排在P1/P2问题前面。
 
 详细分组策略、问题列表和提问格式模板见 [question-groups_zh.md](references/question-groups_zh.md)。
-按组加载问题：先 Read [questions-index.json](references/questions-index.json) 获取概览，再按需 Read 对应分组文件 ([questions-group-{N}.json](references/))。禁止 Read 完整的 questions-data.json。
+按组加载问题：先 Read [questions-index.json](references/questions-index.json) 获取概览，再按需 Read 对应分组文件 ([questions-group-{N}.json](references/))。
 问题优先级见 [questions-priority_zh.md](references/questions-priority_zh.md)。
 
 ### 第5步：评分和分析
@@ -217,7 +217,7 @@ options:
 | **评估日期** | {YYYY-MM-DD} |
 | **评估范围** | {应用名称、AWS 账户、区域} |
 | **方法论版本** | RMA Assessment v2.0 |
-| **评估类型** | {简约版 (36题) / 完整版 (80题)} |
+| **评估类型** | {简约版 (36题) / 完整版 (82题)} |
 | **保密等级** | {用户指定} |
 
 然后包含以下部分：

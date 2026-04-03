@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # EKS Resilience Assessment — 28 best-practice checks
-# Outputs: assessment.json + assessment-report.md
+# Outputs: assessment.json, assessment-report.md, assessment-report.html, remediation-commands.sh
 
 ###############################################################################
 # Globals
@@ -667,6 +667,357 @@ write_report() {
   log "Wrote $out"
 }
 
+generate_html_report() {
+  local out="$OUTPUT_DIR/assessment-report.html"
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local score=0
+  [[ $TOTAL -gt 0 ]] && score=$(( (PASS * 100) / TOTAL ))
+
+  cat > "$out" <<'HTMLHEAD'
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EKS Resilience Assessment</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f8fafc;color:#1e293b;line-height:1.6;padding:1rem;max-width:960px;margin:auto}
+h1{font-size:1.5rem;margin-bottom:.5rem}h2{font-size:1.2rem;margin:1rem 0 .5rem;cursor:pointer}
+.summary{background:#fff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.stats{display:flex;gap:1rem;flex-wrap:wrap;margin:.75rem 0}.stat{text-align:center;padding:.5rem 1rem;border-radius:6px;background:#f1f5f9;min-width:80px}
+.stat .num{font-size:1.5rem;font-weight:700}.stat .lbl{font-size:.75rem;color:#64748b}
+.bar-bg{background:#e2e8f0;border-radius:99px;height:24px;overflow:hidden;margin:.5rem 0}
+.bar-fill{height:100%;border-radius:99px;transition:width .3s;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;color:#fff}
+.pass{background:#22c55e}.fail{background:#ef4444}.info{background:#3b82f6}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;color:#fff}
+details{background:#fff;border-radius:8px;margin:.5rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+details>summary{padding:.75rem 1rem;cursor:pointer;font-weight:600;list-style:none}
+details>summary::before{content:"▶ ";font-size:.8rem}details[open]>summary::before{content:"▼ "}
+.check{border-top:1px solid #e2e8f0;padding:.75rem 1rem}.check-header{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.sev{font-size:.7rem;padding:1px 6px;border-radius:3px;background:#e2e8f0;color:#475569}
+.findings{margin:.5rem 0;padding-left:1.2rem;font-size:.9rem;color:#475569}.remediation{font-size:.85rem;color:#334155;margin-top:.25rem}
+footer{text-align:center;margin-top:2rem;font-size:.75rem;color:#94a3b8}
+@media(max-width:600px){.stats{flex-direction:column}.stat{min-width:auto}}
+</style></head><body>
+HTMLHEAD
+
+  # Header + summary section (written via shell variable expansion)
+  cat >> "$out" <<EOF
+<h1>EKS Resilience Assessment Report</h1>
+<div class="summary">
+<div class="stats">
+<div class="stat"><div class="num">${TOTAL}</div><div class="lbl">Total</div></div>
+<div class="stat"><div class="num" style="color:#22c55e">${PASS}</div><div class="lbl">Passed</div></div>
+<div class="stat"><div class="num" style="color:#ef4444">${FAIL}</div><div class="lbl">Failed</div></div>
+<div class="stat"><div class="num" style="color:#3b82f6">${INFO}</div><div class="lbl">Info</div></div>
+<div class="stat"><div class="num">${score}%</div><div class="lbl">Score</div></div>
+</div>
+<div class="bar-bg"><div class="bar-fill pass" style="width:${score}%">${score}%</div></div>
+</div>
+EOF
+
+  # Emit check sections by category
+  local cat_id cat_title
+  for cat_id in application control_plane data_plane; do
+    case $cat_id in
+      application)   cat_title="Application (A1–A14)" ;;
+      control_plane) cat_title="Control Plane (C1–C5)" ;;
+      data_plane)    cat_title="Data Plane (D1–D7)" ;;
+    esac
+    echo "<details open><summary>${cat_title}</summary>" >> "$out"
+    for r in "${RESULTS[@]}"; do
+      local rc ri rn rs rv rf rr badge_class
+      rc=$(echo "$r" | jq -r '.category')
+      [[ "$rc" != "$cat_id" ]] && continue
+      ri=$(echo "$r" | jq -r '.id')
+      rn=$(echo "$r" | jq -r '.name')
+      rs=$(echo "$r" | jq -r '.status')
+      rv=$(echo "$r" | jq -r '.severity')
+      rf=$(echo "$r" | jq -r '.findings | if type=="array" then map(if type=="string" then . else tostring end) | .[] else tostring end')
+      rr=$(echo "$r" | jq -r '.remediation')
+      case $rs in PASS) badge_class="pass";; FAIL) badge_class="fail";; *) badge_class="info";; esac
+      cat >> "$out" <<EOF
+<div class="check"><div class="check-header"><span class="badge ${badge_class}">${rs}</span><strong>${ri}: ${rn}</strong><span class="sev">${rv}</span></div>
+<ul class="findings">
+EOF
+      echo "$r" | jq -r '.findings | if type=="array" then .[] | if type=="string" then . else tostring end else tostring end' | while IFS= read -r line; do
+        echo "<li>${line}</li>" >> "$out"
+      done
+      cat >> "$out" <<EOF
+</ul>
+<div class="remediation"><strong>Remediation:</strong> ${rr}</div></div>
+EOF
+    done
+    echo "</details>" >> "$out"
+  done
+
+  # Footer
+  cat >> "$out" <<EOF
+<footer>Cluster: ${CLUSTER_NAME} | Date: ${ts} | EKS Resilience Checker v1.0</footer>
+</body></html>
+EOF
+  log "Wrote $out"
+}
+
+generate_remediation_script() {
+  local out="$OUTPUT_DIR/remediation-commands.sh"
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  # Check if there are any FAILed checks
+  local has_fail=0
+  for r in "${RESULTS[@]}"; do
+    [[ $(echo "$r" | jq -r '.status') == "FAIL" ]] && has_fail=1 && break
+  done
+  if [[ $has_fail -eq 0 ]]; then
+    log "No failed checks — skipping remediation script generation"
+    return
+  fi
+
+  cat > "$out" <<EOF
+#!/usr/bin/env bash
+# Auto-generated remediation script from EKS Resilience Assessment
+# Cluster: ${CLUSTER_NAME} | Date: ${ts}
+# WARNING: Review each command before executing!
+set -euo pipefail
+
+CLUSTER_NAME="${CLUSTER_NAME}"
+REGION="${REGION}"
+EOF
+
+  for r in "${RESULTS[@]}"; do
+    local st id name
+    st=$(echo "$r" | jq -r '.status')
+    [[ "$st" != "FAIL" ]] && continue
+    id=$(echo "$r" | jq -r '.id')
+    name=$(echo "$r" | jq -r '.name')
+
+    echo "" >> "$out"
+    echo "echo \"=== ${id}: ${name} ===\"" >> "$out"
+
+    # Emit findings as echo statements
+    echo "$r" | jq -r '.findings | if type=="array" then .[] | if type=="string" then . else tostring end else tostring end' | while IFS= read -r finding; do
+      echo "echo \"Found: ${finding}\"" >> "$out"
+    done
+
+    # Emit remediation commands per check ID
+    case "$id" in
+      A1)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns pod; do
+          [[ -z "$ns" || -z "$pod" ]] && continue
+          cat >> "$out" <<CMDS
+# Convert singleton pod to Deployment:
+# kubectl get pod ${pod} -n ${ns} -o json | jq '{apiVersion: "apps/v1", kind: "Deployment", metadata: {name: .metadata.name, namespace: .metadata.namespace}, spec: {replicas: 2, selector: {matchLabels: {app: .metadata.name}}, template: {metadata: {labels: {app: .metadata.name}}, spec: .spec}}}' > /tmp/${pod}-deployment.yaml
+# kubectl apply -f /tmp/${pod}-deployment.yaml
+# kubectl delete pod ${pod} -n ${ns}
+CMDS
+        done
+        ;;
+      A2)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name) \(.kind)" else empty end' | while read -r ns wname kind; do
+          [[ -z "$ns" || -z "$wname" ]] && continue
+          local klow
+          klow=$(echo "${kind:-deployment}" | tr '[:upper:]' '[:lower:]')
+          echo "kubectl scale ${klow} ${wname} --replicas=2 -n ${ns}" >> "$out"
+        done
+        ;;
+      A3)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          cat >> "$out" <<CMDS
+kubectl patch deployment ${dep} -n ${ns} --type=strategic -p '{"spec":{"template":{"spec":{"affinity":{"podAntiAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"weight":100,"podAffinityTerm":{"labelSelector":{"matchExpressions":[{"key":"app","operator":"In","values":["${dep}"]}]},"topologyKey":"kubernetes.io/hostname"}}]}}}}}}'
+CMDS
+        done
+        ;;
+      A4)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          cat >> "$out" <<CMDS
+# Add liveness probes — adjust path/port for your application:
+# kubectl patch deployment ${dep} -n ${ns} --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"CONTAINER_NAME","livenessProbe":{"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":15,"periodSeconds":10,"timeoutSeconds":5,"failureThreshold":3}}]}}}}'
+CMDS
+        done
+        ;;
+      A5)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          cat >> "$out" <<CMDS
+# Add readiness probes — adjust path/port for your application:
+# kubectl patch deployment ${dep} -n ${ns} --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"CONTAINER_NAME","readinessProbe":{"httpGet":{"path":"/ready","port":8080},"initialDelaySeconds":5,"periodSeconds":5,"timeoutSeconds":3,"failureThreshold":3}}]}}}}'
+CMDS
+        done
+        ;;
+      A6)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns wname; do
+          [[ -z "$ns" || -z "$wname" ]] && continue
+          cat >> "$out" <<CMDS
+cat <<PDBEOF | kubectl apply -f -
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${wname}-pdb
+  namespace: ${ns}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ${wname}
+PDBEOF
+CMDS
+        done
+        ;;
+      A7)
+        cat >> "$out" <<CMDS
+# Install metrics-server as EKS managed add-on (recommended):
+aws eks create-addon --cluster-name "\$CLUSTER_NAME" --addon-name metrics-server --region "\$REGION"
+# Or install via kubectl:
+# kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+CMDS
+        ;;
+      A8)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          echo "kubectl autoscale deployment ${dep} -n ${ns} --min=2 --max=10 --cpu-percent=70" >> "$out"
+        done
+        ;;
+      A11)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          cat >> "$out" <<CMDS
+# Add preStop hook for graceful termination:
+# kubectl patch deployment ${dep} -n ${ns} --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"CONTAINER_NAME","lifecycle":{"preStop":{"exec":{"command":["/bin/sh","-c","sleep 10"]}}}}]}}}}'
+CMDS
+        done
+        ;;
+      A13)
+        cat >> "$out" <<CMDS
+# Install monitoring — option A: CloudWatch Container Insights
+aws eks create-addon --cluster-name "\$CLUSTER_NAME" --addon-name amazon-cloudwatch-observability --region "\$REGION"
+# Option B: Prometheus stack via Helm
+# helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && helm repo update
+# helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
+CMDS
+        ;;
+      A14)
+        cat >> "$out" <<CMDS
+# Install centralized logging — Fluent Bit as EKS add-on
+aws eks create-addon --cluster-name "\$CLUSTER_NAME" --addon-name aws-for-fluent-bit --region "\$REGION"
+# Or via Helm:
+# helm repo add fluent https://fluent.github.io/helm-charts && helm repo update
+# helm install fluent-bit fluent/fluent-bit --namespace logging --create-namespace --set output.cloudwatch.enabled=true --set output.cloudwatch.region="\$REGION"
+CMDS
+        ;;
+      C1)
+        cat >> "$out" <<CMDS
+aws eks update-cluster-config --name "\$CLUSTER_NAME" --region "\$REGION" \
+  --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}'
+CMDS
+        ;;
+      C2)
+        cat >> "$out" <<CMDS
+# Configure EKS Access Entries (replace ACCOUNT_ID and ROLE_NAME):
+# aws eks create-access-entry --cluster-name "\$CLUSTER_NAME" --region "\$REGION" --principal-arn "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME" --type STANDARD
+CMDS
+        ;;
+      C4)
+        cat >> "$out" <<CMDS
+# Restrict public endpoint — option A: private only
+aws eks update-cluster-config --name "\$CLUSTER_NAME" --region "\$REGION" \
+  --resources-vpc-config endpointPublicAccess=false,endpointPrivateAccess=true
+# Option B: restrict CIDR (replace YOUR_CIDR):
+# aws eks update-cluster-config --name "\$CLUSTER_NAME" --region "\$REGION" \
+#   --resources-vpc-config endpointPublicAccess=true,endpointPrivateAccess=true,publicAccessCidrs="YOUR_CIDR/32"
+CMDS
+        ;;
+      C5)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then .name else empty end' | while IFS= read -r whname; do
+          [[ -z "$whname" ]] && continue
+          cat >> "$out" <<CMDS
+# Narrow webhook scope for: ${whname}
+# kubectl patch mutatingwebhookconfiguration ${whname} --type=json -p '[{"op":"add","path":"/webhooks/0/namespaceSelector","value":{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"NotIn","values":["kube-system","kube-public","kube-node-lease"]}]}}]'
+CMDS
+        done
+        ;;
+      D1)
+        cat >> "$out" <<CMDS
+# Install Karpenter (recommended) — see https://karpenter.sh/docs/getting-started/
+# Or install Cluster Autoscaler:
+# helm repo add autoscaler https://kubernetes.github.io/autoscaler
+# helm install cluster-autoscaler autoscaler/cluster-autoscaler --namespace kube-system --set autoDiscovery.clusterName="\$CLUSTER_NAME" --set awsRegion="\$REGION"
+CMDS
+        ;;
+      D2)
+        cat >> "$out" <<CMDS
+# Create a multi-AZ node group (replace SUBNET IDs):
+# aws eks create-nodegroup --cluster-name "\$CLUSTER_NAME" --region "\$REGION" \
+#   --nodegroup-name "multi-az-ng" --subnets "subnet-az-a" "subnet-az-c" "subnet-az-d" \
+#   --instance-types "m5.large" --scaling-config minSize=3,maxSize=9,desiredSize=6
+CMDS
+        ;;
+      D3)
+        echo "$r" | jq -r '.findings // [] | .[] | if type=="object" then "\(.namespace) \(.name)" else empty end' | while read -r ns dep; do
+          [[ -z "$ns" || -z "$dep" ]] && continue
+          cat >> "$out" <<CMDS
+# Set resource requests/limits — adjust values for your workload:
+# kubectl patch deployment ${dep} -n ${ns} --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"CONTAINER_NAME","resources":{"requests":{"cpu":"100m","memory":"128Mi"},"limits":{"cpu":"500m","memory":"512Mi"}}}]}}}}'
+CMDS
+        done
+        ;;
+      D4)
+        echo "$r" | jq -r '.findings // [] | if type=="array" then .[] else empty end' | while IFS= read -r ns; do
+          [[ -z "$ns" ]] && continue
+          cat >> "$out" <<CMDS
+cat <<RQEOF | kubectl apply -f -
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: default-quota
+  namespace: ${ns}
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+    limits.cpu: "20"
+    limits.memory: "40Gi"
+    pods: "50"
+RQEOF
+CMDS
+        done
+        ;;
+      D5)
+        echo "$r" | jq -r '.findings // [] | if type=="array" then .[] else empty end' | while IFS= read -r ns; do
+          [[ -z "$ns" ]] && continue
+          cat >> "$out" <<CMDS
+cat <<LREOF | kubectl apply -f -
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: ${ns}
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "256Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+LREOF
+CMDS
+        done
+        ;;
+      D6)
+        cat >> "$out" <<CMDS
+# Set up CoreDNS metrics monitoring via ServiceMonitor or annotations:
+kubectl annotate service kube-dns -n kube-system prometheus.io/scrape="true" prometheus.io/port="9153" --overwrite
+CMDS
+        ;;
+    esac
+  done
+
+  chmod +x "$out"
+  log "Wrote $out"
+}
+
 print_summary() {
   echo ""
   echo "=========================================="
@@ -678,6 +1029,9 @@ print_summary() {
   echo "=========================================="
   echo " Output: $OUTPUT_DIR/assessment.json"
   echo "         $OUTPUT_DIR/assessment-report.md"
+  echo "         $OUTPUT_DIR/assessment-report.html"
+  [[ -f "$OUTPUT_DIR/remediation-commands.sh" ]] && \
+  echo "         $OUTPUT_DIR/remediation-commands.sh"
   echo "=========================================="
 }
 
@@ -716,6 +1070,8 @@ main() {
 
   write_json
   write_report
+  generate_html_report
+  generate_remediation_script
   print_summary
 }
 

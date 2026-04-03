@@ -6,6 +6,22 @@
 
 这是一个全面的 AWS 系统韧性评估和风险分析 skill，整合了 2025 年最新的业界最佳实践。
 
+## 安装
+
+**方式 A：npx skills（推荐）**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill aws-resilience-modeling
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**方式 B：Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## 特性
 
 - ✅ 基于 **AWS Well-Architected Framework** 可靠性支柱

@@ -8,6 +8,22 @@ AI 驱动的混沌工程 Agent Skill，在 AWS 上运行受控混沌实验，覆
 
 本 Skill 基于 `aws-resilience-modeling` Skill 的评估报告，通过 **AWS FIS** 和可选的 **Chaos Mesh** 进行受控故障注入，系统性验证系统韧性。
 
+## 安装
+
+**方式 A：npx skills（推荐）**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill chaos-engineering-on-aws
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**方式 B：Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## 前置条件
 
 - `aws-resilience-modeling` Skill 生成的评估报告（推荐）
@@ -145,6 +161,14 @@ K8s Pod / 容器层  →  Chaos Mesh（推荐）
   └── 资源压力：   StressChaos (cpu/memory)
 ```
 
+## 核心能力
+
+- 双通道可观测性：CloudWatch 指标（`monitor.sh`）+ 应用日志（`log-collector.sh`）
+- 5 类错误自动分类（timeout、connection、5xx、oom、other）
+- AI 引导的实验设计与自动安全验证
+- 渐进式故障注入与强制停止条件
+- 多工具支持：AWS FIS + Chaos Mesh + FIS Scenario Library
+
 ## 安全原则
 
 - **强制停止条件**：每个 FIS 实验必须绑定 CloudWatch Alarm
@@ -190,6 +214,7 @@ chaos-engineering-on-aws/
 │   └── gameday_zh.md           # Game Day 演练指南
 ├── scripts/
 │   ├── monitor.sh              # 监控脚本模板
+│   ├── log-collector.sh        # Pod 日志收集 + 错误分类
 │   └── setup-prerequisites.sh  # 可选的前置环境准备脚本
 └── e2e-tests/                  # 端到端测试
 ```

@@ -2,7 +2,7 @@
 
 # AWS 韧性评估 Skill 集
 
-一组 AI 驱动的 Agent Skill，覆盖 AWS 系统韧性的完整生命周期 — 从成熟度评估、风险分析到混沌工程验证。适用于 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)、[Kiro](https://kiro.dev/) 以及任何支持 skill/prompt 框架的 AI 编程助手。
+一组 AI 驱动的 Agent Skill，覆盖 AWS 系统韧性的完整生命周期 — 从成熟度评估、风险分析到混沌工程验证。适用于 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)、[Kiro](https://kiro.dev/)、[OpenClaw](https://openclaw.dev/) 以及任何支持 skill/prompt 框架的 AI 编程助手。
 
 ## 四个 Skill 的关系
 
@@ -37,7 +37,7 @@
 | 1 | **aws-rma-assessment** | Stage 1: 设定目标 | 引导式问答 | 韧性成熟度评分 + 改进路线图 |
 | 2 | **aws-resilience-modeling** | Stage 2: 设计与实施 | AWS 账户访问或架构文档 | 风险清单 + 资源扫描 + 缓解策略 |
 | 3 | **chaos-engineering-on-aws** | Stage 3: 评估与测试 | Skill #2 的评估报告 | 实验结果 + 验证报告 + 更新后的韧性评分 |
-| 4 | **eks-resilience-checker** | Stage 3: 评估与测试 | EKS 集群 kubectl 访问权限 | 28 项合规报告 + 实验建议 |
+| 4 | **eks-resilience-checker** | Stage 3: 评估与测试 | EKS 集群 kubectl 访问权限 | 26 项合规报告 + 实验建议 |
 
 ### 推荐使用流程
 
@@ -89,6 +89,10 @@
 - 双引擎：**AWS FIS**（基础设施故障：节点终止、AZ 隔离、数据库故障转移）+ **Chaos Mesh**（Pod/容器故障）
 - 混合监控：后台指标采集 + Agent 驱动的 FIS 状态轮询
 - 跨长时间实验的状态持久化
+- 双通道可观测性：CloudWatch 指标（`monitor.sh`）+ 应用日志（`log-collector.sh`）并行采集
+- 日志 5 类错误分类（timeout、connection、5xx、oom、other）
+- 实验后日志分析模式
+- 报告中包含应用日志分析章节（错误时间线、跨服务关联、恢复检测）
 - Markdown + HTML 双格式报告（含 MTTR 分阶段分析）
 - Game Day 团队演练模式
 
@@ -96,15 +100,16 @@
 
 ### 4. EKS 韧性检查器 (`eks-resilience-checker`)
 
-**功能：** 基于 28 项最佳实践对 Amazon EKS 集群的韧性进行评估，覆盖应用工作负载、控制平面和数据平面 — 输出结构化建议，可直接供混沌工程 Skill 消费。
+**功能：** 基于 26 项最佳实践对 Amazon EKS 集群的韧性进行评估，覆盖应用工作负载、控制平面和数据平面 — 输出结构化建议，可直接供混沌工程 Skill 消费。
 
 **适用场景：** EKS 专项基线 — 在运行混沌实验之前识别 Kubernetes 级别的韧性缺口。
 
 **核心能力：**
-- 28 项韧性检查，覆盖应用、控制平面和数据平面维度
-- 合规报告（含通过/失败状态和严重级别）
-- 结构化 `assessment.json` 输出，与 `chaos-engineering-on-aws` 集成
-- 基于识别缺口的实验建议
+- 26 项韧性检查，覆盖 3 大类别：应用层 (A1-A14)、控制平面 (C1-C5)、数据平面 (D1-D7)
+- 自动化 `assess.sh` 脚本 — 一条命令生成 4 个输出文件（JSON + Markdown + HTML + 修复脚本）
+- 合规评分 + 关键故障计数
+- 实验建议：将失败检查项映射到混沌实验（供 `chaos-engineering-on-aws` 消费）
+- 可移植：自动检测集群名称、区域和 Kubernetes 版本
 
 **调用方式：** 在对话中提及 "EKS 韧性检查"、"集群评估" 或 "cluster resilience check"。
 
@@ -132,15 +137,27 @@
 
 ### 1. AI 编程助手
 
-任何支持自定义 Skill 的 AI 编程助手：[Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)、[Kiro](https://kiro.dev/)、[Cursor](https://cursor.sh/) 等。
+任何支持自定义 Skill 的 AI 编程助手：[Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)、[Kiro](https://kiro.dev/)、[Cursor](https://cursor.sh/)、[OpenClaw](https://openclaw.dev/) 等。
 
 ### 2. 安装
 
+**方式 A：npx skills（推荐）**
 ```bash
-git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
+# 安装单个 Skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill eks-resilience-checker
+
+# 安装全部 4 个韧性 Skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
 ```
 
-将 Skill 目录复制到项目的 Skill 文件夹中，或直接引用。
+**方式 B：Git 克隆**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+将 Skill 目录复制到项目的 `.kiro/skills/`、`.claude/skills/` 或等效文件夹中。
+
+**方式 C：直接下载**
+从 [GitHub 仓库](https://github.com/aws-samples/sample-aws-resilience-skill) 下载单个 Skill 目录。
 
 ### 3. AWS 访问权限（推荐）
 
@@ -181,9 +198,14 @@ git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
 │   ├── SKILL_EN.md                    # 英文 Skill 指令
 │   ├── SKILL_ZH.md                    # 中文 Skill 指令
 │   ├── README.md                      # Skill 说明文档
+│   ├── scripts/
+│   │   └── assess.sh                  # 自动化 26 项检查评估脚本
 │   ├── references/                    # 参考文档
-│   ├── examples/                      # 示例场景
-│   └── scripts/                       # 辅助脚本
+│   │   ├── EKS-Resiliency-Checkpoints.md  # 26 项检查定义
+│   │   ├── check-commands.md          # 每项检查的 kubectl/aws 命令
+│   │   └── remediation-templates.md   # 修复模板（含 YAML 示例）
+│   └── examples/
+│       └── petsite-assessment.md      # 评估报告示例
 │
 ├── chaos-engineering-on-aws/          # 混沌工程实验
 │   ├── SKILL.md                       # Skill 定义（六步工作流）
@@ -199,7 +221,9 @@ git clone https://github.com/aws-samples/sample-gcr-resilience-skill.git
 │   │   ├── 03-eks-pod-kill.md         # EKS Pod Kill（Chaos Mesh）
 │   │   └── 04-az-network-disrupt.md   # AZ 网络隔离
 │   ├── scripts/
-│   │   └── monitor.sh                 # CloudWatch 指标采集脚本
+│   │   ├── monitor.sh                 # CloudWatch 指标采集脚本
+│   │   ├── log-collector.sh           # Pod 日志采集 + 错误分类
+│   │   └── setup-prerequisites.sh     # FIS 角色、Chaos Mesh、资源标签配置
 │   └── doc/                           # 设计文档（PRD、决议）
 │
 ├── README.md                          # 本文件（英文）

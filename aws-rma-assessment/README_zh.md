@@ -6,6 +6,22 @@
 
 智能RMA（Reliability, Maintainability, Availability）韧性评估助手
 
+## 安装
+
+**方式 A：npx skills（推荐）**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill aws-rma-assessment
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**方式 B：Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## 🚀 AI辅助效率提升
 
 **传统RMA方式** vs **AI辅助方式**：

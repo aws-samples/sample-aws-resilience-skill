@@ -39,22 +39,22 @@ An AI-powered Agent Skill that performs automated resilience assessment of Amazo
 
 ```bash
 # Install this skill to your AI agent
-npx skills add panlm/sample-aws-resilience-skill --skill eks-resilience-checker
+npx skills add aws-samples/sample-aws-resilience-skill --skill eks-resilience-checker
 
 # Install all 4 resilience skills
-npx skills add panlm/sample-aws-resilience-skill --skill '*'
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
 
 # Install to a specific agent
-npx skills add panlm/sample-aws-resilience-skill --skill eks-resilience-checker -a claude-code
+npx skills add aws-samples/sample-aws-resilience-skill --skill eks-resilience-checker -a claude-code
 
 # Global install (available across projects)
-npx skills add panlm/sample-aws-resilience-skill --skill eks-resilience-checker -g
+npx skills add aws-samples/sample-aws-resilience-skill --skill eks-resilience-checker -g
 ```
 
 ### Manual Install
 
 ```bash
-git clone https://github.com/panlm/sample-aws-resilience-skill.git
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 ln -s $(pwd)/sample-aws-resilience-skill/eks-resilience-checker ~/.claude/skills/eks-resilience-checker
 ```
 

@@ -6,6 +6,22 @@
 
 An intelligent RMA (Reliability, Maintainability, Availability) resilience assessment assistant.
 
+## Installation
+
+**Option A: npx skills (Recommended)**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill aws-rma-assessment
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**Option B: Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## 🚀 AI-Assisted Efficiency Gains
 
 **Traditional RMA approach** vs **AI-assisted approach**:

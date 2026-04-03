@@ -8,6 +8,22 @@ An AI-powered Agent Skill for running controlled chaos engineering experiments o
 
 This skill enables you to systematically validate system resilience through controlled fault injection using **AWS FIS** and optional **Chaos Mesh**, guided by assessment reports from the `aws-resilience-modeling` skill.
 
+## Installation
+
+**Option A: npx skills (Recommended)**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill chaos-engineering-on-aws
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**Option B: Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## Prerequisites
 
 - Completed assessment report from `aws-resilience-modeling` skill (recommended)
@@ -145,6 +161,14 @@ K8s Pod / Container Layer  →  Chaos Mesh (preferred)
   └── Resources:     StressChaos (cpu/memory)
 ```
 
+## Key Features
+
+- Dual-channel observability: CloudWatch metrics (`monitor.sh`) + application logs (`log-collector.sh`)
+- 5-category error classification (timeout, connection, 5xx, oom, other)
+- AI-guided experiment design with automatic safety validation
+- Progressive fault injection with mandatory stop conditions
+- Multi-tool support: AWS FIS + Chaos Mesh + FIS Scenario Library
+
 ## Safety Principles
 
 - **Mandatory stop conditions**: Every FIS experiment must bind a CloudWatch Alarm
@@ -190,6 +214,7 @@ chaos-engineering-on-aws/
 │   └── gameday.md              # Game Day exercise guide
 ├── scripts/
 │   ├── monitor.sh              # Monitoring script template
+│   ├── log-collector.sh        # Pod log collection + error classification
 │   └── setup-prerequisites.sh  # Optional pre-flight setup script
 └── e2e-tests/                  # End-to-end tests
 ```

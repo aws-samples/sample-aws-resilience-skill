@@ -6,6 +6,22 @@
 
 A comprehensive AWS system resilience assessment and risk analysis skill, incorporating the latest 2025 industry best practices.
 
+## Installation
+
+**Option A: npx skills (Recommended)**
+```bash
+# Install this skill
+npx skills add aws-samples/sample-aws-resilience-skill --skill aws-resilience-modeling
+
+# Install all 4 resilience skills
+npx skills add aws-samples/sample-aws-resilience-skill --skill '*'
+```
+
+**Option B: Git clone**
+```bash
+git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
+```
+
 ## Features
 
 - ✅ Based on the **AWS Well-Architected Framework** Reliability Pillar

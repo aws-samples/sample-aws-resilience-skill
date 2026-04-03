@@ -120,9 +120,9 @@ check_a2() {
   local deps sts found status
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
-  found=$(jq -nc --argjson d "$deps" --argjson s "$sts" '
-    [$d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas == 1) | {namespace:.metadata.namespace, name:.metadata.name, kind:"Deployment", replicas:.spec.replicas}] +
-    [$s.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas == 1) | {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet", replicas:.spec.replicas}]')
+  found=$(echo "{\"d\":$deps,\"s\":$sts}" | jq '
+    [.d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas == 1) | {namespace:.metadata.namespace, name:.metadata.name, kind:"Deployment", replicas:.spec.replicas}] +
+    [.s.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas == 1) | {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet", replicas:.spec.replicas}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A2" "Run Multiple Replicas" "application" "critical" "$status" \
     "$found" "$found" "Set spec.replicas > 1 for all production workloads."
@@ -144,8 +144,8 @@ check_a4() {
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
   ds=$(kube_json get daemonsets --all-namespaces)
-  found=$(jq -nc --argjson d "$deps" --argjson s "$sts" --argjson a "$ds" '
-    [($d.items[], $s.items[], $a.items[]) | select(.metadata.namespace | test("^kube-") | not) |
+  found=$(echo "{\"d\":$deps,\"s\":$sts,\"a\":$ds}" | jq '
+    [(.d.items[], .s.items[], .a.items[]) | select(.metadata.namespace | test("^kube-") | not) |
      {namespace:.metadata.namespace, name:.metadata.name, containers_missing_probe:
        [.spec.template.spec.containers[] | select(.livenessProbe == null) | .name]}
      | select(.containers_missing_probe | length > 0)]')
@@ -160,8 +160,8 @@ check_a5() {
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
   ds=$(kube_json get daemonsets --all-namespaces)
-  found=$(jq -nc --argjson d "$deps" --argjson s "$sts" --argjson a "$ds" '
-    [($d.items[], $s.items[], $a.items[]) | select(.metadata.namespace | test("^kube-") | not) |
+  found=$(echo "{\"d\":$deps,\"s\":$sts,\"a\":$ds}" | jq '
+    [(.d.items[], .s.items[], .a.items[]) | select(.metadata.namespace | test("^kube-") | not) |
      {namespace:.metadata.namespace, name:.metadata.name, containers_missing_probe:
        [.spec.template.spec.containers[] | select(.readinessProbe == null) | .name]}
      | select(.containers_missing_probe | length > 0)]')
@@ -176,13 +176,13 @@ check_a6() {
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
   pdbs=$(kubectl get pdb --all-namespaces -o json 2>/dev/null | jq '[.items[] | {namespace:.metadata.namespace, selector:.spec.selector.matchLabels}]' || echo '[]')
-  found=$(jq -nc --argjson d "$deps" --argjson s "$sts" --argjson p "$pdbs" '
-    [$d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
+  found=$(echo "{\"d\":$deps,\"s\":$sts,\"p\":$pdbs}" | jq '. as $root |
+    [.d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
      {namespace:.metadata.namespace, name:.metadata.name, kind:"Deployment"} |
-     select(. as $w | $p | map(select(.namespace == $w.namespace)) | length == 0)] +
-    [$s.items[] | select(.metadata.namespace | test("^kube-") | not) |
+     select(. as $w | $root.p | map(select(.namespace == $w.namespace)) | length == 0)] +
+    [.s.items[] | select(.metadata.namespace | test("^kube-") | not) |
      {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet"} |
-     select(. as $w | $p | map(select(.namespace == $w.namespace)) | length == 0)]')
+     select(. as $w | $root.p | map(select(.namespace == $w.namespace)) | length == 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A6" "Use Pod Disruption Budgets" "application" "warning" "$status" \
     "$found" "$found" "Create PodDisruptionBudgets for critical workloads."
@@ -212,10 +212,10 @@ check_a8() {
   local deps hpas found status
   deps=$(kube_json get deployments --all-namespaces)
   hpas=$(kubectl get hpa --all-namespaces -o json 2>/dev/null | jq '[.items[] | {namespace:.metadata.namespace, target:.spec.scaleTargetRef.name}]' || echo '[]')
-  found=$(jq -nc --argjson d "$deps" --argjson h "$hpas" '
-    [$d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
+  found=$(echo "{\"d\":$deps,\"h\":$hpas}" | jq '. as $root |
+    [.d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
      {namespace:.metadata.namespace, name:.metadata.name} |
-     select(. as $w | $h | map(select(.namespace == $w.namespace and .target == $w.name)) | length == 0)]')
+     select(. as $w | $root.h | map(select(.namespace == $w.namespace and .target == $w.name)) | length == 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A8" "Use Horizontal Pod Autoscaler" "application" "warning" "$status" \
     "$found" "$found" "Create HPA resources for multi-replica workloads."
@@ -264,8 +264,8 @@ check_a11() {
   local deps sts found status
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
-  found=$(jq -nc --argjson d "$deps" --argjson s "$sts" '
-    [($d.items[], $s.items[]) | select(.metadata.namespace | test("^kube-") | not) |
+  found=$(echo "{\"d\":$deps,\"s\":$sts}" | jq '
+    [(.d.items[], .s.items[]) | select(.metadata.namespace | test("^kube-") | not) |
      {namespace:.metadata.namespace, name:.metadata.name, containers_missing_hook:
        [.spec.template.spec.containers[] | select(.lifecycle.preStop == null) | .name]}
      | select(.containers_missing_hook | length > 0)]')
@@ -420,8 +420,8 @@ check_c5() {
   local mut val found status
   mut=$(kubectl get mutatingwebhookconfigurations -o json 2>/dev/null || echo '{"items":[]}')
   val=$(kubectl get validatingwebhookconfigurations -o json 2>/dev/null || echo '{"items":[]}')
-  found=$(jq -nc --argjson m "$mut" --argjson v "$val" '
-    [($m.items[], $v.items[]) | {name:.metadata.name, webhooks:[.webhooks[]? |
+  found=$(echo "{\"m\":$mut,\"v\":$val}" | jq '
+    [(.m.items[], .v.items[]) | {name:.metadata.name, webhooks:[.webhooks[]? |
       select((.namespaceSelector == null) and (.objectSelector == null) and
         (.rules[]? | (.apiGroups[]? == "*") or (.apiVersions[]? == "*") or (.resources[]? == "*"))) |
       {name:.name}]} | select(.webhooks | length > 0)]')

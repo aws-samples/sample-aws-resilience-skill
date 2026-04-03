@@ -915,7 +915,7 @@ HTML 报告，特点：
 # === Critical ===
 
 # [A2] Scale single-replica deployments
-kubectl scale deployment payforadoption --replicas=2 -n petadoptions
+kubectl scale deployment {DEPLOYMENT} --replicas=2 -n {NAMESPACE}
 
 # [C4] Restrict API server access
 aws eks update-cluster-config --name <CLUSTER> --resources-vpc-config publicAccessCidrs="<CIDR>"

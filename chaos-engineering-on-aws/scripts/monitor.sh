@@ -16,7 +16,7 @@ set -euo pipefail
 
 EXPERIMENT_ID="${EXPERIMENT_ID:?'EXPERIMENT_ID not set'}"
 NAMESPACE="${NAMESPACE:?'NAMESPACE not set'}"
-REGION="${REGION:-ap-northeast-1}"
+REGION="${REGION:?'REGION not set — pass AWS_DEFAULT_REGION or set REGION env var'}"
 OUTPUT_FILE="${OUTPUT_FILE:-output/step5-metrics.jsonl}"
 INTERVAL="${INTERVAL:-30}"
 

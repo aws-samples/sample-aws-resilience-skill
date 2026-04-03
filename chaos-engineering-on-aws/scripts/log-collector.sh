@@ -3,8 +3,8 @@
 # Runs alongside monitor.sh for dual-channel observability (metrics + logs)
 #
 # Usage:
-#   Live mode:  ./log-collector.sh --namespace petadoptions --duration 300
-#   Post mode:  ./log-collector.sh --namespace petadoptions --mode post --since 2026-04-04T02:30:00Z
+#   Live mode:  ./log-collector.sh --namespace {NAMESPACE} --duration 300
+#   Post mode:  ./log-collector.sh --namespace {NAMESPACE} --mode post --since 2026-04-04T02:30:00Z
 
 set -euo pipefail
 

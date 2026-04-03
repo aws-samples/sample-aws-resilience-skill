@@ -3,3 +3,4 @@
 chaos-engineering-on-aws/doc/
 chaos-engineering-on-aws/e2e-tests/
 eks-resilience-checker/output/
+chaos-engineering-on-aws/output/

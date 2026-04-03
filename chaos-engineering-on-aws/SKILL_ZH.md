@@ -44,7 +44,7 @@
       "check_id": "A1",
       "suggested_fault_type": "pod_kill",
       "priority": "P0",
-      "target_resources": ["petsite/payforadoption-singleton"],
+      "target_resources": ["NAMESPACE/SERVICE-NAME"],
       "hypothesis": "杀死 singleton pod 导致服务永久不可用"
     }
   ]
@@ -111,12 +111,12 @@ output/
     "awslabs.aws-api-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+      "env": { "AWS_REGION": "YOUR_REGION", "FASTMCP_LOG_LEVEL": "ERROR" }
     },
     "awslabs.cloudwatch-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+      "env": { "AWS_REGION": "YOUR_REGION", "FASTMCP_LOG_LEVEL": "ERROR" }
     }
   }
 }

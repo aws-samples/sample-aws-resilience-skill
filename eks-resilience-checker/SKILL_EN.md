@@ -642,7 +642,7 @@ Executable shell script:
 
 # --- A2: Run Multiple Replicas ---
 # Scale single-replica deployments to 2
-kubectl scale deployment payforadoption --replicas=2 -n petadoptions
+kubectl scale deployment {DEPLOYMENT} --replicas=2 -n {NAMESPACE}
 # ... (one section per FAIL item)
 ```
 
@@ -681,7 +681,7 @@ For each FAIL check that has a mapping:
    {
      "priority": "P0",
      "check_id": "A2",
-     "target_resources": ["petadoptions/payforadoption"],
+     "target_resources": ["{NAMESPACE}/{DEPLOYMENT}"],
      "suggested_fault_type": "pod_kill",
      "suggested_backend": "chaosmesh",
      "hypothesis": "Killing the single-replica payforadoption pod will cause service unavailability until K8s recreates the pod (~30-60s)",
@@ -698,7 +698,7 @@ Display a summary table:
 ```
 | # | Check | Fault Type | Priority | Target Resources | Hypothesis |
 |---|-------|-----------|----------|-----------------|------------|
-| 1 | A2    | pod_kill  | P0       | petadoptions/payforadoption | Single replica = guaranteed downtime |
+| 1 | A2    | pod_kill  | P0       | {NAMESPACE}/{DEPLOYMENT} | Single replica = guaranteed downtime |
 ```
 
 #### 4.4 Handoff to Chaos Engineering

@@ -21,16 +21,16 @@
 #
 # Examples:
 #   # Create FIS role and basic stop alarm
-#   ./setup-prerequisites.sh --region ap-northeast-1 --create-fis-role --create-stop-alarm
+#   ./setup-prerequisites.sh --region us-east-1 --create-fis-role --create-stop-alarm
 #
 #   # Tag resources for Scenario Library
-#   ./setup-prerequisites.sh --region ap-northeast-1 --tag-resources i-0abc123,vol-0def456
+#   ./setup-prerequisites.sh --region us-east-1 --tag-resources i-0abc123,vol-0def456
 #
 #   # Check and install Chaos Mesh
-#   ./setup-prerequisites.sh --region ap-northeast-1 --cluster-name my-cluster --install-chaos-mesh
+#   ./setup-prerequisites.sh --region us-east-1 --cluster-name my-cluster --install-chaos-mesh
 #
 #   # Dry-run to preview all actions
-#   ./setup-prerequisites.sh --region ap-northeast-1 --create-fis-role --dry-run
+#   ./setup-prerequisites.sh --region us-east-1 --create-fis-role --dry-run
 
 set -euo pipefail
 

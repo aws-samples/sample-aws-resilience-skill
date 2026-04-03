@@ -597,49 +597,61 @@ cp -r sample-aws-resilience-skill/eks-resilience-checker ~/.claude/skills/
 
 ---
 
-## 10. 从未合并 EKS MCP Server PR 借鉴的内容
+## 10. 参考实现和执行路径
 
-### 10.1 背景
+### 10.1 参考来源
 
-`awslabs/eks-mcp-server` 有一个未被官方接受的 PR，实现了 `check_eks_resiliency` 功能——完整的 26 项韧性检查 Python 实现（6069 行）。虽然不会作为 MCP Server 发布，但其中有大量可借鉴的内容来完善本 Skill。
+本 Skill 实现参考了以下来源：
 
-源码位置：`/home/ubuntu/tech/blog/g3-skill/eks-resilience-checker/src/eks-mcp-server/`
+| 来源 | 内容 | 如何使用 |
+|------|------|---------|
+| `awslabs/eks-mcp-server` 未合并 PR | 26 项检查的 Python 实现（6069 行）+ 测试（1328 行） | 参考边界处理逻辑（CRD 不存在、API 差异），直接复制 `eks-resiliency-checks.md` 作为 "Why it matters" 补充文档 |
+| `EKS-Resiliency-Checkpoints.md` | 26 项检查的详细定义和合规标准 | 作为 assess.sh 和 SKILL 指令的检查规范 |
+| `RadiumGu/Chaosmesh-MCP` | EKS Authentication Methods | 参考设计了三种 kubectl 认证路径（已有 kubeconfig / IAM / ServiceAccount Token） |
+| `panlm/skills/eks-app-log-analysis` | 实时/事后双模式日志分析 | 参考设计了 chaos skill 的 log-collector.sh |
+| `graph-driven-chaos/log_collector.py` | 5 类错误分类逻辑 | 参考设计了 log-collector.sh 的 classify_line() |
 
-### 10.2 已借鉴内容
-
-| 借鉴内容 | 用在哪里 | 说明 |
-|----------|---------|------|
-| 26 项检查的判定逻辑和边界处理 | `scripts/assess.sh` + SKILL 指令 Step 2 | Python 源码中对 CRD 不存在、API 版本差异等场景的处理方式，转化为 bash 脚本中的 error handling |
-| remediation 文本 + YAML 示例 | `references/remediation-templates.md` | PR 中每项检查都有详细修复步骤和完整 YAML 示例，比初始版本更具体 |
-| `eks-resiliency-checks.md` 的 "Why it matters" 说明 | `references/eks-resiliency-checks-mcp.md` | 直接复制作为补充参考文档，Agent 可据此向用户解释检查的业务价值 |
-| A9 Custom Metrics 多路径检查 | `references/check-commands.md` A9 | PR 同时查 KEDA CRD + Prometheus Adapter + metrics.k8s.io API 三条路径，我们的检查命令也覆盖了这三条 |
-| 测试用例中的 PASS/FAIL 场景 | `examples/petsite-assessment.md` | 参考测试用例设计示例报告中的 findings |
-
-### 10.3 未采用的部分
-
-| 内容 | 为什么不用 |
-|------|-----------|
-| 独立 MCP Server 打包 | 本项目目标是 Agent Skill，不是 MCP Server。Agent 通过 SKILL 指令 + assess.sh + kubectl 命令完成检查 |
-| K8s Python SDK 调用方式 | Skill 的执行路径是 Agent 调用 kubectl/aws CLI，不是 Python API |
-| `ResiliencyCheckResponse` 数据模型 | 我们用 assessment.json 自己的结构（含 `experiment_recommendations`，对齐 chaos skill）|
-
-### 10.4 执行路径（两层）
+### 10.2 执行路径
 
 ```
 用户触发 "EKS 韧性评估"
        │
        ▼
-┌─ Path A: assess.sh 脚本（有 bash 环境时）────────────────────┐
-│  Agent 调用 scripts/assess.sh --cluster <name>                │
+┌─ Path A: assess.sh 脚本（推荐）──────────────────────────────┐
+│  bash scripts/assess.sh --cluster <name> --region <region>    │
 │  纯 bash + kubectl + aws CLI + jq                             │
-│  输出 assessment.json + assessment-report.md                  │
-│  优点：一键完成，结构化输出，可重复                           │
+│  输出 4 个文件：                                              │
+│    assessment.json          — 结构化结果 + 实验推荐           │
+│    assessment-report.md     — Markdown 报告                   │
+│    assessment-report.html   — HTML 报告（颜色编码）           │
+│    remediation-commands.sh  — 修复脚本                        │
+│  优点：一键完成，结构化输出，可重复，CI/CD 友好               │
 └───────────────────────────────────────────────────────────────┘
-       │ 如果 assess.sh 不适用（如 Windows 等）
+       │ 如果 assess.sh 不适用
        ▼
-┌─ Path B: Agent 直接执行命令（默认路径）──────────────────────┐
-│  Agent 按 SKILL_EN/ZH.md 的 Step 2 逐条执行 kubectl 命令     │
+┌─ Path B: Agent 逐条执行（默认）──────────────────────────────┐
+│  Agent 按 SKILL_EN/ZH.md Step 2 执行 kubectl 命令            │
 │  参考 references/check-commands.md                            │
-│  优点：Agent 可根据上下文跳过不适用检查，灵活性最高           │
+│  优点：Agent 可按上下文跳过检查，灵活性最高                   │
 └───────────────────────────────────────────────────────────────┘
 ```
+
+### 10.3 验证记录
+
+**PetSite 集群实测**（2026-04-04，EKS 1.34，ap-northeast-1）：
+
+| 指标 | 结果 |
+|------|------|
+| 检查项 | 26（A1-A14 + C1-C5 + D1-D7） |
+| PASS | 10 |
+| FAIL | 13 |
+| INFO | 3 |
+| Critical Failures | 5（A2/A4/A5/C4/D3） |
+| Compliance Score | 40.0% |
+| 实验推荐 | 7 条（A2/A3/A4/A5/A6/A8/D3） |
+| 执行时间 | ~90 秒 |
+| 输出文件 | 4 个（JSON 42KB, MD 13KB, HTML 22KB, SH 45KB） |
+
+**已修复的运行时问题**：
+- `jq --argjson` 在大集群上 `Argument list too long` → 改用 stdin 管道
+- A6/A8 的 jq nested reference 需要 `$root` 模式

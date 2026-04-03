@@ -309,14 +309,34 @@ kubectl apply -f chaos-experiment.yaml
 #### Phase 2: Observation — Hybrid Monitoring
 
 1. Generate and execute background monitoring script: `nohup ./monitor.sh &`, collect CloudWatch metrics every 30s → `output/step5-metrics.jsonl`
-2. Agent polls FIS status every 15s: `aws fis get-experiment` (lightweight)
-3. Stop condition triggered → Auto-stop experiment
-4. FIS ended (completed/failed/stopped) → Stop polling, read `step5-metrics.jsonl` for analysis
+2. **Start application log collection** (parallel to monitor.sh):
+   ```bash
+   nohup bash scripts/log-collector.sh \
+     --namespace {TARGET_NS} \
+     --services "{svc1},{svc2}" \
+     --duration {EXPERIMENT_DURATION + 60} \
+     --output-dir output/ \
+     --mode live &
+   ```
+   This collects Pod logs via `kubectl logs -f` and classifies errors into 5 categories:
+   - **timeout**: request timeouts, deadline exceeded
+   - **connection**: connection refused/reset, ECONNREFUSED
+   - **5xx**: HTTP 500-599 responses
+   - **oom**: OOMKilled, out of memory
+   - **other**: unclassified errors
+   
+   Outputs: `output/step5-logs.jsonl` (per-line classified) + `output/step5-log-summary.json` (aggregated)
+3. Agent polls FIS status every 15s: `aws fis get-experiment` (lightweight)
+4. Stop condition triggered → Auto-stop experiment
+5. FIS ended (completed/failed/stopped) → Stop polling, read `step5-metrics.jsonl` and `step5-log-summary.json` for analysis
 
+Log collection script: [scripts/log-collector.sh](scripts/log-collector.sh)
 Monitoring script template: [scripts/monitor.sh](scripts/monitor.sh)
 
 #### Phase 3: Recovery (T+duration → T+recovery)
 Wait for auto-recovery → Record recovery time → Compare with target RTO → Alert if not recovered within timeout.
+
+**Log-based recovery detection**: When error rate drops to zero for 30 consecutive seconds in `step5-log-summary.json`, mark recovery time.
 
 #### Phase 4: Steady-State Validation
 Re-collect metrics → Compare with baseline → Confirm full recovery.
@@ -330,18 +350,36 @@ Re-collect metrics → Compare with baseline → Confirm full recovery.
 | Dry-run | Walk through the workflow without injection |
 | Game Day | Cross-team exercise, see [references/gameday.md](references/gameday.md) |
 
-**Output**: `output/step5-experiment.json` + `output/step5-metrics.jsonl`
+**Output**: `output/step5-experiment.json` + `output/step5-metrics.jsonl` + `output/step5-logs.jsonl` + `output/step5-log-summary.json`
 
 ### Step 6: Learning and Report
 
-**Consumes**: Experiment data + Resilience score (2.7)
+**Consumes**: Experiment data + Resilience score (2.7) + Application logs
 
 1. Analyze results: PASSED ✅ / FAILED ❌ / ABORTED ⚠️
 2. Steady-state hypothesis vs. actual performance comparison table
 3. MTTR phased analysis (Detection → Triage → Response → Recovery)
-4. Resilience score update (compare with 9 dimensions in 2.7)
-5. Backfill newly discovered risks
-6. Improvement recommendations (P0/P1/P2 priority)
+4. **Application Log Analysis** (new section in report):
+   - Error timeline: per-minute error counts by category (timeout/connection/5xx/oom/other)
+   - Error patterns: most frequent error messages per service
+   - First error timestamp → fault propagation delay
+   - Recovery detection: when errors return to zero
+   - Cross-service correlation: which services showed errors and in what order
+5. Resilience score update (compare with 9 dimensions in 2.7)
+6. Backfill newly discovered risks
+7. Improvement recommendations (P0/P1/P2 priority)
+
+**Post-Experiment Log Analysis** (standalone entry point):
+If the user wants to analyze logs after the experiment has completed:
+```bash
+bash scripts/log-collector.sh \
+  --namespace {NS} \
+  --services "{svc1},{svc2}" \
+  --mode post \
+  --since "{experiment_start_time}" \
+  --output-dir output/
+```
+Then include the results in the Step 6 report.
 
 Report template details: [references/report-templates.md](references/report-templates.md)
 

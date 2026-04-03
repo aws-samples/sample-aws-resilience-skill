@@ -309,14 +309,34 @@ kubectl apply -f chaos-experiment.yaml
 #### 阶段 2：观测 — 混合监控
 
 1. 生成并执行后台监控脚本：`nohup ./monitor.sh &`，每 30s 采集 CloudWatch 指标 → `output/step5-metrics.jsonl`
-2. Agent 每 15s 轮询 FIS 状态：`aws fis get-experiment`（轻量）
-3. 检测到 stop condition 触发 → 自动停止实验
-4. FIS 结束（completed/failed/stopped）→ 停止轮询，读 `step5-metrics.jsonl` 分析
+2. **启动应用日志采集**（与 monitor.sh 并行）：
+   ```bash
+   nohup bash scripts/log-collector.sh \
+     --namespace {TARGET_NS} \
+     --services "{svc1},{svc2}" \
+     --duration {实验时长 + 60} \
+     --output-dir output/ \
+     --mode live &
+   ```
+   通过 `kubectl logs -f` 采集 Pod 日志，自动分类为 5 种错误类型：
+   - **timeout**：请求超时、deadline exceeded
+   - **connection**：连接拒绝/重置、ECONNREFUSED
+   - **5xx**：HTTP 500-599 响应
+   - **oom**：OOMKilled、内存不足
+   - **other**：未分类错误
+   
+   输出：`output/step5-logs.jsonl`（逐行分类）+ `output/step5-log-summary.json`（汇总）
+3. Agent 每 15s 轮询 FIS 状态：`aws fis get-experiment`（轻量）
+4. 检测到 stop condition 触发 → 自动停止实验
+5. FIS 结束（completed/failed/stopped）→ 停止轮询，读 `step5-metrics.jsonl` 和 `step5-log-summary.json` 分析
 
+日志采集脚本：[scripts/log-collector.sh](scripts/log-collector.sh)
 监控脚本模板：[scripts/monitor.sh](scripts/monitor.sh)
 
 #### 阶段 3：恢复 (T+duration → T+recovery)
 等待自动恢复 → 记录恢复时间 → 与目标 RTO 对比 → 超时未恢复告警。
+
+**基于日志的恢复检测**：当 `step5-log-summary.json` 中错误率连续 30 秒降为零时，标记恢复时间。
 
 #### 阶段 4：稳态验证
 重新采集指标 → 与基线对比 → 确认完全恢复。
@@ -330,18 +350,36 @@ kubectl apply -f chaos-experiment.yaml
 | Dry-run | 只走流程不注入 |
 | Game Day | 跨团队演练，参见 [references/gameday_zh.md](references/gameday_zh.md) |
 
-**输出**：`output/step5-experiment.json` + `output/step5-metrics.jsonl`
+**输出**：`output/step5-experiment.json` + `output/step5-metrics.jsonl` + `output/step5-logs.jsonl` + `output/step5-log-summary.json`
 
 ### 步骤 6：学习与报告
 
-**消费**：实验数据 + 韧性评分 (2.7)
+**消费**：实验数据 + 韧性评分 (2.7) + 应用日志
 
 1. 分析结果：PASSED ✅ / FAILED ❌ / ABORTED ⚠️
 2. 稳态假设 vs 实际表现对比表
 3. MTTR 分阶段分析（检测 → 定位 → 修复 → 恢复）
-4. 韧性评分更新（与 2.7 的 9 维度对比）
-5. 新发现风险回填
-6. 改进建议（P0/P1/P2 优先级）
+4. **应用日志分析**（报告新增章节）：
+   - 错误时间线：按分钟统计各类别错误数（timeout/connection/5xx/oom/other）
+   - 错误模式：每个服务最频繁的错误消息
+   - 首个错误时间戳 → 故障传播延迟
+   - 恢复检测：错误何时归零
+   - 跨服务关联：哪些服务出现错误及其先后顺序
+5. 韧性评分更新（与 2.7 的 9 维度对比）
+6. 新发现风险回填
+7. 改进建议（P0/P1/P2 优先级）
+
+**事后日志分析**（独立入口）：
+如果用户在实验结束后才想分析日志：
+```bash
+bash scripts/log-collector.sh \
+  --namespace {NS} \
+  --services "{svc1},{svc2}" \
+  --mode post \
+  --since "{实验开始时间}" \
+  --output-dir output/
+```
+然后将结果纳入步骤 6 报告。
 
 报告模板详情：[references/report-templates_zh.md](references/report-templates_zh.md)
 

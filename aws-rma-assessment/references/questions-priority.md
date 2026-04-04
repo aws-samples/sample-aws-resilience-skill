@@ -11,7 +11,7 @@
 
 Includes all P0 + P1 priority questions
 
-### Full Version (80 Questions)
+### Full Version (82 Questions)
 
 Includes all P0 + P1 + P2 + P3 questions
 
@@ -81,7 +81,7 @@ Includes all P0 + P1 + P2 + P3 questions
 
 ---
 
-## P2 - Recommended Questions (30)
+## P2 - Recommended Questions (32)
 
 ### Resilience Analysis (6)
 4. **Q4**: What are the documented resilience requirement constraints?
@@ -105,12 +105,16 @@ Includes all P0 + P1 + P2 + P3 questions
 25. **Q25**: What methods are used to relay alert notifications?
 26. **Q26**: How do you automate alert responses?
 
+
+### Disaster Recovery (1)
+81. **Q81**: Does your DR strategy meet regulatory compliance requirements (e.g., data residency, retention periods)?
 ### Change Management (1)
 47. **Q47**: How do you ensure code complies with organizational standards?
 
-### Incident Management (2)
+### Incident Management (3)
 53. **Q53**: Do you track how teams use the report repository?
 57. **Q57**: Does the response team have authority to take action?
+82. **Q82**: How do you ensure audit log retention meets compliance requirements?
 
 ### Operations Reviews (4)
 58. **Q58**: Who participates in operational reviews?
@@ -162,7 +166,7 @@ Includes all P0 + P1 + P2 + P3 questions
 | Version | Questions Included | Count | Estimated Time |
 |---------|-------------------|-------|----------------|
 | **Compact** | P0 (12) + P1 (24) | 36 | 30-40 min |
-| **Full** | P0 (12) + P1 (24) + P2 (30) + P3 (14) | 80 | 60-90 min |
+| **Full** | P0 (12) + P1 (24) + P2 (32) + P3 (14) | 82 | 60-90 min |
 
 ## Recommendations
 

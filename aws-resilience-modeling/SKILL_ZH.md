@@ -113,8 +113,12 @@
 
 **参考资源**：
 - AWS Prescriptive Guidance - Resilience Analysis Framework
-- 详见 [resilience-framework_zh.md](references/resilience-framework_zh.md)
-- **重要**：按需使用 Grep 搜索 resilience-framework_zh.md 中的特定故障模式类别，不要一次性 Read 整个 52KB 文件。
+- 详见 [resilience-framework_zh.md](references/resilience-framework_zh.md) 索引文件。按需加载对应子文件：
+  - [waf-reliability-pillar_zh.md](references/waf-reliability-pillar_zh.md) — DR 策略、多 AZ/多 Region
+  - [resilience-analysis-core_zh.md](references/resilience-analysis-core_zh.md) — Error Budget、SLI/SLO、黄金信号、事后复盘
+  - [chaos-engineering-methodology_zh.md](references/chaos-engineering-methodology_zh.md) — 实验流程、FIS 模板
+  - [observability-standards_zh.md](references/observability-standards_zh.md) — OpenTelemetry、日志/指标/链路
+  - [cloud-design-patterns_zh.md](references/cloud-design-patterns_zh.md) — 舱壁、熔断器、重试
 
 **识别以下故障模式类别**：
 

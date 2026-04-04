@@ -114,8 +114,12 @@ Before starting the analysis, ask the user the following key information:
 
 **Reference Resources**:
 - AWS Prescriptive Guidance - Resilience Analysis Framework
-- See [resilience-framework.md](references/resilience-framework.md) for details
-- **Important**: Reference resilience-framework.md as needed using Grep to search for specific failure mode categories. Do NOT Read the entire 52KB file at once.
+- See [resilience-framework.md](references/resilience-framework.md) for the index of all reference files. Load only the specific sub-file relevant to your current task:
+  - [waf-reliability-pillar.md](references/waf-reliability-pillar.md) — DR strategies, Multi-AZ/Multi-Region
+  - [resilience-analysis-core.md](references/resilience-analysis-core.md) — Error budget, SLI/SLO, golden signals, postmortem
+  - [chaos-engineering-methodology.md](references/chaos-engineering-methodology.md) — Experiment process, FIS templates
+  - [observability-standards.md](references/observability-standards.md) — OpenTelemetry, logs/metrics/traces
+  - [cloud-design-patterns.md](references/cloud-design-patterns.md) — Bulkhead, circuit breaker, retry
 
 **Identify the following failure mode categories**:
 

@@ -23,7 +23,7 @@ Based on the official AWS RMA framework, the assessment covers the following 10 
 
 ## Core Capabilities
 
-1. **Efficient Batch Q&A**: Group related questions, compress 80 questions into 15-20 interactions
+1. **Efficient Batch Q&A**: Group related questions, compress 82 questions into 15-20 interactions
 2. **Intelligent Auto-Inference**: Analyze architecture docs/IaC code, automatically answer 60-70% of questions
 3. **Contextual Analysis**: Infer related question answers based on existing responses, reducing repetitive questions
 4. **Flexible Version Selection**: Support compact (quick assessment) and full (deep assessment) versions
@@ -32,9 +32,9 @@ Based on the official AWS RMA framework, the assessment covers the following 10 
 
 ## AI-Assisted Efficiency Improvements
 
-| Mode | Compact (36 Qs) | Full (80 Qs) | Traditional RMA |
+| Mode | Compact (36 Qs) | Full (82 Qs) | Traditional RMA |
 |------|-----------------|--------------|-----------------|
-| Question Count | 36 (P0+P1) | 80 (P0-P3) | 80 |
+| Question Count | 36 (P0+P1) | 82 (P0-P3) | 80+ |
 | Interactions | 8-12 | 15-20 | 80+ |
 | Auto Doc Analysis | Supported | Supported | Manual |
 | Smart Inference | Supported | Supported | Not supported |
@@ -78,7 +78,7 @@ options:
     description: "36 core questions (P0+P1 priority), focusing on key resilience indicators. Covers recovery objectives, SLOs, DR strategies, HA controls, deployment strategies, incident management, and more. Ideal for quickly understanding current resilience posture and identifying critical risks."
 
   - label: "Full - Deep Assessment"
-    description: "All 80 questions (P0-P3), covering all resilience domains. Additionally covers chaos engineering, game days, organizational learning, and other maturity uplift areas. Ideal for comprehensive resilience maturity assessment and long-term improvement planning."
+    description: "All 82 questions (P0-P3), covering all resilience domains. Additionally covers chaos engineering, game days, organizational learning, and other maturity uplift areas. Ideal for comprehensive resilience maturity assessment and long-term improvement planning."
 ```
 
 ### Step 2: Batch Information Collection
@@ -167,12 +167,12 @@ Each auto-answer must include **confidence level** and **analysis basis**, allow
 **Core Strategy**: Group related questions, ask one group at a time to reduce interactions.
 
 - **Compact (36 Qs)**: 6 groups, 8-12 interactions
-- **Full (80 Qs)**: Additional 4 groups, 15-20 interactions
+- **Full (82 Qs)**: Additional 4 groups, 15-20 interactions
 
 Grouping principle: Aggregate related questions by topic domain (recovery objectives, disaster recovery, high availability, change management, incident management, observability, etc.); within each group, P0 questions precede P1/P2 questions.
 
 See [question-groups.md](references/question-groups.md) for detailed grouping strategies, question lists, and question format templates.
-Load questions by group: first Read [questions-index.json](references/questions-index.json) for overview, then Read specific group files ([questions-group-{N}.json](references/)) as needed during the assessment. NEVER Read the full questions-data.json.
+Load questions by group: first Read [questions-index.json](references/questions-index.json) for overview, then Read specific group files ([questions-group-{N}.json](references/)) as needed during the assessment.
 See [questions-priority.md](references/questions-priority.md) for question priorities.
 
 ### Step 5: Scoring and Analysis
@@ -217,7 +217,7 @@ Use the Write tool to generate a Markdown assessment report. The report MUST beg
 | **Assessment Date** | {YYYY-MM-DD} |
 | **Scope** | {application name, AWS account(s), region(s)} |
 | **Methodology Version** | RMA Assessment v2.0 |
-| **Assessment Type** | {Compact (36 Qs) / Full (80 Qs)} |
+| **Assessment Type** | {Compact (36 Qs) / Full (82 Qs)} |
 | **Confidentiality** | {as specified by user} |
 
 Then include the following sections:
@@ -326,7 +326,7 @@ Welcome! I will help you quickly assess your application's resilience maturity.
 
 **AI-Assisted Efficiency**:
 - Auto-analyze docs/code, reducing 60-70% manual answers
-- Batch Q&A, compressing 80 questions into 15-20 interactions
+- Batch Q&A, compressing 82 questions into 15-20 interactions
 
 **Important**: This is an unofficial aid tool, not an AWS official certification or compliance commitment.
 

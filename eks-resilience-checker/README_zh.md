@@ -162,7 +162,19 @@ output/
     "info": 2,
     "compliance_score": 71.4
   },
-  "checks": [ ... ],
+  "checks": [
+    {
+      "id": "A2",
+      "name": "Run Multiple Replicas",
+      "category": "application",
+      "severity": "critical",
+      "status": "FAIL",
+      "findings": ["..."],
+      "resources_affected": ["..."],
+      "remediation": "Set spec.replicas > 1 for all production workloads.",
+      "cost_impact": "+1 Pod per workload — doubles CPU/memory; may trigger additional node"
+    }
+  ],
   "experiment_recommendations": [ ... ]
 }
 ```

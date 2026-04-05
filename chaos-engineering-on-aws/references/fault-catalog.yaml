@@ -21,6 +21,11 @@ chaosmesh:
       mode: fixed-percent
       value: "50"
       duration: "2m"
+    safe_first_run_params:
+      action: pod-kill
+      mode: fixed
+      value: "1"
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Target Deployment replicas >= 2"
@@ -35,6 +40,10 @@ chaosmesh:
       action: pod-failure
       mode: one
       duration: "5m"
+    safe_first_run_params:
+      action: pod-failure
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -48,6 +57,10 @@ chaosmesh:
       action: container-kill
       mode: one
       duration: "2m"
+    safe_first_run_params:
+      action: container-kill
+      mode: one
+      duration: "1m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Multi-container Pod (sidecar pattern)"
@@ -65,6 +78,12 @@ chaosmesh:
       jitter: "50ms"
       mode: all
       duration: "5m"
+    safe_first_run_params:
+      action: delay
+      latency: "50ms"
+      jitter: "10ms"
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -79,6 +98,11 @@ chaosmesh:
       loss: "30"
       mode: all
       duration: "5m"
+    safe_first_run_params:
+      action: loss
+      loss: "5"
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -93,6 +117,11 @@ chaosmesh:
       direction: both
       mode: all
       duration: "5m"
+    safe_first_run_params:
+      action: partition
+      direction: to
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -107,6 +136,11 @@ chaosmesh:
       rate: "1mbps"
       mode: all
       duration: "5m"
+    safe_first_run_params:
+      action: bandwidth
+      rate: "10mbps"
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -122,6 +156,11 @@ chaosmesh:
       port: 80
       mode: all
       duration: "3m"
+    safe_first_run_params:
+      abort: true
+      port: 80
+      mode: one
+      duration: "1m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Target service uses HTTP"
@@ -137,6 +176,11 @@ chaosmesh:
       port: 80
       mode: all
       duration: "5m"
+    safe_first_run_params:
+      delay: "1s"
+      port: 80
+      mode: one
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Target service uses HTTP"
@@ -152,6 +196,10 @@ chaosmesh:
       workers: 2
       load: 80
       duration: "5m"
+    safe_first_run_params:
+      workers: 1
+      load: 30
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Pod resource limits configured"
@@ -166,6 +214,10 @@ chaosmesh:
       workers: 1
       size: "256MB"
       duration: "5m"
+    safe_first_run_params:
+      workers: 1
+      size: "64MB"
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Pod resource limits configured"
@@ -181,6 +233,10 @@ chaosmesh:
       action: latency
       delay: "100ms"
       duration: "5m"
+    safe_first_run_params:
+      action: latency
+      delay: "30ms"
+      duration: "2m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -194,6 +250,10 @@ chaosmesh:
       action: fault
       errno: 5
       duration: "3m"
+    safe_first_run_params:
+      action: fault
+      errno: 5
+      duration: "1m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
     recommended_for: [eks-microservices]
@@ -208,6 +268,10 @@ chaosmesh:
       action: error
       mode: all
       duration: "3m"
+    safe_first_run_params:
+      action: error
+      mode: one
+      duration: "1m"
     prerequisites:
       - "Chaos Mesh installed in cluster"
       - "Chaos Mesh DNS server enabled"
@@ -223,6 +287,9 @@ fis:
     description: "Terminate EC2 instances (SPOF validation)"
     default_params:
       duration: "5m"
+    safe_first_run_params:
+      duration: "5m"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:TerminateInstances"
       - "ASG or replacement mechanism in place"
@@ -236,6 +303,10 @@ fis:
     default_params:
       duration: "5m"
       startInstancesAfterDuration: "PT5M"
+    safe_first_run_params:
+      duration: "PT3M"
+      startInstancesAfterDuration: "PT3M"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:StopInstances, ec2:StartInstances"
     recommended_for: [ec2-traditional]
@@ -246,6 +317,8 @@ fis:
     fis_action_id: "aws:ec2:reboot-instances"
     description: "Reboot EC2 instances"
     default_params: {}
+    safe_first_run_params:
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:RebootInstances"
     recommended_for: [ec2-traditional]
@@ -257,6 +330,9 @@ fis:
     description: "Simulate Spot instance interruptions"
     default_params:
       durationBeforeInterruption: "PT2M"
+    safe_first_run_params:
+      durationBeforeInterruption: "PT2M"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:SendSpotInstanceInterruptions"
       - "Target instances are Spot instances"
@@ -270,6 +346,10 @@ fis:
     default_params:
       duration: "PT5M"
       scope: "all"
+    safe_first_run_params:
+      duration: "PT2M"
+      scope: "all"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:CreateNetworkAcl*, ec2:DeleteNetworkAcl*"
     recommended_for: [ec2-traditional]
@@ -282,6 +362,8 @@ fis:
     description: "Terminate EKS node group instances (recommended for node-level)"
     default_params:
       instanceTerminationPercentage: "30"
+    safe_first_run_params:
+      instanceTerminationPercentage: "10"
     prerequisites:
       - "FIS IAM Role with eks:* and ec2:TerminateInstances"
       - "Managed node group or ASG-backed nodes"
@@ -294,6 +376,9 @@ fis:
     fis_action_id: "aws:rds:failover-db-cluster"
     description: "Aurora/RDS cluster failover"
     default_params: {}
+    safe_first_run_params:
+      # Single failover is inherently atomic — no percentage to reduce.
+      # Ensure a reader instance exists and test during a low-traffic window.
     prerequisites:
       - "FIS IAM Role with rds:FailoverDBCluster"
       - "Multi-AZ cluster with reader instance"
@@ -305,6 +390,8 @@ fis:
     fis_action_id: "aws:rds:reboot-db-instances"
     description: "Reboot RDS instances"
     default_params: {}
+    safe_first_run_params:
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with rds:RebootDBInstance"
     recommended_for: [all]
@@ -319,6 +406,10 @@ fis:
       duration: "PT5M"
       delayMilliseconds: "2000"
       invocationPercentage: "100"
+    safe_first_run_params:
+      duration: "PT2M"
+      delayMilliseconds: "500"
+      invocationPercentage: "10"
     prerequisites:
       - "FIS IAM Role with lambda:* permissions (FIS extension)"
       - "Lambda function ARN"
@@ -332,6 +423,9 @@ fis:
     default_params:
       duration: "PT5M"
       invocationPercentage: "50"
+    safe_first_run_params:
+      duration: "PT2M"
+      invocationPercentage: "10"
     prerequisites:
       - "FIS IAM Role with lambda:* permissions (FIS extension)"
       - "Lambda function ARN"
@@ -346,6 +440,10 @@ fis:
     default_params:
       duration: "PT5M"
       scope: "all"
+    safe_first_run_params:
+      duration: "PT2M"
+      scope: "all"
+      # Note: target a single subnet or non-critical AZ first
     prerequisites:
       - "FIS IAM Role with ec2:CreateNetworkAcl*, ec2:DeleteNetworkAcl*"
       - "Multi-AZ deployment"
@@ -358,6 +456,9 @@ fis:
     description: "Cross-region route table disruption"
     default_params:
       duration: "PT5M"
+    safe_first_run_params:
+      duration: "PT2M"
+      # Warning: high blast radius — must validate in non-production first
     prerequisites:
       - "FIS IAM Role with ec2:CreateRoute, ec2:DeleteRoute, ec2:ReplaceRoute"
       - "Multi-region architecture with VPC Peering or TGW"
@@ -371,6 +472,9 @@ fis:
     description: "Pause EBS volume IO"
     default_params:
       duration: "PT5M"
+    safe_first_run_params:
+      duration: "PT2M"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
     prerequisites:
       - "FIS IAM Role with ec2:PauseVolumeIO"
       - "EBS volume attached to target instance"
@@ -384,6 +488,8 @@ fis:
     description: "Pause DynamoDB global table replication"
     default_params:
       duration: "PT5M"
+    safe_first_run_params:
+      duration: "PT2M"
     prerequisites:
       - "FIS IAM Role with dynamodb:* permissions"
       - "DynamoDB Global Table configured"
@@ -397,6 +503,8 @@ fis:
     description: "ElastiCache AZ power interruption"
     default_params:
       duration: "PT5M"
+    safe_first_run_params:
+      duration: "PT2M"
     prerequisites:
       - "FIS IAM Role with elasticache:InterruptClusterAzPower"
       - "Multi-AZ ElastiCache cluster"
@@ -410,6 +518,8 @@ fis:
     description: "Pause S3 cross-region replication"
     default_params:
       duration: "PT10M"
+    safe_first_run_params:
+      duration: "PT3M"
     prerequisites:
       - "FIS IAM Role with s3:PutReplicationConfiguration"
       - "S3 CRR configured"
@@ -424,6 +534,11 @@ fis:
     default_params:
       duration: "PT5M"
       percentage: "100"
+      service: "ec2"
+      operations: "DescribeInstances"
+    safe_first_run_params:
+      duration: "PT2M"
+      percentage: "10"
       service: "ec2"
       operations: "DescribeInstances"
     prerequisites:
@@ -441,10 +556,108 @@ fis:
       percentage: "100"
       service: "ec2"
       operations: "DescribeInstances"
+    safe_first_run_params:
+      duration: "PT2M"
+      percentage: "10"
+      service: "ec2"
+      operations: "DescribeInstances"
     prerequisites:
       - "FIS IAM Role (basic)"
       - "Target IAM Role ARN"
     recommended_for: [all]
+
+  # -- ECS --
+  - type: ecs_stop_task
+    backend: fis
+    category: compute
+    fis_action_id: "aws:ecs:stop-task"
+    description: "Stop ECS tasks to test service recovery and task replacement"
+    default_params:
+      duration: "PT5M"
+    safe_first_run_params:
+      duration: "PT2M"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
+    prerequisites:
+      - "FIS IAM Role with ecs:StopTask"
+      - "ECS service with desired count > stopped count"
+    recommended_for: [ecs-microservices]
+
+  - type: ecs_drain_container_instance
+    backend: fis
+    category: compute
+    fis_action_id: "aws:ecs:drain-container-instances"
+    description: "Drain ECS container instances to test task rescheduling"
+    default_params:
+      duration: "PT10M"
+      drainagePercentage: "50"
+    safe_first_run_params:
+      duration: "PT5M"
+      drainagePercentage: "25"
+    prerequisites:
+      - "FIS IAM Role with ecs:UpdateContainerInstancesState"
+      - "EC2 launch type (not Fargate)"
+      - "Sufficient capacity on remaining instances"
+    recommended_for: [ecs-microservices]
+
+  - type: ecs_task_cpu_stress
+    backend: fis
+    category: stress
+    fis_action_id: "aws:ecs:task-cpu-stress"
+    description: "CPU stress on ECS tasks via SSM"
+    default_params:
+      duration: "PT5M"
+      workers: 2
+      percent: 80
+    safe_first_run_params:
+      duration: "PT2M"
+      workers: 1
+      percent: 30
+    prerequisites:
+      - "FIS IAM Role with ssm:SendCommand"
+      - "SSM Agent installed on container instances"
+      - "EC2 launch type"
+    recommended_for: [ecs-microservices]
+
+  - type: ecs_task_io_stress
+    backend: fis
+    category: stress
+    fis_action_id: "aws:ecs:task-io-stress"
+    description: "IO stress on ECS tasks via SSM"
+    default_params:
+      duration: "PT5M"
+      workers: 1
+      percent: 80
+    safe_first_run_params:
+      duration: "PT2M"
+      workers: 1
+      percent: 30
+    prerequisites:
+      - "FIS IAM Role with ssm:SendCommand"
+      - "SSM Agent installed on container instances"
+      - "EC2 launch type"
+    recommended_for: [ecs-microservices]
+
+  - type: ecs_task_network_blackhole
+    backend: fis
+    category: network
+    fis_action_id: "aws:ecs:task-network-blackhole-port"
+    description: "Block specific port traffic on ECS tasks"
+    default_params:
+      duration: "PT5M"
+      port: 443
+      trafficType: "EGRESS"
+      protocol: "TCP"
+    safe_first_run_params:
+      duration: "PT2M"
+      port: 443
+      trafficType: "EGRESS"
+      protocol: "TCP"
+      # Note: set target selectionMode=COUNT with count=1 in experiment template
+    prerequisites:
+      - "FIS IAM Role with ssm:SendCommand"
+      - "SSM Agent installed on container instances"
+      - "EC2 launch type"
+    recommended_for: [ecs-microservices]
 
 # ── FIS Scenario Library: Composite Scenarios ───────────────────────────────
 # ⚠️ These templates CANNOT be created via FIS API.
@@ -457,6 +670,10 @@ fis_scenarios:
     composite: true
     scenario_id: "az-availability-scenario"
     description: "AZ Power Interruption — simultaneously affects EC2/RDS/EBS/ElastiCache in one AZ"
+    safe_first_run_params:
+      duration: "PT5M"
+      # Warning: high blast radius — run in Staging first
+      # Verify remaining AZs have capacity to absorb full traffic before starting
     sub_actions:
       - aws:ec2:stop-instances
       - aws:rds:failover-db-cluster
@@ -479,6 +696,9 @@ fis_scenarios:
     composite: true
     scenario_id: "az-application-slowdown-scenario"
     description: "AZ Application Slowdown — application-layer degradation (latency/packet loss) in one AZ"
+    safe_first_run_params:
+      duration: "PT5M"
+      # Recommended first run: target a single non-primary AZ, verify latency alarms trigger correctly
     sub_actions:
       - aws:ec2:disrupt-network-connectivity
       - aws:lambda:invocation-add-delay
@@ -498,6 +718,9 @@ fis_scenarios:
     composite: true
     scenario_id: "cross-az-traffic-slowdown-scenario"
     description: "Cross-AZ Traffic Slowdown — degraded inter-AZ network, intra-AZ normal"
+    safe_first_run_params:
+      duration: "PT5M"
+      # Recommended first run: target a single subnet pair, ensure cross-AZ latency alarms are in place
     sub_actions:
       - aws:network:disrupt-connectivity
     required_tags:
@@ -516,6 +739,10 @@ fis_scenarios:
     composite: true
     scenario_id: "cross-region-scenario"
     description: "Cross-Region Connectivity — disrupt connectivity between AWS regions"
+    safe_first_run_params:
+      duration: "PT3M"
+      # CRITICAL: highest blast radius of all scenarios
+      # Must run in non-production first; ensure Route 53 failover or Global Accelerator is active
     sub_actions:
       - aws:network:route-table-disrupt-cross-region-connectivity
       - aws:network:transit-gateway-disrupt-cross-region-connectivity

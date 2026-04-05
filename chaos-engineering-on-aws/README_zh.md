@@ -208,6 +208,7 @@ chaos-engineering-on-aws/
 │   ├── fault-catalog.yaml      # 统一故障类型注册表（ChaosMesh + FIS + Scenarios）
 │   ├── scenario-library_zh.md  # FIS Scenario Library 模板与要求
 │   ├── prerequisites-checklist_zh.md  # 按架构模式分类的前置条件
+│   ├── emergency-procedures_zh.md     # 应急停止程序（三级升级方案）
 │   ├── fis-actions_zh.md       # FIS actions 参考
 │   ├── chaosmesh-crds_zh.md    # Chaos Mesh CRD 参考
 │   ├── report-templates_zh.md  # 报告生成模板
@@ -218,3 +219,23 @@ chaos-engineering-on-aws/
 │   └── setup-prerequisites.sh  # 可选的前置环境准备脚本
 └── e2e-tests/                  # 端到端测试
 ```
+
+## 近期变更
+
+### v1.2.0 — 2026-04-05
+
+**安全与运营**
+- `references/emergency-procedures_zh.md` — 新增：三级应急停止程序，覆盖 FIS、Chaos Mesh 及核弹级 CRD 删除方案
+- `references/fault-catalog.yaml` — 为全部 23 种故障类型新增 `safe_first_run_params`（首次实验保守参数；`pod_kill` 默认改为固定 1 个 Pod，而非 50%）
+
+**IAM 与权限**
+- `references/prerequisites-checklist_zh.md` — 新增三级 FIS IAM Policy 模板（Tier 1：仅 EC2；Tier 2：+RDS；Tier 3：完整版），附权限边界配置指南
+
+**可观测性与可靠性**
+- `scripts/monitor.sh` — `metric-queries.json` 缺失时写入 warning 到 JSONL，而非硬失败
+- `SKILL_EN.md` / `SKILL_ZH.md` — 步骤 3 明确要求 Agent 生成 `metric-queries.json`；步骤 4 前置检查清单新增 `metric-queries.json` 存在性检查
+
+**文档**
+- `references/report-templates_zh.md` — 步骤 6 报告新增"清理状态"章节，含 FIS 模板、Chaos Mesh CR、临时告警的 checkbox 清单
+- `references/scenario-library_zh.md` — 所有 JSON 骨架标注"Last verified: 2026-04-05 against FIS API version 2024-05-01"
+- `SKILL_EN.md` / `SKILL_ZH.md` — 顶部新增"Last sync: 2026-04-05"标记

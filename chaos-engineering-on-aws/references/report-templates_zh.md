@@ -61,6 +61,26 @@
 | 风险 ID | 描述 | 严重度 | 建议 |
 |---------|------|--------|------|
 | R-NEW-001 | ... | 🟠 高 | ... |
+
+## 清理状态
+
+实验后清理检查清单，完成每项后勾选。
+
+### FIS 资源
+- [ ] 实验模板已删除：`aws fis delete-experiment-template --id <TEMPLATE_ID>`
+- [ ] 确认无 FIS 创建的 NACL 残留：`aws ec2 describe-network-acls --filters "Name=tag-key,Values=aws:fis:experiment-id"`
+- [ ] 仅为本次实验创建的临时停止条件告警已删除：`aws cloudwatch delete-alarms --alarm-names <ALARM_NAMES>`
+
+### Chaos Mesh 资源
+- [ ] PodChaos / NetworkChaos / HTTPChaos CR 已删除：`kubectl delete -f chaos-experiment.yaml`
+- [ ] 确认无混沌 CR 残留：`kubectl get podchaos,networkchaos,httpchaos,stresschaos -A`
+
+### 临时监控资源
+- [ ] 仅为本次实验创建的临时 CloudWatch 告警已删除（若不复用）
+- [ ] 仅为本次实验创建的自定义指标 Dashboard 已移除（若不复用）
+
+### 备注
+{cleanup_notes}
 ```
 
 ## 汇总报告

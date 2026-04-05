@@ -58,6 +58,8 @@ Resources **must** be tagged for the scenario to target them:
 
 ### JSON Template Skeleton
 
+> Last verified: 2026-04-05 against FIS API version 2024-05-01
+
 ```json
 {
   "description": "AZ Power Interruption - simulates power loss in a single AZ",
@@ -203,6 +205,8 @@ Simulates application-level degradation in a single AZ — network latency and p
 
 ### JSON Template Skeleton
 
+> Last verified: 2026-04-05 against FIS API version 2024-05-01
+
 ```json
 {
   "description": "AZ Application Slowdown - network degradation in a single AZ",
@@ -314,6 +318,8 @@ Simulates degraded network performance between Availability Zones — increased 
 
 ### JSON Template Skeleton
 
+> Last verified: 2026-04-05 against FIS API version 2024-05-01
+
 ```json
 {
   "description": "Cross-AZ Traffic Slowdown - degraded inter-AZ network performance",
@@ -409,6 +415,8 @@ Simulates loss of connectivity between AWS Regions — disrupts cross-region tra
 | `region` | Remote region to disconnect from | `us-west-2` |
 
 ### JSON Template Skeleton
+
+> Last verified: 2026-04-05 against FIS API version 2024-05-01
 
 ```json
 {

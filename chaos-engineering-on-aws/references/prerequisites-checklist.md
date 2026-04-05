@@ -38,6 +38,177 @@ Trust policy: fis.amazonaws.com
 - `logs:CreateLogDelivery` (if logging to CloudWatch Logs)
 - `cloudwatch:DescribeAlarms` (for stop conditions)
 
+#### Tiered FIS IAM Policies
+
+Instead of assembling permissions manually, use one of these ready-to-use policy templates. Attach the appropriate tier to your `FISExperimentRole`.
+
+> **Recommendation**: Add a [Permission Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html) to `FISExperimentRole` to prevent privilege escalation. Set the boundary to limit scope to only the services you experiment on.
+
+**Tier 1 — EC2 Only** (safe starting point for EC2 experiments):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier1EC2",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**Tier 2 — EC2 + RDS** (adds database failover for RDS experiments):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier2EC2RDS",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "rds:FailoverDBCluster",
+        "rds:RebootDBInstance",
+        "rds:DescribeDBClusters",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**Tier 3 — Full** (all supported FIS actions including EKS, Lambda, ECS, DynamoDB, ElastiCache, S3):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier3Full",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "ec2:CreateRoute",
+        "ec2:DeleteRoute",
+        "ec2:ReplaceRoute",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeTransitGateways",
+        "eks:DescribeNodegroup",
+        "eks:ListNodegroups",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:TerminateInstanceInAutoScalingGroup",
+        "rds:FailoverDBCluster",
+        "rds:RebootDBInstance",
+        "rds:DescribeDBClusters",
+        "lambda:InvokeFunction",
+        "lambda:GetFunction",
+        "ecs:StopTask",
+        "ecs:UpdateContainerInstancesState",
+        "ecs:DescribeTasks",
+        "ecs:ListTasks",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTable",
+        "elasticache:InterruptClusterAzPower",
+        "elasticache:DescribeReplicationGroups",
+        "s3:PutReplicationConfiguration",
+        "s3:GetReplicationConfiguration",
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "fis:InjectApiInternalError",
+        "fis:InjectApiThrottleError",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+> **Permission Boundary example** — create a boundary policy that limits the blast radius of the FIS Role:
+>
+> ```json
+> {
+>   "Version": "2012-10-17",
+>   "Statement": [
+>     {
+>       "Effect": "Allow",
+>       "Action": [
+>         "ec2:*", "rds:*", "eks:*", "ecs:*", "lambda:*",
+>         "elasticache:*", "dynamodb:*", "s3:GetReplicationConfiguration",
+>         "s3:PutReplicationConfiguration", "autoscaling:*", "ssm:SendCommand",
+>         "ssm:GetCommandInvocation", "fis:InjectApi*",
+>         "logs:CreateLogDelivery", "cloudwatch:DescribeAlarms"
+>       ],
+>       "Resource": "*"
+>     }
+>   ]
+> }
+> ```
+>
+> Attach boundary when creating the role:
+> ```bash
+> aws iam create-role \
+>   --role-name FISExperimentRole \
+>   --assume-role-policy-document file://fis-trust-policy.json \
+>   --permissions-boundary arn:aws:iam::<ACCOUNT_ID>:policy/FISPermissionBoundary
+> ```
+
 #### Operator Permissions
 
 The human/CI user running the experiment needs:

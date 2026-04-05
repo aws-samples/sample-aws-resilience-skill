@@ -149,6 +149,34 @@ Rate each critical component (1 star = inadequate, 5 stars = excellent):
 | **Backup & Recovery** | Is there a data backup and recovery mechanism? | 1: No backup / 2: Manual backups / 3: Automated backups + tested restore / 4: Cross-region backup + periodic DR testing / 5: Cross-region + automated recovery testing + PITR |
 | **Best Practices** | Does it comply with Well-Architected? | 1: Multiple violations / 2: Partial compliance / 3: Mostly compliant + known gaps / 4: Fully compliant + optimization in progress / 5: Fully compliant + continuous improvement |
 
+#### Mapping: Modeling 9 Dimensions ↔ RMA 10 Domains
+
+If the user has also completed an RMA Assessment (aws-rma-assessment skill), use this mapping to cross-reference results:
+
+| Modeling Dimension | RMA Domain(s) | Mapping Notes |
+|-------------------|---------------|---------------|
+| **Redundancy Design** | D2: Design for Multi-Location (Q7-Q9) | Modeling rates per-component; RMA rates organizational approach |
+| **AZ Fault Tolerance** | D2: Design for Multi-Location (Q7-Q9), D10: Disaster Recovery (Q46-Q52) | Modeling focuses on technical AZ config; RMA includes DR governance |
+| **Timeout & Retry** | D3: Design Interactions (Q10-Q13) | Direct mapping — both assess timeout/retry/backoff strategies |
+| **Circuit Breaker** | D3: Design Interactions (Q10-Q13), D8: Fault Isolation (Q36-Q39) | Modeling covers circuit breaker specifically; RMA is broader (interactions + isolation) |
+| **Auto Scaling** | D1: Design Your Workload (Q1-Q6) | Modeling rates scaling capability; RMA rates overall workload design maturity |
+| **Configuration Safeguards** | D4: Design Distributed Systems (Q14-Q17), D5: Change Management (Q18-Q22) | Modeling focuses on IaC/validation; RMA adds change management process |
+| **Fault Isolation** | D8: Fault Isolation (Q36-Q39) | Direct mapping |
+| **Backup & Recovery** | D10: Disaster Recovery (Q46-Q52) | Direct mapping |
+| **Best Practices** | All Domains (aggregate) | Modeling rates WAF compliance; RMA provides granular domain-level maturity |
+
+**Score Conversion Guide** (approximate):
+
+| Modeling Star Rating | Approximate RMA Level | Interpretation |
+|---------------------|----------------------|----------------|
+| ⭐ (1 star) | Level 0-1 | Not implemented or ad-hoc |
+| ⭐⭐ (2 stars) | Level 1-2 | Basic implementation, manual processes |
+| ⭐⭐⭐ (3 stars) | Level 2-3 | Standardized, partially automated |
+| ⭐⭐⭐⭐ (4 stars) | Level 3-4 | Well-automated, regularly tested |
+| ⭐⭐⭐⭐⭐ (5 stars) | Level 4-5 | Optimized, continuously improving |
+
+> ⚠️ This mapping is approximate. Modeling scores reflect technical implementation depth for specific components; RMA levels reflect organizational maturity across people, process, and tools.
+
 ### Task 4: Business Impact Analysis
 
 1. **Identify Critical Business Processes** (user registration/login, order processing, payment transactions, data analytics, etc.)

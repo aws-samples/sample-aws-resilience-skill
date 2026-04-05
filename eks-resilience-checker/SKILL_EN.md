@@ -652,6 +652,33 @@ Include only FAIL items. Each section has: check ID, name, comment explaining th
 
 **User Interaction**: Present the summary table and compliance score. Ask if the user wants to proceed to Step 4 (experiment recommendations).
 
+### Cost Impact Assessment
+
+Each FAIL item in the report includes a cost impact estimate.
+
+**Mode A — Reference Pricing (with AWS Pricing MCP Server)**:
+If `awslabs.aws-pricing-mcp-server` is configured, enhance cost estimates with actual on-demand list pricing:
+- For compute-related fixes (A2, A7, A8, D1): query EC2/Fargate pricing based on Pod resource requests and region
+- For monitoring/logging fixes (A13, A14, C1): query CloudWatch pricing
+- Replace qualitative description with monthly dollar estimate
+- Add disclaimer: "Based on on-demand list pricing; actual cost may differ with RI, Savings Plans, or EDP discounts."
+
+MCP Server config:
+```json
+{
+  "mcpServers": {
+    "awslabs.aws-pricing-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+    }
+  }
+}
+```
+
+**Mode B — Qualitative (default)**:
+When Pricing MCP is not available, the report uses built-in qualitative cost descriptions (e.g., "Zero — configuration only" or "+1 Pod per workload ≈ doubles CPU/memory").
+
 ---
 
 ### Step 4: Experiment Recommendations (Optional)

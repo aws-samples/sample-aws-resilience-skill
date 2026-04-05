@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0",
+  "cluster_name": "quickstart-cluster",
+  "region": "us-west-2",
+  "timestamp": "2026-04-04T08:00:00Z",
+  "namespace": "quickstart-demo",
+  "summary": {
+    "total_checks": 12,
+    "passed": 4,
+    "failed": 8,
+    "compliance_score": 33.3
+  },
+  "checks": [
+    {
+      "id": "A1",
+      "name": "Replica Count",
+      "status": "FAIL",
+      "details": "Deployments with single replica detected",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Set replicas >= 2 for production workloads"
+    },
+    {
+      "id": "A2",
+      "name": "Pod Disruption Budget",
+      "status": "FAIL",
+      "details": "No PDB configured for deployments",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Create PDB with minAvailable or maxUnavailable"
+    },
+    {
+      "id": "A3",
+      "name": "Resource Limits",
+      "status": "FAIL",
+      "details": "No resource requests/limits configured",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Set CPU and memory requests and limits"
+    },
+    {
+      "id": "A4",
+      "name": "Liveness Probe",
+      "status": "FAIL",
+      "details": "No liveness probe configured",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Configure liveness probe for auto-restart on failure"
+    },
+    {
+      "id": "A5",
+      "name": "Readiness Probe",
+      "status": "FAIL",
+      "details": "No readiness probe configured",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Configure readiness probe for traffic management"
+    },
+    {
+      "id": "A6",
+      "name": "Topology Spread Constraints",
+      "status": "FAIL",
+      "details": "No topology spread constraints configured",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Add topologySpreadConstraints for multi-AZ distribution"
+    },
+    {
+      "id": "A7",
+      "name": "HPA Configuration",
+      "status": "FAIL",
+      "details": "No HPA configured",
+      "affected_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Configure Horizontal Pod Autoscaler for dynamic scaling"
+    },
+    {
+      "id": "A8",
+      "name": "Service Configuration",
+      "status": "PASS",
+      "details": "Services properly configured with selectors"
+    },
+    {
+      "id": "A9",
+      "name": "Image Tag Pinning",
+      "status": "FAIL",
+      "details": "Using 'latest' tag for api deployment",
+      "affected_resources": [
+        "quickstart-demo/api"
+      ],
+      "recommendation": "Pin image tags to specific versions"
+    },
+    {
+      "id": "A10",
+      "name": "Namespace Isolation",
+      "status": "PASS",
+      "details": "Deployments are in dedicated namespace"
+    },
+    {
+      "id": "A11",
+      "name": "Container Port Definition",
+      "status": "PASS",
+      "details": "Container ports properly defined"
+    },
+    {
+      "id": "A12",
+      "name": "Labels and Selectors",
+      "status": "PASS",
+      "details": "Labels and selectors properly configured"
+    }
+  ],
+  "experiment_recommendations": [
+    {
+      "check_id": "A1",
+      "suggested_fault_type": "pod_kill",
+      "priority": "P0",
+      "target_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "hypothesis": "Killing singleton pod causes permanent service loss until Kubernetes restarts it"
+    },
+    {
+      "check_id": "A4",
+      "suggested_fault_type": "pod_failure",
+      "priority": "P0",
+      "target_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "hypothesis": "Without liveness probe, unhealthy pod is never restarted automatically"
+    },
+    {
+      "check_id": "A5",
+      "suggested_fault_type": "http_delay",
+      "priority": "P1",
+      "target_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "hypothesis": "Without readiness probe, slow pod continues receiving traffic causing user-facing errors"
+    },
+    {
+      "check_id": "A2",
+      "suggested_fault_type": "pod_kill",
+      "priority": "P1",
+      "target_resources": [
+        "quickstart-demo/web",
+        "quickstart-demo/api"
+      ],
+      "hypothesis": "Without PDB, voluntary disruption (node drain) can kill all pods simultaneously"
+    }
+  ]
+}

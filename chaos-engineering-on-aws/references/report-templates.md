@@ -61,6 +61,26 @@
 | Risk ID | Description | Severity | Recommendation |
 |---------|------|--------|------|
 | R-NEW-001 | ... | 🟠 High | ... |
+
+## Cleanup Status
+
+Post-experiment cleanup checklist. Check each item once completed.
+
+### FIS Resources
+- [ ] Experiment template deleted: `aws fis delete-experiment-template --id <TEMPLATE_ID>`
+- [ ] Verify no FIS-created NACLs remain: `aws ec2 describe-network-acls --filters "Name=tag-key,Values=aws:fis:experiment-id"`
+- [ ] Temporary stop-condition alarms deleted (if created only for this experiment): `aws cloudwatch delete-alarms --alarm-names <ALARM_NAMES>`
+
+### Chaos Mesh Resources
+- [ ] PodChaos / NetworkChaos / HTTPChaos CR deleted: `kubectl delete -f chaos-experiment.yaml`
+- [ ] Verify no chaos CRs remain: `kubectl get podchaos,networkchaos,httpchaos,stresschaos -A`
+
+### Temporary Monitoring Resources
+- [ ] Temporary CloudWatch alarms created for this experiment deleted (if not reused)
+- [ ] Custom metric dashboards removed (if created only for this experiment)
+
+### Notes
+{cleanup_notes}
 ```
 
 ## Summary Report

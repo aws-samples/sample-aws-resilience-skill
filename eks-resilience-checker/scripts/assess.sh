@@ -99,10 +99,10 @@ get_namespaces() {
   log "Target namespaces (${#FILTERED_NS[@]}): ${FILTERED_NS[*]}"
 }
 
-# emit_result ID NAME CATEGORY SEVERITY STATUS FINDINGS_JSON RESOURCES_JSON REMEDIATION
+# emit_result ID NAME CATEGORY SEVERITY STATUS FINDINGS_JSON RESOURCES_JSON REMEDIATION COST_IMPACT
 emit_result() {
   local id="$1" name="$2" category="$3" severity="$4" status="$5"
-  local findings="$6" resources="$7" remediation="$8"
+  local findings="$6" resources="$7" remediation="$8" cost_impact="${9:-}"
   local json
   json=$(jq -nc \
     --arg id "$id" \
@@ -113,7 +113,8 @@ emit_result() {
     --argjson findings "$findings" \
     --argjson resources "$resources" \
     --arg remediation "$remediation" \
-    '{id:$id, name:$name, category:$category, severity:$severity, status:$status, findings:$findings, resources_affected:$resources, remediation:$remediation}')
+    --arg cost_impact "$cost_impact" \
+    '{id:$id, name:$name, category:$category, severity:$severity, status:$status, findings:$findings, resources_affected:$resources, remediation:$remediation, cost_impact:$cost_impact}')
   echo "$json"
   RESULTS+=("$json")
   TOTAL=$((TOTAL + 1))
@@ -140,7 +141,8 @@ check_a1() {
   found=$(echo "$raw" | jq '[.items[] | select((.metadata.ownerReferences // []) | length == 0) | select(.metadata.namespace | test("^kube-") | not) | {namespace:.metadata.namespace, name:.metadata.name}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A1" "Avoid Running Singleton Pods" "application" "critical" "$status" \
-    "$found" "$found" "Wrap standalone pods in a Deployment, StatefulSet, or Job controller."
+    "$found" "$found" "Wrap standalone pods in a Deployment, StatefulSet, or Job controller." \
+    'Zero — pure K8s resource conversion (Pod to Deployment)'
 }
 
 check_a2() {
@@ -153,7 +155,8 @@ check_a2() {
     [.s.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas == 1) | {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet", replicas:.spec.replicas}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A2" "Run Multiple Replicas" "application" "critical" "$status" \
-    "$found" "$found" "Set spec.replicas > 1 for all production workloads."
+    "$found" "$found" "Set spec.replicas > 1 for all production workloads." \
+    '+1 Pod per workload — doubles CPU/memory; may trigger additional node'
 }
 
 check_a3() {
@@ -163,7 +166,8 @@ check_a3() {
   found=$(echo "$deps" | jq '[.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) | select(.spec.template.spec.affinity.podAntiAffinity == null) | {namespace:.metadata.namespace, name:.metadata.name, replicas:.spec.replicas}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A3" "Use Pod Anti-Affinity" "application" "warning" "$status" \
-    "$found" "$found" "Add podAntiAffinity to spread replicas across nodes."
+    "$found" "$found" "Add podAntiAffinity to spread replicas across nodes." \
+    'Zero — K8s scheduling configuration only'
 }
 
 check_a4() {
@@ -179,7 +183,8 @@ check_a4() {
      | select(.containers_missing_probe | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A4" "Use Liveness Probes" "application" "critical" "$status" \
-    "$found" "$found" "Add livenessProbe to every container in your workloads."
+    "$found" "$found" "Add livenessProbe to every container in your workloads." \
+    'Zero — K8s probe configuration only'
 }
 
 check_a5() {
@@ -195,7 +200,8 @@ check_a5() {
      | select(.containers_missing_probe | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A5" "Use Readiness Probes" "application" "critical" "$status" \
-    "$found" "$found" "Add readinessProbe to every container in your workloads."
+    "$found" "$found" "Add readinessProbe to every container in your workloads." \
+    'Zero — K8s probe configuration only'
 }
 
 check_a6() {
@@ -213,7 +219,8 @@ check_a6() {
      select(. as $w | $root.p | map(select(.namespace == $w.namespace)) | length == 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A6" "Use Pod Disruption Budgets" "application" "warning" "$status" \
-    "$found" "$found" "Create PodDisruptionBudgets for critical workloads."
+    "$found" "$found" "Create PodDisruptionBudgets for critical workloads." \
+    'Zero — K8s PDB configuration only'
 }
 
 check_a7() {
@@ -232,7 +239,8 @@ check_a7() {
     findings='["Metrics server available_replicas='"$avail"', nodes_reporting='"$node_count"'"]'
   fi
   emit_result "A7" "Run Kubernetes Metrics Server" "application" "warning" "$status" \
-    "$findings" '[]' "Install metrics-server via EKS managed add-on or Helm."
+    "$findings" '[]' "Install metrics-server via EKS managed add-on or Helm." \
+    '~0.5 vCPU + 256MB memory for metrics-server Pod'
 }
 
 check_a8() {
@@ -246,7 +254,8 @@ check_a8() {
      select(. as $w | $root.h | map(select(.namespace == $w.namespace and .target == $w.name)) | length == 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A8" "Use Horizontal Pod Autoscaler" "application" "warning" "$status" \
-    "$found" "$found" "Create HPA resources for multi-replica workloads."
+    "$found" "$found" "Create HPA resources for multi-replica workloads." \
+    'HPA free; autoscaled Pods may increase compute cost'
 }
 
 check_a9() {
@@ -265,7 +274,8 @@ check_a9() {
     status="INFO"; findings='["No custom metrics scaling infrastructure found"]'
   fi
   emit_result "A9" "Use Custom Metrics Scaling" "application" "info" "$status" \
-    "$findings" '[]' "Install Prometheus Adapter or KEDA for custom metrics scaling."
+    "$findings" '[]' "Install Prometheus Adapter or KEDA for custom metrics scaling." \
+    'KEDA/Prometheus Adapter: ~0.5 vCPU + 512MB per controller'
 }
 
 check_a10() {
@@ -284,7 +294,8 @@ check_a10() {
     status="INFO"; findings='["VPA not installed"]'
   fi
   emit_result "A10" "Use Vertical Pod Autoscaler" "application" "info" "$status" \
-    "$findings" '[]' "Install VPA and create VerticalPodAutoscaler resources for workloads."
+    "$findings" '[]' "Install VPA and create VerticalPodAutoscaler resources for workloads." \
+    'VPA controller: ~0.5 vCPU + 256MB; may resize Pods'
 }
 
 check_a11() {
@@ -299,7 +310,8 @@ check_a11() {
      | select(.containers_missing_hook | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A11" "Use PreStop Hooks" "application" "warning" "$status" \
-    "$found" "$found" "Add lifecycle.preStop hooks for graceful termination."
+    "$found" "$found" "Add lifecycle.preStop hooks for graceful termination." \
+    'Zero — K8s lifecycle configuration only'
 }
 
 check_a12() {
@@ -319,7 +331,8 @@ check_a12() {
     status="INFO"; findings='["No service mesh detected"]'
   fi
   emit_result "A12" "Use a Service Mesh" "application" "info" "$status" \
-    "$findings" '[]' "Consider deploying Istio, Linkerd, or Consul for service mesh capabilities."
+    "$findings" '[]' "Consider deploying Istio, Linkerd, or Consul for service mesh capabilities." \
+    'Service mesh: ~10-20% additional CPU/memory per sidecar Pod'
 }
 
 check_a13() {
@@ -338,7 +351,8 @@ check_a13() {
     status="FAIL"; findings='["No monitoring solution detected"]'
   fi
   emit_result "A13" "Monitor Your Applications" "application" "warning" "$status" \
-    "$findings" '[]' "Deploy Prometheus, CloudWatch Container Insights, or a third-party monitoring agent."
+    "$findings" '[]' "Deploy Prometheus, CloudWatch Container Insights, or a third-party monitoring agent." \
+    'CloudWatch Container Insights: per-metric + log volume pricing; Prometheus: ~2 vCPU + 8GB'
 }
 
 check_a14() {
@@ -356,7 +370,8 @@ check_a14() {
     status="FAIL"; findings='["No centralized logging solution detected"]'
   fi
   emit_result "A14" "Use Centralized Logging" "application" "warning" "$status" \
-    "$findings" '[]' "Deploy Fluent Bit, CloudWatch Logs agent, or EFK/Loki stack."
+    "$findings" '[]' "Deploy Fluent Bit, CloudWatch Logs agent, or EFK/Loki stack." \
+    'Fluent Bit DaemonSet: ~0.5 vCPU + 256MB per node; CW Logs ~$0.50/GB ingested'
 }
 
 ###############################################################################
@@ -375,7 +390,8 @@ check_c1() {
     status="FAIL"; findings='["API server logging not enabled"]'
   fi
   emit_result "C1" "Monitor Control Plane Logs" "control_plane" "warning" "$status" \
-    "$findings" '[]' "Enable at least api log type via aws eks update-cluster-config."
+    "$findings" '[]' "Enable at least api log type via aws eks update-cluster-config." \
+    'CloudWatch Logs: ~$0.50/GB ingested (control plane ~1-5 GB/month)'
 }
 
 check_c2() {
@@ -393,7 +409,8 @@ check_c2() {
     status="FAIL"; findings='["No access entries or aws-auth ConfigMap found"]'
   fi
   emit_result "C2" "Cluster Authentication" "control_plane" "warning" "$status" \
-    "$findings" '[]' "Configure EKS Access Entries or aws-auth ConfigMap for cluster access."
+    "$findings" '[]' "Configure EKS Access Entries or aws-auth ConfigMap for cluster access." \
+    'Zero — authentication configuration only'
 }
 
 check_c3() {
@@ -417,7 +434,8 @@ check_c3() {
     fi
   fi
   emit_result "C3" "Running Large Clusters" "control_plane" "info" "$status" \
-    "$findings" '[]' "For >1000 services, enable IPVS mode and configure WARM_IP_TARGET."
+    "$findings" '[]' "For >1000 services, enable IPVS mode and configure WARM_IP_TARGET." \
+    'Zero — configuration tuning only'
 }
 
 check_c4() {
@@ -440,7 +458,8 @@ check_c4() {
     status="INFO"; findings='["Unable to determine endpoint access configuration"]'
   fi
   emit_result "C4" "EKS Control Plane Endpoint Access Control" "control_plane" "critical" "$status" \
-    "$findings" '[]' "Restrict public endpoint access or use a fully private endpoint."
+    "$findings" '[]' "Restrict public endpoint access or use a fully private endpoint." \
+    'Zero — endpoint access configuration only'
 }
 
 check_c5() {
@@ -455,7 +474,8 @@ check_c5() {
       {name:.name}]} | select(.webhooks | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "C5" "Avoid Catch-All Admission Webhooks" "control_plane" "warning" "$status" \
-    "$found" "$found" "Add namespaceSelector or objectSelector to narrow webhook scope."
+    "$found" "$found" "Add namespaceSelector or objectSelector to narrow webhook scope." \
+    'Zero — webhook scope configuration only'
 }
 
 ###############################################################################
@@ -477,7 +497,8 @@ check_d1() {
     status="FAIL"; findings='["No Cluster Autoscaler or Karpenter found"]'
   fi
   emit_result "D1" "Use Cluster Autoscaler or Karpenter" "data_plane" "critical" "$status" \
-    "$findings" '[]' "Install Karpenter or Cluster Autoscaler for automatic node scaling."
+    "$findings" '[]' "Install Karpenter or Cluster Autoscaler for automatic node scaling." \
+    'Karpenter free; CA: ~0.5 vCPU; auto-scaling increases EC2 spend'
 }
 
 check_d2() {
@@ -502,7 +523,8 @@ check_d2() {
     findings=$(jq -nc --argjson a "$az_info" --arg v "$variance" '["AZ distribution: \($a | map("\(.az)=\(.count)") | join(", ")); variance=\($v)%"]')
   fi
   emit_result "D2" "Worker Nodes Spread Across Multiple AZs" "data_plane" "critical" "$status" \
-    "$findings" '[]' "Use multiple AZs with balanced node groups for high availability."
+    "$findings" '[]' "Use multiple AZs with balanced node groups for high availability." \
+    'May require additional nodes in underrepresented AZs'
 }
 
 check_d3() {
@@ -518,7 +540,8 @@ check_d3() {
     | select(.containers_missing_resources | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "D3" "Configure Resource Requests/Limits" "data_plane" "critical" "$status" \
-    "$found" "$found" "Set CPU/memory requests and limits for all containers."
+    "$found" "$found" "Set CPU/memory requests and limits for all containers." \
+    'Zero — may expose need for more capacity if requests were unset'
 }
 
 check_d4() {
@@ -533,7 +556,8 @@ check_d4() {
   found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.')
   if [[ ${#missing[@]} -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "D4" "Namespace ResourceQuotas" "data_plane" "warning" "$status" \
-    "$found" "$found" "Create ResourceQuota in each namespace to enforce resource limits."
+    "$found" "$found" "Create ResourceQuota in each namespace to enforce resource limits." \
+    'Zero — K8s quota configuration only'
 }
 
 check_d5() {
@@ -548,7 +572,8 @@ check_d5() {
   found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.')
   if [[ ${#missing[@]} -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "D5" "Namespace LimitRanges" "data_plane" "warning" "$status" \
-    "$found" "$found" "Create LimitRange in each namespace to set default resource constraints."
+    "$found" "$found" "Create LimitRange in each namespace to set default resource constraints." \
+    'Zero — K8s LimitRange configuration only'
 }
 
 check_d6() {
@@ -570,7 +595,8 @@ check_d6() {
     status="FAIL"; findings='["CoreDNS metrics not properly configured"]'
   fi
   emit_result "D6" "Monitor CoreDNS Metrics" "data_plane" "warning" "$status" \
-    "$findings" '[]' "Ensure CoreDNS metrics port 9153 is exposed and monitored by Prometheus."
+    "$findings" '[]' "Ensure CoreDNS metrics port 9153 is exposed and monitored by Prometheus." \
+    'Zero — metrics endpoint configuration only'
 }
 
 check_d7() {
@@ -592,7 +618,8 @@ check_d7() {
     fi
   fi
   emit_result "D7" "CoreDNS Configuration" "data_plane" "info" "$status" \
-    "$findings" '[]' "Use EKS managed add-on for CoreDNS to get automatic updates."
+    "$findings" '[]' "Use EKS managed add-on for CoreDNS to get automatic updates." \
+    'Zero — addon management migration only'
 }
 
 ###############################################################################
@@ -773,6 +800,12 @@ write_report() {
         echo ""
         echo "**Remediation:** $rem"
         echo ""
+        local cost_impact
+        cost_impact=$(echo "$r" | jq -r '.cost_impact // ""')
+        if [[ -n "$cost_impact" ]]; then
+          echo "- **Cost Impact**: $cost_impact"
+          echo ""
+        fi
       done
     fi
   } > "$out"
@@ -862,8 +895,14 @@ EOF
       done
       cat >> "$out" <<EOF
 </ul>
-<div class="remediation"><strong>Remediation:</strong> ${rr}</div></div>
+<div class="remediation"><strong>Remediation:</strong> ${rr}</div>
 EOF
+      local rci
+      rci=$(echo "$r" | jq -r '.cost_impact // ""')
+      if [[ -n "$rci" ]]; then
+        echo "<div style=\"font-size:.8rem;color:#6b7280;margin-top:.25rem\"><strong>Cost Impact:</strong> ${rci}</div>" >> "$out"
+      fi
+      echo "</div>" >> "$out"
     done
     echo "</details>" >> "$out"
   done

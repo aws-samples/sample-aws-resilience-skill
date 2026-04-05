@@ -9,6 +9,7 @@
 ## Application Checks
 
 ### A1: Avoid Running Singleton Pods
+**Cost Impact:** Zero — pure K8s resource conversion (Pod to Deployment)
 #### Remediation
 Convert the singleton pod to a Deployment:
 ```bash
@@ -29,6 +30,7 @@ kubectl delete pod {pod-name} -n {namespace}
 ---
 
 ### A2: Run Multiple Replicas
+**Cost Impact:** +1 Pod per workload — doubles CPU/memory; may trigger additional node
 #### Remediation
 Scale up the workload to at least 2 replicas:
 ```bash
@@ -49,6 +51,7 @@ kubectl patch deployment {deployment-name} -n {namespace} -p '{"spec":{"replicas
 ---
 
 ### A3: Use Pod Anti-Affinity
+**Cost Impact:** Zero — K8s scheduling configuration only
 #### Remediation
 Add `podAntiAffinity` to spread replicas across nodes:
 ```bash
@@ -87,6 +90,7 @@ kubectl patch deployment {deployment-name} -n {namespace} --type=strategic -p '{
 ---
 
 ### A4: Use Liveness Probes
+**Cost Impact:** Zero — K8s probe configuration only
 #### Remediation
 Add a liveness probe to each container:
 ```bash
@@ -121,6 +125,7 @@ kubectl patch deployment {deployment-name} -n {namespace} --type=strategic -p '{
 ---
 
 ### A5: Use Readiness Probes
+**Cost Impact:** Zero — K8s probe configuration only
 #### Remediation
 Add a readiness probe to each container:
 ```bash
@@ -155,6 +160,7 @@ kubectl patch deployment {deployment-name} -n {namespace} --type=strategic -p '{
 ---
 
 ### A6: Use Pod Disruption Budgets
+**Cost Impact:** Zero — K8s PDB configuration only
 #### Remediation
 Create a PDB for the workload:
 ```bash
@@ -181,6 +187,7 @@ EOF
 ---
 
 ### A7: Run Kubernetes Metrics Server
+**Cost Impact:** ~0.5 vCPU + 256MB memory for metrics-server Pod
 #### Remediation
 Install metrics-server:
 ```bash
@@ -204,6 +211,7 @@ kubectl top nodes
 ---
 
 ### A8: Use Horizontal Pod Autoscaler
+**Cost Impact:** HPA free; autoscaled Pods may increase compute cost
 #### Remediation
 Create an HPA for the workload:
 ```bash
@@ -251,6 +259,7 @@ EOF
 ---
 
 ### A11: Use PreStop Hooks
+**Cost Impact:** Zero — K8s lifecycle configuration only
 #### Remediation
 Add a preStop hook to gracefully handle termination:
 ```bash
@@ -282,6 +291,7 @@ kubectl patch deployment {deployment-name} -n {namespace} --type=strategic -p '{
 ---
 
 ### A13: Monitor Your Applications
+**Cost Impact:** CloudWatch Container Insights: per-metric + log volume pricing; Prometheus: ~2 vCPU + 8GB
 #### Remediation
 Install a monitoring solution. Recommended: Prometheus stack via Helm:
 ```bash
@@ -306,6 +316,7 @@ aws eks create-addon --cluster-name {cluster-name} --addon-name amazon-cloudwatc
 ---
 
 ### A14: Use Centralized Logging
+**Cost Impact:** Fluent Bit DaemonSet: ~0.5 vCPU + 256MB per node; CW Logs ~\$0.50/GB ingested
 #### Remediation
 Install a centralized logging solution. Recommended: Fluent Bit to CloudWatch Logs:
 ```bash
@@ -331,6 +342,7 @@ helm install fluent-bit fluent/fluent-bit \
 ## Control Plane Checks
 
 ### C1: Monitor Control Plane Logs
+**Cost Impact:** CloudWatch Logs: ~\$0.50/GB ingested (control plane ~1-5 GB/month)
 #### Remediation
 Enable EKS control plane logging:
 ```bash
@@ -352,6 +364,7 @@ aws eks describe-cluster --name "$CLUSTER_NAME" --region "$REGION" --query 'clus
 ---
 
 ### C2: Cluster Authentication
+**Cost Impact:** Zero — authentication configuration only
 #### Remediation
 Configure EKS Access Entries (recommended over aws-auth ConfigMap):
 ```bash
@@ -378,6 +391,7 @@ aws eks associate-access-policy --cluster-name "$CLUSTER_NAME" --region "$REGION
 ---
 
 ### C4: EKS Control Plane Endpoint Access Control
+**Cost Impact:** Zero — endpoint access configuration only
 #### Remediation
 Restrict API server endpoint access:
 ```bash
@@ -401,6 +415,7 @@ aws eks update-cluster-config --name "$CLUSTER_NAME" --region "$REGION" \
 ---
 
 ### C5: Avoid Catch-All Admission Webhooks
+**Cost Impact:** Zero — webhook scope configuration only
 #### Remediation
 Add namespace selectors and narrow the scope of webhook rules:
 ```bash
@@ -441,6 +456,7 @@ kubectl patch validatingwebhookconfiguration {webhook-name} --type=json -p '[{
 ## Data Plane Checks
 
 ### D1: Use Kubernetes Cluster Autoscaler or Karpenter
+**Cost Impact:** Karpenter free; CA: ~0.5 vCPU; auto-scaling increases EC2 spend
 #### Remediation
 Install Karpenter (recommended) or Cluster Autoscaler:
 ```bash
@@ -495,6 +511,7 @@ helm install cluster-autoscaler autoscaler/cluster-autoscaler \
 ---
 
 ### D2: Worker Nodes Spread Across Multiple AZs
+**Cost Impact:** May require additional nodes in underrepresented AZs
 #### Remediation
 Configure node groups across multiple AZs:
 ```bash
@@ -537,6 +554,7 @@ EOF
 ---
 
 ### D3: Configure Resource Requests/Limits
+**Cost Impact:** Zero — may expose need for more capacity if requests were previously unset
 #### Remediation
 Add resource specifications to containers:
 ```bash
@@ -572,6 +590,7 @@ kubectl patch deployment {deployment-name} -n {namespace} --type=strategic -p '{
 ---
 
 ### D4: Namespace ResourceQuotas
+**Cost Impact:** Zero — K8s quota configuration only
 #### Remediation
 Create a ResourceQuota for the namespace:
 ```bash
@@ -601,6 +620,7 @@ EOF
 ---
 
 ### D5: Namespace LimitRanges
+**Cost Impact:** Zero — K8s LimitRange configuration only
 #### Remediation
 Create a LimitRange for the namespace:
 ```bash
@@ -640,6 +660,7 @@ EOF
 ---
 
 ### D6: Monitor CoreDNS Metrics
+**Cost Impact:** Zero — metrics endpoint configuration only
 #### Remediation
 Set up CoreDNS metrics collection:
 ```bash

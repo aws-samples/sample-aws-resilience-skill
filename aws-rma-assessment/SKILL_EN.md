@@ -153,6 +153,20 @@ Based on collected information and answered questions, automatically infer relat
 - **Goal-stated** (medium confidence): Based on user-declared targets (e.g., "our RTO is 1 hour"). Must ask: "Has this target been validated through testing?"
 - **Inferred** (low confidence): Derived from other answers or assumptions. Must be presented to user for explicit confirmation.
 
+#### Confidence-Based Decision Matrix
+
+| Confidence | Action | Report Display | Example |
+|------------|--------|---------------|---------|
+| **High** (Evidence-based) | Auto-fill, no confirmation needed | ✅ Auto-assessed (evidence: {source}) | CloudWatch Alarm found in IaC → Q13 ≥ Level 2 |
+| **Medium** (Goal-stated) | Auto-fill + MUST ask confirmation question | ⚠️ Inferred from stated goal — please confirm | User says "RTO < 1h" → Q27 ≥ Level 2, ask "Has this RTO been validated through DR testing?" |
+| **Low** (Inferred) | DO NOT auto-fill, MUST ask user | ❓ Unable to determine — user input required | Single region detected → cannot infer DR maturity level |
+
+**Processing Rules**:
+1. High-confidence: Apply immediately, show in report with evidence source. User can override.
+2. Medium-confidence: Apply tentatively, generate a confirmation question. If user does not confirm within the session, downgrade to "Unverified" in report.
+3. Low-confidence: Skip auto-fill entirely. Add to "Questions Requiring Input" queue.
+4. When >5 low-confidence items remain after initial analysis, offer batch-question mode: present all remaining questions in a numbered list for efficient answering.
+
 #### 3.3 Auto-Answer Output Format
 
 Generate auto-answer summary in three categories:
@@ -235,6 +249,22 @@ Then include the following sections:
    - RMA Level 2 (Defined) approximately equals Modeling 2.5-3.5 stars
    - RMA Level 3 (Managed) approximately equals Modeling 4-5 stars
    - Note: This is an approximate mapping, not an exact equivalence, as the two assessments evaluate different dimensions
+
+### Relationship with AWS Resilience Hub
+
+AWS Resilience Hub provides automated technical resilience assessment for AWS applications, including RTO/RPO policy compliance checking and drift detection. 
+
+**How they complement each other**:
+
+| Aspect | RMA Assessment (this Skill) | AWS Resilience Hub |
+|--------|---------------------------|-------------------|
+| **Focus** | Organizational/process maturity (people, process, tools) | Technical configuration compliance |
+| **Scope** | 10 domains × 52 questions covering culture, governance, testing | Per-application RTO/RPO policy, resource configuration |
+| **Output** | Maturity levels (1-5) + improvement roadmap | Compliance status + recommended actions |
+| **When to use** | First-time resilience strategy, maturity benchmarking | Ongoing automated compliance monitoring |
+
+**Recommended approach**: Start with RMA Assessment to understand organizational gaps, then use Resilience Hub for continuous automated monitoring of the technical improvements you implement.
+
 8. **Reference Resources** — AWS documentation links
 
 See [report-template.md](references/report-template.md) for detailed report template structure and HTML generation methods.

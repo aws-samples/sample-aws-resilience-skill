@@ -38,6 +38,177 @@ FIS 执行实验时假设的 IAM 角色。所有基于 FIS 的实验都需要。
 - `logs:CreateLogDelivery`（如日志输出到 CloudWatch Logs）
 - `cloudwatch:DescribeAlarms`（用于停止条件）
 
+#### 分级 FIS IAM Policy 模板
+
+无需手动拼凑权限，直接使用以下即用型 Policy 模板，将合适的 Tier 附加到 `FISExperimentRole`。
+
+> **推荐**：为 `FISExperimentRole` 添加[权限边界（Permission Boundary）](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)，防止权限提升，将范围限定在实验所需服务内。
+
+**Tier 1 — 仅 EC2**（EC2 实验的安全起点）：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier1EC2",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**Tier 2 — EC2 + RDS**（在 Tier 1 基础上增加数据库故障转移）：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier2EC2RDS",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "rds:FailoverDBCluster",
+        "rds:RebootDBInstance",
+        "rds:DescribeDBClusters",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**Tier 3 — 完整版**（包含 EKS、Lambda、ECS、DynamoDB、ElastiCache、S3 的所有 FIS action）：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FISTier3Full",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:SendSpotInstanceInterruptions",
+        "ec2:CreateNetworkAcl",
+        "ec2:CreateNetworkAclEntry",
+        "ec2:DeleteNetworkAcl",
+        "ec2:DeleteNetworkAclEntry",
+        "ec2:DescribeNetworkAcls",
+        "ec2:ReplaceNetworkAclAssociation",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "ec2:CreateRoute",
+        "ec2:DeleteRoute",
+        "ec2:ReplaceRoute",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeTransitGateways",
+        "eks:DescribeNodegroup",
+        "eks:ListNodegroups",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:TerminateInstanceInAutoScalingGroup",
+        "rds:FailoverDBCluster",
+        "rds:RebootDBInstance",
+        "rds:DescribeDBClusters",
+        "lambda:InvokeFunction",
+        "lambda:GetFunction",
+        "ecs:StopTask",
+        "ecs:UpdateContainerInstancesState",
+        "ecs:DescribeTasks",
+        "ecs:ListTasks",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTable",
+        "elasticache:InterruptClusterAzPower",
+        "elasticache:DescribeReplicationGroups",
+        "s3:PutReplicationConfiguration",
+        "s3:GetReplicationConfiguration",
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "fis:InjectApiInternalError",
+        "fis:InjectApiThrottleError",
+        "logs:CreateLogDelivery",
+        "cloudwatch:DescribeAlarms"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+> **权限边界示例** — 创建边界策略限制 FIS Role 的爆炸半径：
+>
+> ```json
+> {
+>   "Version": "2012-10-17",
+>   "Statement": [
+>     {
+>       "Effect": "Allow",
+>       "Action": [
+>         "ec2:*", "rds:*", "eks:*", "ecs:*", "lambda:*",
+>         "elasticache:*", "dynamodb:*", "s3:GetReplicationConfiguration",
+>         "s3:PutReplicationConfiguration", "autoscaling:*", "ssm:SendCommand",
+>         "ssm:GetCommandInvocation", "fis:InjectApi*",
+>         "logs:CreateLogDelivery", "cloudwatch:DescribeAlarms"
+>       ],
+>       "Resource": "*"
+>     }
+>   ]
+> }
+> ```
+>
+> 创建角色时附加边界：
+> ```bash
+> aws iam create-role \
+>   --role-name FISExperimentRole \
+>   --assume-role-policy-document file://fis-trust-policy.json \
+>   --permissions-boundary arn:aws:iam::<ACCOUNT_ID>:policy/FISPermissionBoundary
+> ```
+
 #### 操作人员权限
 
 执行实验的人员/CI 需要：

@@ -1,5 +1,7 @@
 # Chaos Engineering on AWS
 
+> Last sync: 2026-04-05
+
 ## Role Definition
 
 You are a senior AWS Chaos Engineering expert. Based on the assessment report from the `aws-resilience-modeling` Skill, you execute the full chaos engineering experiment lifecycle: Target Definition → Resource Validation → Hypothesis & Experiment Design → Safety Check → Controlled Execution → Analysis Report.
@@ -185,6 +187,8 @@ Key metrics: Request success rate, P99 latency, recovery time, data integrity.
 
 Starting from the suggested experiments in section 2.5, generate full configuration: injection tool, Action, target resource ARN, duration, stop conditions, blast radius.
 
+> **Required output**: Agent **must** generate `metric-queries.json` alongside `step3-experiment.json`. This file contains the CloudWatch `GetMetricData` query definitions used by `monitor.sh` during Step 5. Without it, metric collection will be skipped and the experiment will run blind. Do not proceed to Step 4 without generating this file.
+
 #### 3.3 Monitoring Readiness
 
 | Status | Handling |
@@ -254,6 +258,20 @@ Every experiment must be bound to:
 - Time limit
 - User can manually terminate at any time
 
+### FIS Cost Estimation
+
+Before executing experiments, provide a cost estimate:
+
+| Cost Component | Pricing | Example (3 experiments × 5 min) |
+|---------------|---------|--------------------------------|
+| FIS action-minutes | $0.10/action-minute | 3 × 5 × $0.10 = $1.50 |
+| FIS Scenario (composite) | $0.10/action-minute per sub-action | Varies by scenario complexity |
+| Chaos Mesh | Free (runs in cluster) | $0.00 (but consumes cluster resources ~0.5 vCPU) |
+| Additional EC2 (recovery testing) | Standard EC2 pricing | Depends on instance type |
+| CloudWatch metrics collection | $0.30/metric/month for custom metrics | ~$1-5/month for experiment metrics |
+
+> **Note**: FIS pricing is per action-minute. A 5-minute experiment with 2 actions = 10 action-minutes = $1.00. See [AWS FIS Pricing](https://aws.amazon.com/fis/pricing/) for current rates.
+
 **Output**: `output/step3-experiment.json` — Full experiment configuration (hypothesis, FIS JSON, stop conditions, rollback plan)
 
 **User Interaction**: Review and confirm experiment design
@@ -274,6 +292,7 @@ Environment:
 Monitoring:
 □ Stop Condition Alarms ready
 □ Key metrics collectible
+□ metric-queries.json exists in working directory (generated in Step 3)
 
 Safety:
 □ Blast radius ≤ maximum limit
@@ -295,6 +314,22 @@ Automatic remediation for missing items: FIS Role does not exist → Generate cr
 
 #### Phase 0: Baseline Collection (T-5min)
 Collect steady-state baseline (success rate, latency, error rate), record resource state.
+
+**Baseline Persistence**: Save Phase 0 baseline as `output/baseline-{timestamp}.json`:
+```json
+{
+  "timestamp": "2026-04-04T08:00:00Z",
+  "cluster_name": "PetSite",
+  "metrics": {
+    "success_rate": 99.95,
+    "p99_latency_ms": 245,
+    "error_rate": 0.05,
+    "active_pods": 12
+  }
+}
+```
+
+If previous baselines exist in `output/baseline-*.json`, Step 6 report includes a "Baseline Trend" section showing how steady-state metrics have changed over time.
 
 #### Phase 1: Fault Injection (T=0)
 ```bash
@@ -358,16 +393,29 @@ Re-collect metrics → Compare with baseline → Confirm full recovery.
 
 1. Analyze results: PASSED ✅ / FAILED ❌ / ABORTED ⚠️
 2. Steady-state hypothesis vs. actual performance comparison table
-3. MTTR phased analysis (Detection → Triage → Response → Recovery)
-4. **Application Log Analysis** (new section in report):
+3. **SLO/RTO Compliance Table** (auto-generated):
+   Extract target RTO/RPO from step1-scope.json (field: `business_functions[].rto_seconds` / `rpo_seconds`) or from the hypothesis statement. Compare with actual observed values:
+
+   | Metric | Target | Actual | Status |
+   |--------|--------|--------|--------|
+   | RTO | {target_rto}s | {observed_recovery_time}s | ✅ Met / ❌ Exceeded |
+   | Success Rate During Experiment | ≥{target_success_rate}% | {actual_success_rate}% | ✅ / ❌ |
+   | Error Rate Post-Recovery | <{target_error_rate}% | {actual_error_rate}% | ✅ / ❌ |
+
+   If target values are not available in step1-scope.json, ask the user:
+   "What are your RTO and success rate targets for this service? (e.g., RTO=60s, success rate ≥99.9%)"
+   
+   If user declines to provide targets, skip this table and note: "SLO compliance comparison skipped — no target values provided."
+4. MTTR phased analysis (Detection → Triage → Response → Recovery)
+5. **Application Log Analysis** (new section in report):
    - Error timeline: per-minute error counts by category (timeout/connection/5xx/oom/other)
    - Error patterns: most frequent error messages per service
    - First error timestamp → fault propagation delay
    - Recovery detection: when errors return to zero
    - Cross-service correlation: which services showed errors and in what order
-5. Resilience score update (compare with 9 dimensions in 2.7)
-6. Backfill newly discovered risks
-7. Improvement recommendations (P0/P1/P2 priority)
+6. Resilience score update (compare with 9 dimensions in 2.7)
+7. Backfill newly discovered risks
+8. Improvement recommendations (P0/P1/P2 priority)
 
 **Post-Experiment Log Analysis** (standalone entry point):
 If the user wants to analyze logs after the experiment has completed:

@@ -930,6 +930,33 @@ aws eks update-cluster-config --name <CLUSTER> --resources-vpc-config publicAcce
 
 **用户交互**：展示报告摘要（总分、FAIL 项），询问是否查看详细报告。
 
+### 成本影响评估
+
+每个 FAIL 项在报告中包含成本影响估算。
+
+**模式 A — 参考定价（配置了 AWS Pricing MCP Server 时）**：
+如果配置了 `awslabs.aws-pricing-mcp-server`，使用实际按需列表定价增强成本估算：
+- 计算相关修复（A2、A7、A8、D1）：基于 Pod 资源请求和区域查询 EC2/Fargate 定价
+- 监控/日志修复（A13、A14、C1）：查询 CloudWatch 定价
+- 用月度美元估算替换定性描述
+- 添加免责声明："基于按需列表定价；实际成本可能因 RI、Savings Plans 或 EDP 折扣而不同。"
+
+MCP Server 配置：
+```json
+{
+  "mcpServers": {
+    "awslabs.aws-pricing-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+    }
+  }
+}
+```
+
+**模式 B — 定性描述（默认）**：
+当 Pricing MCP 不可用时，报告使用 assess.sh 内置的定性成本描述（如 "Zero — configuration only" 或 "+1 Pod per workload ≈ doubles CPU/memory"）。
+
 ---
 
 ### 步骤 4：实验推荐（可选）

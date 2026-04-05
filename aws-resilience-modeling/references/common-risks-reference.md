@@ -265,3 +265,41 @@ During resilience assessments, verify the following checklist items for each ser
 - [ ] Is NLB TCP timeout properly configured?
 - [ ] Is GWLB cross-zone load balancing enabled?
 - [ ] Is there network performance monitoring (Network Flow Monitor)?
+
+---
+
+## 7. Generative AI Risks (Amazon Bedrock)
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| Bedrock-Risk-1 | Model endpoint throttling | API 429 errors during peak inference | Implement client-side retry with exponential backoff; request quota increase; use Provisioned Throughput for critical workloads |
+| Bedrock-Risk-2 | Single-region model availability | Model version unavailable in target region | Pre-validate model availability across regions; implement cross-region fallback with Amazon Bedrock Cross-Region Inference |
+| Bedrock-Risk-3 | Model response latency spikes | User-facing latency SLA breach | Set client-side timeouts; implement streaming responses; use model caching where applicable |
+| Bedrock-Risk-4 | Token quota exhaustion | Batch processing jobs fail mid-execution | Monitor token usage via CloudWatch; implement circuit breaker for batch jobs; pre-calculate token requirements |
+
+## 8. Streaming Risks (Amazon MSK)
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| MSK-Risk-1 | Broker failure | Partition leadership rebalance, temporary latency increase | Multi-AZ deployment (min 3 brokers across 3 AZs); configure `min.insync.replicas=2` with `replication.factor=3` |
+| MSK-Risk-2 | Partition rebalance storm | Consumer group instability, duplicate processing | Tune `session.timeout.ms` and `max.poll.interval.ms`; use static group membership; implement idempotent consumers |
+| MSK-Risk-3 | Storage exhaustion | Brokers become unhealthy, stop accepting writes | Enable auto-scaling storage; set CloudWatch alarm on `KafkaDataLogsDiskUsed`; configure log retention policies |
+| MSK-Risk-4 | ZooKeeper quorum loss (pre-KRaft) | Cluster metadata operations fail | Use KRaft mode (MSK 3.7+) or ensure 3-node ZK ensemble; for legacy clusters, monitor ZK latency |
+
+## 9. Search Risks (Amazon OpenSearch Service)
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| OpenSearch-Risk-1 | Blue/green deployment performance impact | Temporary query latency increase during deployment | Schedule deployments during off-peak; use dedicated master nodes; monitor `SearchLatency` and `IndexingLatency` during updates |
+| OpenSearch-Risk-2 | Shard imbalance / hot spotting | Uneven resource utilization, query timeouts | Use index lifecycle policies; configure shard allocation awareness for AZ; monitor `JVMMemoryPressure` per node |
+| OpenSearch-Risk-3 | Snapshot restore failure | Data recovery blocked during disaster | Regular snapshot testing; cross-region snapshot replication; validate restore time periodically |
+| OpenSearch-Risk-4 | Search query overload (noisy neighbor) | Cluster-wide performance degradation | Implement request throttling; use UltraWarm tier for infrequent data; configure circuit breaker settings |
+
+## 10. Workflow Risks (AWS Step Functions)
+
+| Risk ID | Risk Point | Root Cause | Improvement Recommendation |
+|---------|-----------|-----------|---------------------------|
+| StepFunctions-Risk-1 | Long-running execution timeout | Standard Workflow max 1 year; Express max 5 min | Use Standard Workflows for long processes; implement checkpointing for resumable workflows |
+| StepFunctions-Risk-2 | State data loss on failure | Workflow progress lost, requires restart from beginning | Implement idempotent activities; store intermediate state in DynamoDB; use Step Functions execution history for replay |
+| StepFunctions-Risk-3 | Activity worker failure | Tasks stuck in "Waiting for Activity" state | Set heartbeat and task timeouts; implement worker auto-scaling; monitor `ActivitiesTimedOut` metric |
+| StepFunctions-Risk-4 | Throttling during burst | State transitions fail with ThrottlingException | Request quota increase; implement retry with backoff; split large workflows into sub-workflows |

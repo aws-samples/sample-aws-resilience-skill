@@ -265,3 +265,41 @@
 - [ ] NLB TCP 超时是否配置合理
 - [ ] GWLB 是否开启了 cross-zone load balancing
 - [ ] 是否有网络性能监控手段（Network Flow Monitor）
+
+---
+
+## 7. 生成式 AI 类风险（Amazon Bedrock）
+
+| 风险编号 | 风险点 | 风险原因 | 改进建议 |
+|---------|--------|---------|---------|
+| Bedrock-风险点1 | 模型端点限流 | 推理高峰期 API 返回 429 错误 | 实现客户端指数退避重试；申请配额增加；关键工作负载使用 Provisioned Throughput |
+| Bedrock-风险点2 | 单区域模型可用性 | 目标区域中模型版本不可用 | 预先验证跨区域模型可用性；使用 Amazon Bedrock 跨区域推理实现跨区域回退 |
+| Bedrock-风险点3 | 模型响应延迟飙高 | 面向用户的延迟 SLA 违约 | 设置客户端超时；实现流式响应；在适用场景使用模型缓存 |
+| Bedrock-风险点4 | Token 配额耗尽 | 批处理任务执行中途失败 | 通过 CloudWatch 监控 Token 使用量；为批处理任务实现断路器；预先计算 Token 需求 |
+
+## 8. 流处理类风险（Amazon MSK）
+
+| 风险编号 | 风险点 | 风险原因 | 改进建议 |
+|---------|--------|---------|---------|
+| MSK-风险点1 | Broker 故障 | 分区领导权重平衡，临时延迟增加 | 多 AZ 部署（至少 3 个 Broker 跨 3 个 AZ）；配置 `min.insync.replicas=2`、`replication.factor=3` |
+| MSK-风险点2 | 分区重平衡风暴 | 消费者组不稳定，重复处理 | 调优 `session.timeout.ms` 和 `max.poll.interval.ms`；使用静态组成员；实现幂等消费者 |
+| MSK-风险点3 | 存储耗尽 | Broker 变为不健康状态，停止接受写入 | 启用自动扩展存储；设置 `KafkaDataLogsDiskUsed` CloudWatch 告警；配置日志保留策略 |
+| MSK-风险点4 | ZooKeeper 仲裁丢失（KRaft 之前） | 集群元数据操作失败 | 使用 KRaft 模式（MSK 3.7+）或确保 3 节点 ZK 集群；传统集群监控 ZK 延迟 |
+
+## 9. 搜索类风险（Amazon OpenSearch Service）
+
+| 风险编号 | 风险点 | 风险原因 | 改进建议 |
+|---------|--------|---------|---------|
+| OpenSearch-风险点1 | 蓝绿部署性能影响 | 部署期间查询延迟临时增加 | 在非高峰期安排部署；使用专用主节点；更新期间监控 `SearchLatency` 和 `IndexingLatency` |
+| OpenSearch-风险点2 | 分片不均衡/热点 | 资源利用不均匀，查询超时 | 使用索引生命周期策略；配置分片分配 AZ 感知；监控每节点 `JVMMemoryPressure` |
+| OpenSearch-风险点3 | 快照恢复失败 | 灾难期间数据恢复受阻 | 定期快照测试；跨区域快照复制；定期验证恢复时间 |
+| OpenSearch-风险点4 | 搜索查询过载（噪声邻居） | 集群范围性能下降 | 实现请求限流；对低频数据使用 UltraWarm 层；配置断路器设置 |
+
+## 10. 工作流类风险（AWS Step Functions）
+
+| 风险编号 | 风险点 | 风险原因 | 改进建议 |
+|---------|--------|---------|---------|
+| StepFunctions-风险点1 | 长时间执行超时 | Standard Workflow 最长 1 年；Express 最长 5 分钟 | 长流程使用 Standard Workflow；实现检查点以支持可恢复工作流 |
+| StepFunctions-风险点2 | 故障时状态数据丢失 | 工作流进度丢失，需从头重新开始 | 实现幂等 Activity；将中间状态存储在 DynamoDB；使用 Step Functions 执行历史进行重放 |
+| StepFunctions-风险点3 | Activity Worker 故障 | 任务卡在"等待 Activity"状态 | 设置心跳和任务超时；实现 Worker 自动扩展；监控 `ActivitiesTimedOut` 指标 |
+| StepFunctions-风险点4 | 突发期间限流 | 状态转换因 ThrottlingException 失败 | 申请配额增加；实现退避重试；将大型工作流拆分为子工作流 |

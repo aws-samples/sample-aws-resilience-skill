@@ -7,6 +7,29 @@
 #   - K8s Pod/container-level faults → chaosmesh
 #
 # Adding new fault types: append to the appropriate section below. No need to modify SKILL.md.
+#
+# === Quick Index (41 faults) ===
+# Chaos Mesh (14):
+#   Compute:  pod_kill, pod_failure, container_kill
+#   Network:  network_delay, network_loss, network_partition, network_bandwidth
+#   HTTP:     http_abort, http_delay
+#   Resource: cpu_stress, memory_stress
+#   IO/DNS:   io_latency, io_fault, dns_error
+#
+# FIS Single Action (23):
+#   EC2:        ec2_terminate, ec2_stop, ec2_reboot, ec2_spot_interruption, ec2_network_disrupt
+#   EKS:        eks_terminate_nodes
+#   RDS:        rds_failover, rds_reboot
+#   Lambda:     lambda_delay, lambda_error
+#   Network:    network_disrupt, network_cross_region_route
+#   Storage:    ebs_pause_io, dynamodb_pause_replication, s3_pause_replication
+#   API:        api_internal_error, api_throttle
+#   ECS:        ecs_stop_task, ecs_drain_container_instance, ecs_task_cpu_stress,
+#               ecs_task_io_stress, ecs_task_network_blackhole
+#   Cache:      elasticache_az_power
+#
+# FIS Scenario (4):
+#   az_power_interruption, az_app_slowdown, cross_az_traffic_slowdown, cross_region_connectivity
 
 # ── Chaos Mesh: Pod/Container Layer ─────────────────────────────────────────
 chaosmesh:
@@ -660,8 +683,11 @@ fis:
     recommended_for: [ecs-microservices]
 
 # ── FIS Scenario Library: Composite Scenarios ───────────────────────────────
-# ⚠️ These templates CANNOT be created via FIS API.
-# They must be created through AWS Console → FIS → Scenario Library.
+# Three creation paths:
+# (1) Console → FIS → Scenario Library, then export with `aws fis get-experiment-template`
+# (2) Copy Content tab from Console, manually add missing params, create via API
+# (3) Use the JSON template skeletons in references/scenario-library.md directly:
+#     `aws fis create-experiment-template --cli-input-json file://template.json`
 # See references/scenario-library.md for full JSON skeletons and prerequisites.
 fis_scenarios:
   - type: az_power_interruption

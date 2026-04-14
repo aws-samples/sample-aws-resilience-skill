@@ -8,7 +8,7 @@ description: >-
   risk scoring, and mitigation strategy design — even if they don't explicitly say
   "resilience". Automatically invoked for AWS韧性分析, 架构分析, 系统风险评估,
   AWS韧性评估, 可靠性评估, 灾难恢复规划, 故障模式分析, 组件依赖分析, 风险识别.
-allowed-tools: Bash(aws sts get-caller-identity), Bash(aws configure list), Bash(gh *), Read, Write, Grep, Glob
+allowed-tools: Bash(aws *), Bash(gh *), Read, Write, Grep, Glob
 model: sonnet
 ---
 

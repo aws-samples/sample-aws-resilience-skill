@@ -1,9 +1,7 @@
-# EKS Resiliency Checks
 
-> **Scope**: This file covers **what** each check does and **why** it matters (descriptions, impact, background).
-> For **how** to execute each check (commands + PASS/FAIL criteria), see [check-commands.md](check-commands.md).
+# EKS 韧性检查（MCP 版本）
 
-## Overview
+## 概述
 
 The EKS Resiliency Checker is a comprehensive tool that evaluates Amazon EKS clusters against 26 critical resiliency best practices. It performs automated checks across three main categories: Application workloads, Control Plane configuration, and Data Plane setup. The tool provides detailed findings, compliance status, and actionable remediation guidance for each check.
 

@@ -240,6 +240,18 @@ run_chaosmesh() {
         # Check Chaos Mesh experiment status
         local cm_status
         if [[ -n "$kind" ]]; then
+            # Check if CR still exists (may have been deleted during abort)
+            if ! kubectl get "$kind" "$exp_name" -n "$exp_ns" &>/dev/null; then
+                log "Experiment CR not found — likely deleted or cleaned up"
+                jq -n \
+                    --arg name "$exp_name" \
+                    --arg status "ABORTED" \
+                    --argjson elapsed "$elapsed" \
+                    '{experiment_name:$name, status:$status, elapsed_seconds:$elapsed, message:"Experiment CR not found (deleted or cleaned up)"}' \
+                    > "$STATE_FILE"
+                log "State written to $STATE_FILE"
+                exit 1
+            fi
             cm_status=$(kubectl get "$kind" "$exp_name" -n "$exp_ns" \
                 -o jsonpath='{.status.conditions[?(@.type=="AllRecovered")].status}' 2>/dev/null || echo "")
         else

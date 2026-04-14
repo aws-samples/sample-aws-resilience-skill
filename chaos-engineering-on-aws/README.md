@@ -47,82 +47,15 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 | eks-mcp-server | `awslabs.eks-mcp-server` | EKS-based architectures |
 | chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | Cluster has Chaos Mesh installed |
 
-### Configuration Example
+### Configuration
 
-```json
-{
-  "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
-    },
-    "awslabs.cloudwatch-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
-    }
-  }
-}
-```
+> Full setup guide with examples: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
 
-> No MCP? The skill falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`).
+No MCP? The skill falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`).
 
-### Chaos Mesh MCP: EKS Authentication Methods
+### Chaos Mesh MCP: EKS Authentication
 
-When using the optional Chaos Mesh MCP server, there are two ways to authenticate with your EKS cluster:
-
-#### Method 1: Static ServiceAccount Token (Recommended)
-
-Run the setup script once to create RBAC permissions and generate a self-contained kubeconfig with a long-lived ServiceAccount token. **No AWS CLI or IAM credentials required at runtime.**
-
-```bash
-# One-time setup: create RBAC + generate kubeconfig (expires in 1 year)
-cd /path/to/Chaosmesh-MCP
-./setup-eks-permissions.sh
-
-# Start Chaos Mesh MCP server with the generated kubeconfig
-python server.py --kubeconfig ./chaos-mesh-mcp-kubeconfig
-```
-
-MCP config:
-```json
-{
-  "mcpServers": {
-    "chaosmesh-mcp": {
-      "command": "python",
-      "args": ["/path/to/Chaosmesh-MCP/server.py", "--kubeconfig", "/path/to/chaos-mesh-mcp-kubeconfig"]
-    }
-  }
-}
-```
-
-✅ Portable — no AWS dependency at runtime  
-✅ Least-privilege permissions (Chaos Mesh only)  
-⚠️ Token expires after 1 year — re-run the script to renew
-
-#### Method 2: Admin kubeconfig (exec-based Auth)
-
-If a cluster admin provides a kubeconfig (typically from `aws eks update-kubeconfig`), the server can use it directly. It calls `aws eks get-token` on each request to obtain a temporary token.
-
-```bash
-# Start with an admin-provided kubeconfig
-python server.py --kubeconfig /path/to/admin-kubeconfig
-
-# Or via environment variable
-export KUBECONFIG=/path/to/admin-kubeconfig
-python server.py
-```
-
-**Requirements:** `aws` CLI installed + valid AWS credentials (IAM role / `~/.aws/credentials`) + IAM identity mapped in the EKS `aws-auth` ConfigMap.
-
-✅ No extra setup — reuse existing admin credentials  
-⚠️ Depends on AWS CLI + IAM at runtime  
-⚠️ Admin-level permissions (broader than necessary)
-
-> **Recommendation:** Use Method 1 for production. Use Method 2 for quick testing when an admin kubeconfig is already available.
-
-Full setup guide: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
+Two methods: **Static ServiceAccount Token** (recommended for production) or **Admin kubeconfig** (quick testing). See [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md) for detailed setup instructions.
 
 ## Six-Step Workflow
 
@@ -139,13 +72,31 @@ Full setup guide: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
 
 > 📋 Full structured catalog: [references/fault-catalog.yaml](references/fault-catalog.yaml)
 
+### Fault Catalog Summary: 41 Fault Actions
+
+| Backend | Count | Coverage |
+|---------|-------|----------|
+| **AWS FIS** | 23 | EC2, RDS, Lambda, EBS, DynamoDB, S3, API Gateway, ECS, Network |
+| **Chaos Mesh** | 14 | Pod lifecycle, Network, HTTP, CPU/Memory stress, IO, DNS |
+| **FIS Scenario** | 4 | AZ Power Interruption, AZ App Slowdown, Cross-AZ Traffic, Cross-Region |
+
 ```
 AZ/Region-level Compound Faults  →  FIS Scenario Library
   ├── AZ Power Interruption (EC2 + RDS + EBS + ElastiCache)
   ├── AZ Application Slowdown (network latency injection)
   ├── Cross-AZ Traffic Slowdown (inter-AZ packet loss)
   └── Cross-Region Connectivity (TGW + route table disruption)
-  ⚠️ Scenarios are not complete templates — create via Console then export, or copy Content tab and add missing params via API
+  Three creation paths:
+    (1) Console Scenario Library → export with `aws fis get-experiment-template`
+    (2) Console Content tab → manually add missing params → API create
+    (3) Use JSON skeletons from references/scenario-library.md directly via API
+
+Composite Multi-Action Experiments  →  FIS Native (startAfter)
+  ├── Parallel: multiple actions with no startAfter (simultaneous)
+  ├── Sequential: startAfter dependencies between actions
+  ├── Timed delays: aws:fis:wait action for gaps between actions
+  └── Parameterized templates: references/templates/ ({{placeholder}} format)
+  See examples/05-composite-az-degradation.md for a complete walkthrough
 
 AWS Managed Services / Infrastructure  →  AWS FIS (single action)
   ├── Node level:    eks:terminate-nodegroup-instances
@@ -153,6 +104,10 @@ AWS Managed Services / Infrastructure  →  AWS FIS (single action)
   ├── Database:      rds:failover, rds:reboot
   ├── Network:       network:disrupt-connectivity
   └── Serverless:    lambda:invocation-add-delay/error
+
+Mixed-Backend Experiments  →  FIS + Chaos Mesh (orchestrated)
+  Run both FIS and Chaos Mesh simultaneously for infra + Pod-layer faults.
+  CM injects first → verify → FIS injects → parallel monitoring → abort: FIS first, CM second.
 
 K8s Pod / Container Layer  →  Chaos Mesh (preferred)
   ├── Pod lifecycle: PodChaos (kill/failure)
@@ -168,6 +123,9 @@ K8s Pod / Container Layer  →  Chaos Mesh (preferred)
 - AI-guided experiment design with automatic safety validation
 - Progressive fault injection with mandatory stop conditions
 - Multi-tool support: AWS FIS + Chaos Mesh + FIS Scenario Library
+- **Composite experiments**: FIS native multi-action templates with `startAfter` orchestration (parallel, sequential, timed delays)
+- **Mixed-backend orchestration**: Run FIS + Chaos Mesh simultaneously with defined abort ordering
+- **Parameterized templates**: Reusable `{{placeholder}}` templates for standardized scenarios
 
 ## Safety Principles
 
@@ -193,6 +151,7 @@ K8s Pod / Container Layer  →  Chaos Mesh (preferred)
 - [RDS Aurora Failover — Database HA](examples/02-rds-failover.md)
 - [EKS Pod Kill — Microservice Self-healing](examples/03-eks-pod-kill.md) (Chaos Mesh)
 - [AZ Network Isolation — Multi-AZ Fault Tolerance](examples/04-az-network-disrupt.md)
+- [Composite AZ Degradation — Multi-Action FIS Experiment](examples/05-composite-az-degradation.md) (FIS multi-action + `startAfter`)
 
 ## Directory Structure
 
@@ -205,14 +164,29 @@ chaos-engineering-on-aws/
 ├── MCP_SETUP_GUIDE.md          # MCP server setup
 ├── examples/                   # Experiment scenario examples
 ├── references/
-│   ├── fault-catalog.yaml      # Unified fault type registry (ChaosMesh + FIS + Scenarios)
-│   ├── scenario-library.md     # FIS Scenario Library templates & requirements
+│   ├── fault-catalog.yaml      # Unified fault type registry: 41 actions (23 FIS + 14 CM + 4 Scenario)
+│   ├── workflow-guide.md       # Detailed 6-step workflow instructions (EN)
+│   ├── scenario-library.md     # FIS Scenario Library JSON skeletons & requirements
+│   ├── templates/              # Parameterized FIS multi-action templates ({{placeholder}} format)
+│   │   ├── az-power-interruption.json       # AZ power interruption (4 actions, parallel)
+│   │   ├── cascade-db-to-app.json           # DB cascade fault (3 actions, serial with delay)
+│   │   └── progressive-network-degradation.json  # Progressive degradation (6 actions, 3 waves)
 │   ├── prerequisites-checklist.md  # Pre-flight checklist by architecture pattern
 │   ├── emergency-procedures.md # Emergency stop procedures (3-level escalation)
 │   ├── fis-actions.md          # FIS actions reference
 │   ├── chaosmesh-crds.md       # Chaos Mesh CRD reference
 │   ├── report-templates.md     # Report generation templates
 │   └── gameday.md              # Game Day exercise guide
+├── scripts/
+│   ├── README.md               # Script usage guide (parameters, exit codes)
+│   ├── experiment-runner.sh    # Experiment execution (FIS + Chaos Mesh)
+│   ├── log-collector.sh        # Pod log collection + error classification
+│   ├── monitor.sh              # CloudWatch metric collection
+│   └── setup-prerequisites.sh  # Optional pre-flight setup
+├── doc/                        # Internal development docs (NOT loaded by Agent)
+│   ├── prd.md                  # Product requirements
+│   ├── decisions.md            # Architecture decisions
+│   └── ...                     # Other internal docs
 ├── scripts/
 │   ├── monitor.sh              # Monitoring script template
 │   ├── log-collector.sh        # Pod log collection + error classification
@@ -221,6 +195,25 @@ chaos-engineering-on-aws/
 ```
 
 ## Recent Changes
+
+### v1.3.0 — 2026-04-14
+
+**Composite Experiment Support (P0)**
+- `SKILL_EN.md` / `SKILL_ZH.md` — New §3.6: Composite Experiment Design (FIS multi-action templates with `startAfter` orchestration: parallel, sequential, timed delays)
+- `SKILL_EN.md` / `SKILL_ZH.md` — New §3.7: Mixed-Backend Experiments (FIS + Chaos Mesh simultaneous injection with defined abort ordering)
+- `examples/05-composite-az-degradation.md` / `_zh.md` — New: Complete composite AZ degradation example (EC2 stop + EBS pause + RDS failover, full FIS JSON)
+- `references/fault-catalog.yaml` — Fixed `fis_scenarios` comment: clarified three creation paths (Console export, Content tab + API, direct JSON skeleton)
+
+**Parameterized Templates (P1)**
+- `references/templates/az-power-interruption.json` — New: AZ power interruption (EC2 + EBS + RDS + ElastiCache, 4 parallel actions)
+- `references/templates/cascade-db-to-app.json` — New: DB-to-App cascade fault (RDS failover → 30s wait → network disruption, 3 serial actions)
+- `references/templates/progressive-network-degradation.json` — New: Progressive network degradation (3 waves, 6 actions, includes Lambda delay)
+
+**Robustness (P1)**
+- `scripts/experiment-runner.sh` — Chaos Mesh polling now checks CR existence before querying status; gracefully exits with ABORTED state if CR is deleted
+
+**Duration Override (P2)**
+- `SKILL_EN.md` / `SKILL_ZH.md` — New: Duration Override section in Step 5 (jq for FIS templates, kubectl patch for Chaos Mesh)
 
 ### v1.2.0 — 2026-04-05
 

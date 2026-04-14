@@ -1,0 +1,92 @@
+{
+  "description": "AZ Power Interruption — stop EC2, pause EBS IO, failover RDS, interrupt ElastiCache in one AZ",
+  "targets": {
+    "ec2-instances": {
+      "resourceType": "aws:ec2:instance",
+      "resourceTags": {
+        "AzImpairmentPower": "IceQualified"
+      },
+      "filters": [
+        {
+          "path": "Placement.AvailabilityZone",
+          "values": ["{{availabilityZone}}"]
+        }
+      ],
+      "selectionMode": "ALL"
+    },
+    "ebs-volumes": {
+      "resourceType": "aws:ebs:volume",
+      "resourceTags": {
+        "AzImpairmentPower": "IceQualified"
+      },
+      "filters": [
+        {
+          "path": "AvailabilityZone",
+          "values": ["{{availabilityZone}}"]
+        }
+      ],
+      "selectionMode": "ALL"
+    },
+    "rds-clusters": {
+      "resourceType": "aws:rds:cluster",
+      "resourceArns": ["{{rdsClusterArn}}"],
+      "selectionMode": "ALL"
+    },
+    "elasticache-clusters": {
+      "resourceType": "aws:elasticache:replicationgroup",
+      "resourceArns": ["{{elasticacheArn}}"],
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "stop-ec2": {
+      "actionId": "aws:ec2:stop-instances",
+      "description": "Stop all tagged EC2 instances in target AZ",
+      "parameters": {
+        "startInstancesAfterDuration": "{{duration}}"
+      },
+      "targets": {
+        "Instances": "ec2-instances"
+      }
+    },
+    "pause-ebs-io": {
+      "actionId": "aws:ebs:pause-volume-io",
+      "description": "Pause EBS IO for all tagged volumes in target AZ",
+      "parameters": {
+        "duration": "{{duration}}"
+      },
+      "targets": {
+        "Volumes": "ebs-volumes"
+      }
+    },
+    "failover-rds": {
+      "actionId": "aws:rds:failover-db-cluster",
+      "description": "Trigger Aurora/RDS failover",
+      "parameters": {},
+      "targets": {
+        "Clusters": "rds-clusters"
+      }
+    },
+    "interrupt-elasticache": {
+      "actionId": "aws:elasticache:interrupt-cluster-az-power",
+      "description": "Interrupt ElastiCache node power in target AZ",
+      "parameters": {
+        "duration": "{{duration}}"
+      },
+      "targets": {
+        "ReplicationGroups": "elasticache-clusters"
+      }
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "aws:cloudwatch:alarm",
+      "value": "{{stopConditionAlarmArn}}"
+    }
+  ],
+  "roleArn": "{{fisRoleArn}}",
+  "tags": {
+    "Purpose": "chaos-engineering",
+    "Scenario": "az-power-interruption"
+  }
+}

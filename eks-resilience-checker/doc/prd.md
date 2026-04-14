@@ -1,3 +1,5 @@
+<!-- AGENT: Do not load this file during assessment execution. This is a design document for human reference only. -->
+
 # 📄 Product Requirement Document (PRD)
 ## EKS Resilience Checker — Agent Skill
 

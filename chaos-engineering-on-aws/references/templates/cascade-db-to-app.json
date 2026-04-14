@@ -1,0 +1,64 @@
+{
+  "description": "Cascade DB-to-App: RDS failover → 30s delay → application network degradation",
+  "targets": {
+    "rds-cluster": {
+      "resourceType": "aws:rds:cluster",
+      "resourceArns": ["{{rdsClusterArn}}"],
+      "selectionMode": "ALL"
+    },
+    "app-subnets": {
+      "resourceType": "aws:ec2:subnet",
+      "resourceTags": {
+        "AzImpairmentPower": "IceQualified"
+      },
+      "filters": [
+        {
+          "path": "AvailabilityZone",
+          "values": ["{{availabilityZone}}"]
+        }
+      ],
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "failover-rds": {
+      "actionId": "aws:rds:failover-db-cluster",
+      "description": "Trigger database failover first",
+      "parameters": {},
+      "targets": {
+        "Clusters": "rds-cluster"
+      }
+    },
+    "wait-30s": {
+      "actionId": "aws:fis:wait",
+      "description": "Wait 30s after RDS failover before network disruption",
+      "parameters": {
+        "duration": "PT30S"
+      },
+      "startAfter": ["failover-rds"]
+    },
+    "disrupt-app-network": {
+      "actionId": "aws:network:disrupt-connectivity",
+      "description": "Disrupt application network after DB failover (cascading fault)",
+      "parameters": {
+        "duration": "{{duration}}",
+        "scope": "availability-zone"
+      },
+      "targets": {
+        "Subnets": "app-subnets"
+      },
+      "startAfter": ["wait-30s"]
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "aws:cloudwatch:alarm",
+      "value": "{{stopConditionAlarmArn}}"
+    }
+  ],
+  "roleArn": "{{fisRoleArn}}",
+  "tags": {
+    "Purpose": "chaos-engineering",
+    "Scenario": "cascade-db-to-app"
+  }
+}

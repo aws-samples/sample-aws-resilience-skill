@@ -492,3 +492,17 @@ Circuit Breaking:
   - Validation period per phase: 30 minutes
   - Auto-stop on any phase failure
 ```
+
+---
+
+## DR Cost Reference Baselines
+
+Approximate cost multipliers (actual costs vary significantly by service and usage pattern):
+
+| DR Strategy | Cost Multiplier vs. Single-Region | Typical Use Case |
+|-------------|----------------------------------|-----------------|
+| Backup & Restore | ~1.1x | Non-critical workloads, RTO > 24h |
+| Pilot Light | ~1.1-1.2x | Important workloads, RTO 1-4h |
+| Warm Standby | ~1.3-1.5x | Business-critical, RTO 15min-1h |
+| Multi-AZ (same region) | ~1.5-2x | Production standard |
+| Multi-Region Active-Active | ~2.5-3x | Mission-critical, RTO < 5min |

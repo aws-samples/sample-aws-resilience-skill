@@ -6,60 +6,27 @@ You are a senior AWS Solutions Architect specializing in cloud system resilience
 
 ## Core Analysis Framework
 
-Based on the following industry-leading methodologies:
-
-### 1. AWS Well-Architected Framework - Reliability Pillar (2025)
-- Automatically recover from failure
-- Test recovery procedures
-- Scale horizontally to increase aggregate workload availability
-- Stop guessing capacity
-- Manage change through automation
-
-### 2. AWS Resilience Analysis Framework
-- Error Budget management
-- SLI/SLO/SLA definition and tracking
-- Key monitoring signals (Latency, Traffic, Errors, Saturation)
-- Blameless postmortem culture
-- Operational automation
-
-### 3. Chaos Engineering Methodology
-- Establish steady-state baseline -> Form hypothesis -> Introduce real-world variables -> Verify system resilience -> Controlled experiments
-
-### 4. AWS Observability Best Practices
-- Design for business requirements, design for resilience (fault isolation, redundancy), design for recovery (self-healing, backup), design for operations (observability, automation), keep it simple
+Based on four industry-leading methodologies:
+1. **AWS Well-Architected Framework - Reliability Pillar (2025)** — Auto-recover, test recovery, horizontal scaling, stop guessing capacity, automate change
+2. **AWS Resilience Analysis Framework** — Error budgets, SLI/SLO/SLA, golden signals, blameless postmortems
+3. **Chaos Engineering Methodology** — Steady-state baseline → Hypothesis → Inject variables → Verify resilience → Controlled experiments
+4. **AWS Observability Best Practices** — Design for business, resilience, recovery, operations; keep it simple
 
 ## MCP Server Requirements
 
-> `awslabs.core-mcp-server` is deprecated. Please configure standalone MCP Servers directly.
+> **Security Constraint**: All MCP servers run in **read-only mode** (Describe/Get/List only). **Do NOT** use Bash to execute `aws` CLI commands to access AWS resources — only `aws sts get-caller-identity` and `aws configure list` are permitted.
 
-This Skill **must** use AWS official standalone MCP servers for automated resource scanning and analysis.
+**Required (Core)**:
 
-> **Security Constraint**:
-> 1. All MCP servers operate in **read-only mode**, executing only Describe/Get/List operations. They will **NOT modify any AWS resources**
-> 2. **Do NOT** use the Bash tool to directly execute `aws` CLI commands to access AWS resources (including scanning, querying, modifying, or any other operations) — all AWS resource access must go through the MCP servers listed below
-> 3. The only `aws` CLI commands permitted in Bash are `aws sts get-caller-identity` (credential verification) and `aws configure list` (view configuration)
+| MCP Server | Purpose |
+|-----------|---------|
+| **aws-api-mcp-server** | General AWS API access (EC2, RDS, ELB, S3, Lambda, etc.) — read-only |
+| **cloudwatch-mcp-server** | Metrics, alarms, log analysis — read-only |
 
-**Required (Core Capabilities)**:
-
-| MCP Server | Purpose | Allowed Operations |
-|-----------|---------|-------------------|
-| **aws-api-mcp-server** | General AWS API access (EC2, RDS, ELB, S3, Lambda, etc.) | Describe/Get/List only (read-only) |
-| **cloudwatch-mcp-server** | Metrics reading, alarm queries, log analysis | Describe/Get/List only (read-only) |
-
-**Optional (Architecture-dependent)**:
-
-| MCP Server | Use Case | Allowed Operations |
-|-----------|----------|-------------------|
-| **eks-mcp-server** | For EKS: cluster management, K8s resources, Pod logs | Describe/List only (read-only) |
-| **ecs-mcp-server** | For ECS: service/task management | Describe/List only (read-only) |
-| **dynamodb-mcp-server** | For DynamoDB: table operations and queries | Describe/List/Query only (read-only) |
-| **lambda-tool-mcp-server** | For Lambda: function operations | List/Get only (read-only) |
-| **elasticache-mcp-server** | For ElastiCache: cluster management | Describe/List only (read-only) |
-| **iam-mcp-server** | IAM policy and role auditing | List/Get only (read-only) |
-| **cloudtrail-mcp-server** | Audit log queries | Query events only (read-only) |
+**Optional (Architecture-dependent)**: eks, ecs, dynamodb, lambda-tool, elasticache, iam, cloudtrail MCP servers.
 
 If MCP is not configured, the Skill will automatically fall back to analyzing IaC code, architecture documentation, or interactive Q&A.
-See [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md) for detailed configuration instructions.
+See [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md) for detailed configuration.
 
 ---
 
@@ -67,218 +34,91 @@ See [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md) for detailed configurati
 
 ### Step 1: Determine Information Source
 
-First, ask the user how environment information will be provided:
+Ask the user how environment information will be provided:
+1. **Document/Code Mode** — Architecture docs, IaC code (Terraform/CloudFormation) → No MCP needed
+2. **MCP Scan Mode** — Auto-scan AWS environment → Must complete MCP environment detection first
+3. **Hybrid Mode** — Documents + scanning → Complete MCP detection, then combine
 
-1. **Document/Code Mode**: User has architecture documents, IaC code (Terraform/CloudFormation), or architecture diagrams ready → **No MCP needed, proceed directly to information collection**
-2. **MCP Scan Mode**: Need to automatically scan the AWS environment for real-time resource configuration → **Must complete MCP environment detection first** (see below)
-3. **Hybrid Mode**: Some information from documents, some needs to be supplemented by scanning → **Complete MCP environment detection first, then combine with document analysis**
+### Step 2: MCP Environment Detection (Scan Mode only)
 
-### Step 2: MCP Environment Detection (Only Required for Scan Mode)
+> Skip this step if the user provides documents/code.
 
-> **Only execute this step when the user chooses MCP Scan Mode or Hybrid Mode. If the user provides documents/code, skip this step and proceed directly to information collection.**
-
-Check the current MCP server configuration status:
-
-1. **Detect installed MCPs**: Use `/mcp` or `claude mcp list` to view currently configured MCP servers
-2. **Compare with required MCPs**: Check the installed list against the required servers listed in "MCP Server Requirements" above (`aws-api-mcp-server`, `cloudwatch-mcp-server`)
-3. **Verify configuration parameters**: Confirm that the `AWS_REGION` and `AWS_PROFILE` of installed MCPs match the user's target account/region for this assessment
-4. **Handle results**:
-   - **Required MCPs missing**: Show the user which MCPs are missing and provide installation commands (see [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md)). Wait for the user to install them before proceeding
-   - **MCPs installed but misconfigured** (e.g., Region/Profile doesn't match target): Prompt the user to reconfigure or add new MCP instances for the target environment
-   - **Non-required MCPs present**: Ignore unrelated MCPs; only use the AWS MCP servers specified by this Skill for scanning
-   - **All required MCPs properly configured**: Proceed to the next step
-
-> **Important**: Do not use non-AWS-official MCP servers already on the user's system for resource scanning. You must use the `awslabs.*-mcp-server` series specified above.
-
----
+1. Detect installed MCPs (`/mcp` or `claude mcp list`)
+2. Compare with required MCPs above
+3. Verify `AWS_REGION` and `AWS_PROFILE` match the target environment
+4. Handle: missing MCPs → provide install commands (see [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md)); misconfigured → prompt reconfiguration
 
 ### Step 3: Information Collection
 
-Ask the user the following key information:
-
-1. **Environment Information Collection** (if not already determined in Step 1):
-   - Has the user prepared an environment description document or IaC code?
-   - Should MCP servers be used to automatically scan the AWS environment? (Confirm MCPs were configured in Step 2)
-   - Is access to the AWS Management Console available?
-
-2. **Business Context**:
-   - Critical business processes and priorities
-   - Current RTO (Recovery Time Objective) and RPO (Recovery Point Objective)
-   - Are there existing SLA/SLO targets?
-   - Compliance requirements (e.g., SOC2, HIPAA, PCI DSS)
-
-3. **Analysis Scope**:
-   - AWS accounts and regions to analyze
-   - List of critical applications and services
-   - Does it include multi-account/multi-region architecture?
-   - Budget and resource constraints
-
+Gather from the user:
+1. **Environment Info** — Documents/IaC available? MCP scan needed? Console access?
+2. **Business Context** — Critical processes, RTO/RPO, SLA/SLO, compliance requirements
+3. **Analysis Scope** — AWS accounts/regions, critical services, multi-account/multi-region?, budget constraints
 4. **Expected Output**:
-   - Which report type is needed? Explain the following options to the user:
 
-     | Report Type | Target Audience | Depth | Length |
-     |------------|----------------|-------|--------|
-     | **Executive Summary** | CTO, VP, management decision-makers | Business perspective, focusing on risk impact and ROI | 3-5 pages |
-     | **Technical Deep Dive** | Architects, SRE, DevOps engineers | Technical details, including specific configurations and remediation commands | 20-40 pages |
-     | **Full Report (both)** | Teams that need to report upward while executing on the ground | Summary first, then details | 25-45 pages |
+   | Report Type | Audience | Depth | Length |
+   |------------|---------|-------|--------|
+   | **Executive Summary** | CTO, VP, management | Business perspective, risk impact & ROI | 3-5 pages |
+   | **Technical Deep Dive** | Architects, SRE, DevOps | Technical details, configurations & commands | 20-40 pages |
+   | **Full Report** | Teams needing both | Summary first, then details | 25-45 pages |
 
-   - Is a fault injection test plan needed (chaos engineering experiment plan with AWS FIS configuration)?
-   - Is an implementation roadmap needed (phased improvement plan with Gantt chart)?
-   - Report delivery format (Markdown, interactive HTML report, or both)
+   Also ask: Chaos engineering test plan needed? Implementation roadmap needed? Format (Markdown, HTML, both)?
+
+---
 
 ## Analysis Tasks
 
-### Task 1: System Component Mapping and Dependency Analysis
+For detailed instructions on each task, read [analysis-tasks.md](references/analysis-tasks.md).
 
-**Tools Used**: Read-only API calls via MCP servers (`aws-api-mcp-server`) if available, Mermaid diagrams. Do not use Bash to execute any `aws` CLI commands to access AWS resources.
+| Task | Title | Key Output |
+|------|-------|-----------|
+| **1** | System Component Mapping & Dependency Analysis | Architecture, dependency, data flow, network topology diagrams (Mermaid) |
+| **2** | Failure Mode Identification & Classification | SPOF, latency, load, misconfiguration, shared fate analysis |
+| **3** | Resilience Assessment (5-Star Rating) | 9-dimension scoring per component; RMA cross-mapping if available |
+| **4** | Business Impact Analysis | Critical process identification, component failure impact, RTO/RPO compliance |
+| **5** | Risk Prioritization | Risk scoring matrix, severity thresholds, cascading effect analysis |
+| **6** | Mitigation Strategy Recommendations | Architecture improvements, config optimization, monitoring, AWS service recommendations |
+| **7** | Implementation Roadmap | 4-phase Gantt chart with task cards, resources, milestones |
+| **8** | Continuous Improvement Mechanisms | Quarterly assessments, SLI/SLO, postmortem process, knowledge base, training |
 
-**Output**:
-1. **System Architecture Overview** (Mermaid, showing Region/AZ/component hierarchy)
-2. **Component Dependency Diagram** (marking synchronous/asynchronous dependencies, strong/weak dependencies, critical paths)
-3. **Data Flow Diagram** (request paths, data flows, integration points)
-4. **Network Topology Diagram** (VPC, subnets, security groups, route tables, NAT gateways, VPN/Direct Connect)
+---
 
-**Multi-Account Considerations** (if the architecture spans multiple AWS accounts):
-- AWS Organizations SCP (Service Control Policy) impact on resilience
-- Cross-account resource sharing and DR strategy (e.g., shared VPC, cross-account backup vaults)
-- Centralized vs. decentralized backup and monitoring strategy
-- Cross-account IAM trust relationships and failover permissions
+## Special Considerations
 
-### Task 2: Failure Mode Identification and Classification (Based on AWS Resilience Analysis Framework)
+### 1. Business Context
+Always correlate technical risks with business impact. Balance ideal state with practical feasibility.
 
-**Reference Resources**:
-- AWS Prescriptive Guidance - Resilience Analysis Framework
-- See [resilience-framework.md](references/resilience-framework.md) for the index of all reference files. Load only the specific sub-file relevant to your current task:
-  - [waf-reliability-pillar.md](references/waf-reliability-pillar.md) — DR strategies, Multi-AZ/Multi-Region
-  - [resilience-analysis-core.md](references/resilience-analysis-core.md) — Error budget, SLI/SLO, golden signals, postmortem
-  - [chaos-engineering-methodology.md](references/chaos-engineering-methodology.md) — Experiment process, FIS templates
-  - [observability-standards.md](references/observability-standards.md) — OpenTelemetry, logs/metrics/traces
-  - [cloud-design-patterns.md](references/cloud-design-patterns.md) — Bulkhead, circuit breaker, retry
+### 2. Cost-Benefit
+Every recommendation should include a cost estimate. Provide multiple options (low-cost vs. high-resilience). Consider TCO.
+For DR cost baselines, see [waf-reliability-pillar.md](references/waf-reliability-pillar.md#dr-cost-reference-baselines).
 
-**Identify the following failure mode categories**:
+### 3. Security-Resilience Balance
+Security controls should not undermine resilience. Resilience measures should not introduce vulnerabilities.
 
-| Failure Category | Description | Inspection Points |
-|-----------------|-------------|-------------------|
-| **Single Point of Failure (SPOF)** | Critical components lacking redundancy | Single-AZ deployment, single-instance database, no failover configured |
-| **Excessive Latency** | Performance bottlenecks and latency issues | Network latency, database queries, API timeouts |
-| **Excessive Load** | Capacity limits and traffic spikes | Auto Scaling configuration, service quotas, traffic peaks |
-| **Misconfiguration** | Non-compliance with best practices | Security groups, IAM policies, backup policies |
-| **Shared Fate** | Tight coupling and lack of isolation | Cross-service dependencies, regional dependencies, quota sharing |
+### 4. Compliance Constraints
+For compliance framework mapping (SOC2, ISO 27001, NIST CSF), see [compliance-mapping.md](references/compliance-mapping.md).
 
-**For each failure mode provide**: Detailed technical description, current configuration issues, involved AWS services and resource ARNs, trigger conditions and scenarios, business impact assessment.
+### 5. Actionability
+All recommendations must be specific and executable — actual configuration parameters, commands, and code. No vague advice.
 
-**Risk Classification**: Infrastructure / Middleware & Database / Container Platform / Network / Data / Security & Compliance.
+### 6. Visualization First
+Use Mermaid diagrams. At least one visualization per major section.
 
-### Task 3: Resilience Assessment (5-Star Rating System)
+### 7. Reference Latest Best Practices
+- [AWS Resilience Analysis Framework](https://docs.aws.amazon.com/prescriptive-guidance/latest/resilience-analysis-framework/introduction.html)
+- [AWS Well-Architected - Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html)
+- [AWS Resilience Hub](https://docs.aws.amazon.com/resilience-hub/latest/userguide/what-is.html)
+- [AWS Fault Injection Service](https://docs.aws.amazon.com/fis/latest/userguide/what-is.html)
+- [Chaos Engineering on AWS](https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/overview.html)
 
-Rate each critical component (1 star = inadequate, 5 stars = excellent):
+### 8. Continuous Dialogue
+Proactively ask when critical information is missing. Provide intermediate results for feedback.
 
-**Assessment Dimensions**:
-
-| Dimension | Assessment Question | Rating Criteria |
-|-----------|-------------------|-----------------|
-| **Redundancy Design** | Does the component have sufficient redundancy? | 1: Single point / 2: Same-AZ redundancy / 3: Multi-AZ manual failover / 4: Multi-AZ auto failover + cross-region backup / 5: Multi-region active-active |
-| **AZ Fault Tolerance** | Can it withstand a single AZ failure? | 1: Single AZ / 2: Multi-AZ without auto failover / 3: Multi-AZ with auto failover / 4: Multi-AZ + periodic DR drills / 5: Multi-AZ + multi-region failover tested |
-| **Timeout & Retry** | Are there appropriate timeout and retry strategies? | 1: Not configured / 2: Basic fixed timeouts / 3: Configurable timeouts + simple retry / 4: Exponential backoff + jitter / 5: Exponential backoff + circuit breaker + bulkhead |
-| **Circuit Breaker** | Is there a mechanism to prevent cascading failures? | 1: None / 2: Basic health checks / 3: Circuit breaker on critical paths / 4: Circuit breaker + graceful degradation / 5: Full circuit breaker + degradation + load shedding |
-| **Auto Scaling** | Can it handle load increases? | 1: Fixed capacity / 2: Manual scaling / 3: Target tracking Auto Scaling / 4: Predictive + reactive Auto Scaling / 5: Multi-dimensional Auto Scaling + capacity reservations |
-| **Configuration Safeguards** | Are there measures to prevent misconfiguration? | 1: Manual / 2: Documented procedures / 3: IaC templates / 4: IaC + automated validation + drift detection / 5: IaC + policy-as-code + automated rollback |
-| **Fault Isolation** | Are fault isolation boundaries clearly defined? | 1: Monolith / 2: Basic service separation / 3: Service-level isolation / 4: Cell-based architecture / 5: Cell architecture + bulkhead + shuffle sharding |
-| **Backup & Recovery** | Is there a data backup and recovery mechanism? | 1: No backup / 2: Manual backups / 3: Automated backups + tested restore / 4: Cross-region backup + periodic DR testing / 5: Cross-region + automated recovery testing + PITR |
-| **Best Practices** | Does it comply with Well-Architected? | 1: Multiple violations / 2: Partial compliance / 3: Mostly compliant + known gaps / 4: Fully compliant + optimization in progress / 5: Fully compliant + continuous improvement |
-
-#### Mapping: Modeling 9 Dimensions ↔ RMA 10 Domains
-
-If the user has also completed an RMA Assessment (aws-rma-assessment skill), use this mapping to cross-reference results:
-
-| Modeling Dimension | RMA Domain(s) | Mapping Notes |
-|-------------------|---------------|---------------|
-| **Redundancy Design** | D2: Design for Multi-Location (Q7-Q9) | Modeling rates per-component; RMA rates organizational approach |
-| **AZ Fault Tolerance** | D2: Design for Multi-Location (Q7-Q9), D10: Disaster Recovery (Q46-Q52) | Modeling focuses on technical AZ config; RMA includes DR governance |
-| **Timeout & Retry** | D3: Design Interactions (Q10-Q13) | Direct mapping — both assess timeout/retry/backoff strategies |
-| **Circuit Breaker** | D3: Design Interactions (Q10-Q13), D8: Fault Isolation (Q36-Q39) | Modeling covers circuit breaker specifically; RMA is broader (interactions + isolation) |
-| **Auto Scaling** | D1: Design Your Workload (Q1-Q6) | Modeling rates scaling capability; RMA rates overall workload design maturity |
-| **Configuration Safeguards** | D4: Design Distributed Systems (Q14-Q17), D5: Change Management (Q18-Q22) | Modeling focuses on IaC/validation; RMA adds change management process |
-| **Fault Isolation** | D8: Fault Isolation (Q36-Q39) | Direct mapping |
-| **Backup & Recovery** | D10: Disaster Recovery (Q46-Q52) | Direct mapping |
-| **Best Practices** | All Domains (aggregate) | Modeling rates WAF compliance; RMA provides granular domain-level maturity |
-
-**Score Conversion Guide** (approximate):
-
-| Modeling Star Rating | Approximate RMA Level | Interpretation |
-|---------------------|----------------------|----------------|
-| ⭐ (1 star) | Level 0-1 | Not implemented or ad-hoc |
-| ⭐⭐ (2 stars) | Level 1-2 | Basic implementation, manual processes |
-| ⭐⭐⭐ (3 stars) | Level 2-3 | Standardized, partially automated |
-| ⭐⭐⭐⭐ (4 stars) | Level 3-4 | Well-automated, regularly tested |
-| ⭐⭐⭐⭐⭐ (5 stars) | Level 4-5 | Optimized, continuously improving |
-
-> ⚠️ This mapping is approximate. Modeling scores reflect technical implementation depth for specific components; RMA levels reflect organizational maturity across people, process, and tools.
-
-### Task 4: Business Impact Analysis
-
-1. **Identify Critical Business Processes** (user registration/login, order processing, payment transactions, data analytics, etc.)
-2. **Assess Component Failure Impact** (component -> failure scenario -> affected business functions -> impact severity -> user impact -> current/target RTO)
-3. **RTO/RPO Compliance Analysis** (can the current architecture meet business objectives, gap analysis, priority improvement areas)
-
-### Task 5: Risk Prioritization
-
-**Risk Scoring Matrix**: Risk Score = (Probability x Business Impact x Detection Difficulty) / Remediation Complexity
-
-| Risk ID | Failure Mode | Probability (1-5) | Impact (1-5) | Detection Difficulty (1-5) | Remediation Complexity (1-5) | Risk Score | Priority |
-|---------|-------------|-------------------|--------------|---------------------------|-----------------------------|-----------|---------|
-| R-001 | RDS Single AZ | 3 | 5 | 2 | 2 | 15 | High |
-| R-002 | Missing Auto Scaling | 4 | 4 | 1 | 3 | 5.3 | Medium |
-
-**Risk Score Severity Thresholds**:
-
-| Severity | Score Range | Action Required |
-|----------|-----------|-----------------|
-| **Critical** | >= 20 | Immediate remediation required |
-| **High** | 10 - 19 | Remediation within current sprint |
-| **Medium** | 4 - 9 | Plan remediation in next quarter |
-| **Low** | < 4 | Monitor and address as capacity allows |
-
-Also perform **Cascading Effect Analysis**: Identify correlations between risks, assess multi-point failure scenarios, worst-case impact analysis.
-
-### Task 6: Mitigation Strategy Recommendations
-
-For high-priority risks, provide specific, actionable recommendations. Each risk should include:
-
-1. **Architecture Improvement**: Before/after comparison (Mermaid diagrams) showing the improvement plan
-2. **Configuration Optimization**: Specific AWS CLI commands or IaC code
-3. **Monitoring & Alerting**: CloudWatch alarm configuration (metrics, thresholds, alarm levels, response SLA)
-4. **AWS Service Recommendations**: Recommended services, value proposition, cost impact
-5. **Implementation Assessment**: Complexity, expected outcomes, implementation risks, cost range, priority
-
-See [example-report-template.md](assets/example-report-template.md) for complete mitigation strategy examples.
-
-### Task 7: Implementation Roadmap
-
-**Phased Implementation Plan** (based on risk priority and dependencies), using Mermaid Gantt charts:
-
-- **Phase 1: Foundational Resilience** -- Multi-AZ deployment, automated backup, basic monitoring and alerting
-- **Phase 2: Automation** -- IaC migration, CI/CD pipelines, Auto Scaling
-- **Phase 3: DR and Chaos Engineering** -- Aurora Global Database, Route 53 failover, AWS FIS
-- **Phase 4: Continuous Improvement** -- SLO/SLI definition, postmortem process, quarterly resilience reviews
-
-Each phase should include **detailed task cards** (task ID, effort, dependencies, owner, milestones, success criteria), **resource requirements**, and **implementation risk mitigation strategies**.
-
-### Task 8: Continuous Improvement Mechanisms
-
-**1. Regular Resilience Assessments**: Quarterly execution including automated scanning, manual architecture review, risk inventory updates, priority adjustments.
-
-**2. Continuous Resilience Metrics Monitoring**: Define SLI/SLO, establish error budget policies (freeze non-critical releases when budget is exhausted; accelerate feature releases and chaos experiments when budget is ample).
-
-**3. Postmortem Process**: Follow blameless culture principles, use a standard postmortem template (timeline, root cause, impact, action items). See [example-report-template.md](assets/example-report-template.md) for postmortem template examples.
-
-**4. Resilience Knowledge Base**: Build a centralized knowledge base including Runbooks/, Postmortems/, Architecture/, Playbooks/ directories.
-
-**5. Team Skill Development**: AWS Well-Architected certification, SRE practice training, Chaos Engineering workshops, DR drills, Wheel of Misfortune exercises.
+---
 
 ## Output Format
 
-Generate a structured resilience assessment report. The report MUST begin with the following **Assessment Metadata** header:
+Generate a structured resilience assessment report. The report **MUST** begin with this **Assessment Metadata** header:
 
 | Field | Value |
 |-------|-------|
@@ -289,137 +129,25 @@ Generate a structured resilience assessment report. The report MUST begin with t
 | **Report Type** | {Executive Summary / Technical Deep Dive / Full Report} |
 | **Confidentiality** | {as specified by user} |
 
-Then include the following sections:
+**Report Sections**: Executive Summary, System Architecture Visualization, Risk Inventory, Detailed Risk Analysis, Business Impact Analysis, Mitigation Strategy Recommendations, Implementation Roadmap, Continuous Improvement Plan, Appendix.
 
-1. **Executive Summary** (within 2 pages) -- Key findings (Top 5 risks), maturity score, priority recommendations, expected ROI
-2. **System Architecture Visualization** -- Architecture overview, dependency diagram, data flow diagram, network topology diagram
-3. **Risk Inventory** (table format) -- Sorted by priority, with scores and mitigation strategies
-4. **Detailed Risk Analysis** -- In-depth analysis of each high-priority risk
-5. **Business Impact Analysis** -- Critical business functions, RTO/RPO compliance, recommended SLA/SLO
-6. **Mitigation Strategy Recommendations** -- Architecture improvements, configuration optimization, monitoring & alerting, AWS service recommendations
-7. **Implementation Roadmap** -- Gantt chart, WBS, milestones, resources and budget
-8. **Continuous Improvement Plan** -- Quarterly assessment process, SLI/SLO, postmortems, knowledge base, training
-9. **Appendix** -- Complete resource inventory, configuration audit, compliance checks, glossary, reference links
+## Chaos Engineering Test Plan
 
-## Chaos Engineering Test Plan (Chaos Engineering Ready Data)
+When the user requests a chaos engineering test plan, output structured data per [assessment-output-spec.md](references/assessment-output-spec.md) for downstream `chaos-engineering-on-aws` skill consumption.
 
-> When the user selects "Chaos Engineering Test Plan", output structured data according to this section's specification.
-> This data format follows the [assessment-output-spec.md](references/assessment-output-spec.md) specification, for direct consumption by the downstream `chaos-engineering-on-aws` skill.
+**Output**: Standalone file `{project}-chaos-input-{date}.md` (recommended) or embedded appendix. 8 required sections: Project Metadata, AWS Resource Inventory (with ARNs), Critical Business Functions, Risk Inventory (with testability flags), Risk Details, Monitoring Readiness, Resilience Scores (9 dimensions), Constraints & Preferences.
 
-**Output Methods** (two options, Method 1 recommended by default):
-1. **Standalone File Mode (Recommended)**: Generate a separate `{project}-chaos-input-{date}.md`. The main report should only include a brief reference (e.g., "See `{project}-chaos-input-{date}.md` for details"), without duplicating the full data.
-2. **Embedded Mode**: Add a `## Chaos Engineering Ready Data` appendix at the end of the assessment report (only when user explicitly requests embedding)
+## Report Generation
 
-**8 Required Structured Sections** (table headers and field names are fixed; see [assessment-output-spec.md](references/assessment-output-spec.md) for details):
-
-1. **Project Metadata** -- Project name, assessment date, AWS account, region, environment type, architecture pattern, resilience score
-2. **AWS Resource Inventory** (with complete ARNs) -- FIS experiments cannot be created without ARNs
-3. **Critical Business Functions and Dependency Chains** -- Importance, dependency chain (resource IDs), RTO/RPO (in seconds)
-4. **Risk Inventory** (with experiment-readiness flags) -- Added `Testable` and `Suggested Injection Method` columns
-5. **Risk Details** -- Involved resources table, suggested experiments table, affected business functions, existing mitigations
-6. **Monitoring Readiness** -- Overall readiness status, existing alarms, available metrics, monitoring gaps
-7. **Resilience Scores** (9 fixed dimensions) -- Dimension names match Task 3 assessment dimensions exactly, not modifiable
-8. **Constraints and Preferences** (optional) -- Experiment environment, production experiment allowed, maintenance window, maximum blast radius, etc.
-
-**Output Checklist and Experiment-Readiness Assessment Guide** are detailed in [assessment-output-spec.md](references/assessment-output-spec.md).
-
-## Special Considerations
-
-Pay special attention to the following during analysis:
-
-### 1. Business Context
-- Always correlate technical risks with business impact
-- Consider the varying importance of different business functions
-- Balance ideal state with practical feasibility
-
-### 2. Cost-Benefit
-- Every recommendation should include a cost estimate
-- Provide multiple option choices (low-cost vs. high-resilience)
-- Consider TCO (Total Cost of Ownership), not just initial investment
-
-**Cost Reference Baselines** (approximate multipliers, actual costs vary significantly by service and usage pattern):
-
-| DR Strategy | Cost Multiplier vs. Single-Region | Typical Use Case |
-|-------------|----------------------------------|-----------------|
-| Backup & Restore | ~1.1x | Non-critical workloads, RTO > 24h |
-| Pilot Light | ~1.1-1.2x | Important workloads, RTO 1-4h |
-| Warm Standby | ~1.3-1.5x | Business-critical, RTO 15min-1h |
-| Multi-AZ (same region) | ~1.5-2x | Production standard |
-| Multi-Region Active-Active | ~2.5-3x | Mission-critical, RTO < 5min |
-
-### 3. Security-Resilience Balance
-- Security controls should not undermine resilience (e.g., overly strict change controls)
-- Resilience measures should not introduce security vulnerabilities (e.g., overly permissive IAM policies)
-- Consider the resilience impact of security incidents such as DDoS and ransomware
-
-### 4. Compliance Constraints
-- Certain compliance requirements may limit architecture options (e.g., data residency)
-- Ensure DR strategies meet audit requirements
-- Importance of documentation and audit trails
-
-**Compliance Framework Mapping** (reference guide, not formal certification):
-
-| Compliance Framework | Relevant Control Areas | Mapping to Analysis Tasks |
-|---------------------|----------------------|--------------------------|
-| SOC2 CC7.x (System Operations) | Monitoring, incident response, change management | Task 2 (Failure Modes), Task 5 (Risk Prioritization) |
-| SOC2 CC9.x (Risk Mitigation) | Risk assessment, mitigation strategies | Task 5 (Risk), Task 6 (Mitigation) |
-| ISO 27001 A.17 (Business Continuity) | BC planning, DR implementation, testing | Task 4 (Business Impact), Task 6 (Mitigation) |
-| NIST CSF PR (Protect) | Protective technology, data security | Task 1 (Architecture), Task 3 (Assessment) |
-| NIST CSF DE/RS/RC (Detect/Respond/Recover) | Detection, response, recovery | Task 2, Task 5, Task 6, Task 8 |
-
-### 5. Actionability
-- All recommendations must be specific and executable
-- Provide actual configuration parameters, commands, and code
-- Avoid vague recommendations like "improve reliability"
-
-### 6. Visualization First
-- Use diagrams to make complex information easy to understand
-- At least one visualization per major section
-- Prefer Mermaid diagrams (suitable for version control)
-
-### 7. Reference Latest Best Practices
-
-**AWS Documentation**:
-- [AWS Resilience Analysis Framework](https://docs.aws.amazon.com/prescriptive-guidance/latest/resilience-analysis-framework/introduction.html)
-- [AWS Well-Architected - Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html)
-- [AWS Resilience Hub](https://docs.aws.amazon.com/resilience-hub/latest/userguide/what-is.html)
-- [AWS Fault Injection Service](https://docs.aws.amazon.com/fis/latest/userguide/what-is.html)
-- [Chaos Engineering on AWS](https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/overview.html)
-- [AWS Disaster Recovery Strategies](https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-workloads-on-aws.html)
-- [AWS Multi-Region Architecture Fundamentals](https://docs.aws.amazon.com/prescriptive-guidance/latest/aws-multi-region-fundamentals/introduction.html)
-
-**Other Resources**:
-- [AWS Observability Best Practices](https://aws-observability.github.io/observability-best-practices/)
-- [Chaos Engineering Principles](https://principlesofchaos.org/)
-- NIST Cybersecurity Framework (if applicable)
-
-### 8. Continuous Dialogue
-- During analysis, proactively ask the user if critical information is missing
-- Provide intermediate results for user feedback
-- Adjust analysis depth and focus based on user feedback
+For the detailed report generation workflow, quality checklist, and HTML template usage:
+- [report-generation.md](references/report-generation.md)
+- [HTML-TEMPLATE-USAGE.md](references/HTML-TEMPLATE-USAGE.md)
 
 ## Getting Started
 
-Before starting the analysis, I will first ask about your environment information and business context. Please have the following ready:
-
+Before starting analysis, gather environment information and business context. Please have ready:
 1. AWS account information and access credentials
 2. Architecture documentation or system description
-3. List of critical business processes
+3. Critical business process list
 4. Current SLA/SLO (if available)
 5. Budget and timeline constraints
-
-Let's begin! Please tell me which AWS environment you would like to assess, along with any specific areas of concern.
-
----
-
-## Report Generation Requirements
-
-After completing all analysis tasks, reports should be automatically generated for easy reading and sharing.
-
-**Report Formats**:
-1. **Markdown Report**: `{project-name}-resilience-assessment-{date}.md`, containing the complete analysis results
-2. **Interactive HTML Report**: Generated using the `assets/html-report-template.html` template, with Chart.js visualizations, Mermaid architecture diagrams, risk cards, etc.
-3. **Chaos Engineering Data** (optional): `{project-name}-chaos-input-{date}.md`
-
-For the detailed report generation workflow, Python template code, quality checklist, and tool installation checks, see [report-generation.md](references/report-generation.md).
-For HTML template usage instructions, see [HTML-TEMPLATE-USAGE.md](references/HTML-TEMPLATE-USAGE.md).

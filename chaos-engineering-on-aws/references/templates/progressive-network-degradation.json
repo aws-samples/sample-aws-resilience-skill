@@ -1,0 +1,100 @@
+{
+  "description": "Progressive Network Degradation: light delay → medium delay + Lambda slow → heavy packet loss (3 waves)",
+  "targets": {
+    "app-subnets": {
+      "resourceType": "aws:ec2:subnet",
+      "resourceTags": {
+        "AzImpairmentPower": "IceQualified"
+      },
+      "filters": [
+        {
+          "path": "AvailabilityZone",
+          "values": ["{{availabilityZone}}"]
+        }
+      ],
+      "selectionMode": "ALL"
+    },
+    "lambda-functions": {
+      "resourceType": "aws:lambda:function",
+      "resourceArns": ["{{lambdaFunctionArn}}"],
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "wave1-light-disruption": {
+      "actionId": "aws:network:disrupt-connectivity",
+      "description": "Wave 1: Light network disruption (2 min)",
+      "parameters": {
+        "duration": "PT2M",
+        "scope": "availability-zone"
+      },
+      "targets": {
+        "Subnets": "app-subnets"
+      }
+    },
+    "wait-after-wave1": {
+      "actionId": "aws:fis:wait",
+      "description": "60s gap between wave 1 and wave 2",
+      "parameters": {
+        "duration": "PT1M"
+      },
+      "startAfter": ["wave1-light-disruption"]
+    },
+    "wave2-medium-disruption": {
+      "actionId": "aws:network:disrupt-connectivity",
+      "description": "Wave 2: Medium network disruption (3 min)",
+      "parameters": {
+        "duration": "PT3M",
+        "scope": "availability-zone"
+      },
+      "targets": {
+        "Subnets": "app-subnets"
+      },
+      "startAfter": ["wait-after-wave1"]
+    },
+    "wave2-lambda-delay": {
+      "actionId": "aws:lambda:invocation-add-delay",
+      "description": "Wave 2: Lambda delay (parallel with network disruption)",
+      "parameters": {
+        "duration": "PT3M",
+        "invocationPercentage": "50",
+        "delayMilliseconds": "2000"
+      },
+      "targets": {
+        "Functions": "lambda-functions"
+      },
+      "startAfter": ["wait-after-wave1"]
+    },
+    "wait-after-wave2": {
+      "actionId": "aws:fis:wait",
+      "description": "60s gap between wave 2 and wave 3",
+      "parameters": {
+        "duration": "PT1M"
+      },
+      "startAfter": ["wave2-medium-disruption"]
+    },
+    "wave3-heavy-disruption": {
+      "actionId": "aws:network:disrupt-connectivity",
+      "description": "Wave 3: Heavy network disruption (2 min)",
+      "parameters": {
+        "duration": "PT2M",
+        "scope": "availability-zone"
+      },
+      "targets": {
+        "Subnets": "app-subnets"
+      },
+      "startAfter": ["wait-after-wave2"]
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "aws:cloudwatch:alarm",
+      "value": "{{stopConditionAlarmArn}}"
+    }
+  ],
+  "roleArn": "{{fisRoleArn}}",
+  "tags": {
+    "Purpose": "chaos-engineering",
+    "Scenario": "progressive-network-degradation"
+  }
+}

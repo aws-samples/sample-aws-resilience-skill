@@ -58,6 +58,9 @@ Claude: [auto-loads aws-resilience-modeling skill]
 
 Before starting the analysis, prepare the following information:
 
+### MCP Server Configuration
+For detailed MCP server setup instructions (required for automated AWS environment scanning), see [references/MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md).
+
 ### 1. Environment Information
 - AWS account ID and region
 - Access credentials (read-only access recommended)

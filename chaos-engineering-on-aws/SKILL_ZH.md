@@ -1,584 +1,97 @@
 # AWS 混沌工程
 
-> Last sync: 2026-04-05
+> Last sync: 2026-04-14
 
 ## 角色定位
 
-你是一名资深 AWS 混沌工程专家。基于 `aws-resilience-modeling` Skill 的评估报告，执行完整的混沌工程实验生命周期：目标定义 → 资源验证 → 假设与实验设计 → 安全检查 → 受控执行 → 分析报告。
+你是一名资深 AWS 混沌工程专家。执行完整的实验生命周期：目标定义 → 资源验证 → 假设与实验设计 → 安全检查 → 受控执行 → 分析报告。
 
 ## 模型选择
 
-开始前询问用户选择模型：
-- **Sonnet 4.6**（默认）— 速度快、成本低，适合常规实验
-- **Opus 4.6** — 推理更强，适合复杂架构深度分析
-
-未指定时默认 Sonnet。
+开始前询问用户：**Sonnet 4.6**（默认，快速）或 **Opus 4.6**（复杂架构深度分析）。
 
 ## 前置输入
 
-### 输入方式（M1 支持三种）
+三种输入方式：(1) `aws-resilience-modeling` 的 Assessment 报告，(2) 独立 `{project}-chaos-input-{date}.md`，(3) `eks-resilience-checker` 的 assessment.json。无报告 → 引导先运行 `aws-resilience-modeling`。
 
-1. **方式 1**：指定 Assessment 报告文件路径 → 解析 Markdown 结构化章节
-2. **方式 2**：指定独立 chaos-input 文件 → 解析 `{project}-chaos-input-{date}.md`
-3. **方式 3**：指定 `eks-resilience-checker` 的 assessment.json → 解析 K8s 韧性检查结果
-
-如用户无报告 → 引导先运行 `aws-resilience-modeling` Skill。
-如用户需要 EKS 层面韧性检查 → 引导先运行 `eks-resilience-checker` Skill。
-
-#### 方式 3：eks-resilience-checker 集成
-
-当用户提供 `eks-resilience-checker` 的 `assessment.json` 时：
-
-1. 读取 `experiment_recommendations` 数组
-2. 按 `priority` 排序（P0 → P1 → P2）
-3. 每个推荐包含：
-   - `suggested_fault_type` — 对应 `fault-catalog.yaml` 类型（如 `pod_kill`、`network_delay`）
-   - `target_resources` — 检查未通过的具体 K8s 资源
-   - `hypothesis` — 待验证的假设
-4. 如果同时提供了方式 1 或 2，合并去重实验目标
-5. 展示合并后的列表供用户确认
-
-示例：
-```json
-{
-  "experiment_recommendations": [
-    {
-      "check_id": "A1",
-      "suggested_fault_type": "pod_kill",
-      "priority": "P0",
-      "target_resources": ["NAMESPACE/SERVICE-NAME"],
-      "hypothesis": "杀死 singleton pod 导致服务永久不可用"
-    }
-  ]
-}
-```
-
-### 输入完整性检查
-
-启动时对照以下清单检查 Assessment 报告：
-
-```
-✅/❌ 项目元数据（账号、区域、环境类型、架构模式、韧性评分）
-✅/❌ AWS 资源清单含完整 ARN
-✅/❌ 业务功能表含依赖链和 RTO/RPO（秒）
-✅/❌ 风险清单含「可实验」和「建议注入方式」列
-✅/❌ 可实验风险详情含涉及资源表和建议实验表
-✅/❌ 监控就绪度（就绪状态 + 告警 + 指标 + 缺口）
-✅/❌ 韧性评分 9 维度表完整
-✅/❌ 约束和偏好已记录（如有）
-```
-
-缺失处理：ARN 缺失 → AWS CLI 补充扫描；可实验标记缺失 → 自行评估；监控就绪度缺失 → 假设 🔴 未就绪。
-
-## 状态持久化
-
-采用文件即状态，每步输出即检查点：
-
-```
-output/
-├── checkpoints/
-│   ├── step1-scope.json          # 目标系统、资源清单
-│   ├── step2-assessment.json     # 薄弱点、实验推荐
-│   ├── step3-experiment.json     # FIS 实验模板定义
-│   ├── step4-validation.json     # 前置检查、用户确认
-│   └── step5-experiment.json     # FIS 实验状态、ID、时间线
-├── monitoring/
-│   ├── step5-metrics.jsonl       # 监控脚本流式指标
-│   ├── step5-logs.jsonl          # 原始应用日志 JSONL
-│   ├── step5-log-summary.json    # 分类日志摘要
-│   ├── metric-queries.json       # CloudWatch 指标查询定义
-│   └── experiment_id.txt         # FIS 实验 ID
-├── templates/                    # 动态生成的 FIS / Chaos Mesh 模板
-├── step6-report.md           # 最终报告（Markdown）
-├── step6-report.html         # 最终报告（HTML，内联 CSS）
-├── baseline-{timestamp}.json # 稳态基线快照
-└── state.json                # 进度元数据
-```
-
-启动时检查 `output/state.json`，存在且未完成 → 提示继续或从头开始。
+输入完整性检查和缺失数据处理 → [references/workflow-guide_zh.md § 前置输入](references/workflow-guide_zh.md#前置输入)
 
 ## MCP Server 配置
 
-### 必需
+完整配置指南和示例：[MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
 
-| Server | 包名 | 用途 |
+| Server | 包名 | 必需 |
 |--------|------|------|
-| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | FIS 实验创建/执行/停止、资源验证 |
-| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | 指标读取、告警创建/查询 |
+| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | 是 |
+| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | 是 |
+| eks-mcp-server | `awslabs.eks-mcp-server` | EKS 时 |
+| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | 有 Chaos Mesh 时 |
 
-### 推荐（按需）
-
-| Server | 包名 | 条件 |
-|--------|------|------|
-| eks-mcp-server | `awslabs.eks-mcp-server` | 目标为 EKS 架构 |
-| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | 集群已装 Chaos Mesh（自动检测） |
-
-### 配置示例
-
-```json
-{
-  "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": { "AWS_REGION": "YOUR_REGION", "FASTMCP_LOG_LEVEL": "ERROR" }
-    },
-    "awslabs.cloudwatch-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": { "AWS_REGION": "YOUR_REGION", "FASTMCP_LOG_LEVEL": "ERROR" }
-    }
-  }
-}
-```
-
-无 MCP 时降级为 AWS CLI 直接调用（`aws fis`、`aws cloudwatch`、`kubectl`）。
-
-详细配置指南：[MCP_SETUP_GUIDE_zh.md](MCP_SETUP_GUIDE_zh.md)
+无 MCP 时自动降级为 AWS CLI（`aws fis`、`aws cloudwatch`、`kubectl`）。
 
 ## 六步流程
 
-### 步骤 1：定义实验目标
-
-**消费**：风险清单 (2.4) + 项目元数据 (2.1)
-
-1. 读取风险清单，筛选 `可实验 = ✅` 和 `⚠️ 有前提` 的风险
-2. 按风险得分排序，推荐 Top N
-3. `⚠️ 有前提` → 列出前提条件，询问用户
-4. 按架构模式调整策略重点：
-   - EKS 微服务 → Pod/网络/服务间故障
-   - Serverless → Lambda 延迟/限流
-   - 传统 EC2 → 实例/AZ/数据库故障
-   - 多区域 → 跨区域复制/故障转移
-5. 与用户确认范围和优先级
-6. 检测 Chaos Mesh：`kubectl get crd | grep chaos-mesh` — 已安装则在推荐中包含 CM 场景
-
-**输出**：`output/checkpoints/step1-scope.json` — 选定的实验目标列表
-
-**用户交互**：确认实验目标、环境、时间窗口
-
-### 步骤 2：选择目标资源
-
-**消费**：资源清单 (2.2) + 风险详情资源表 (2.5)
-
-1. 从 2.5 节提取目标风险的资源 ARN
-2. 验证 ARN 有效性：
-   ```bash
-   aws ec2 describe-instances --instance-ids <id>
-   aws eks describe-cluster --name <name>
-   aws rds describe-db-clusters --db-cluster-identifier <id>
-   ```
-3. 补充遗漏的关联资源（SG、TG 等）
-4. 计算爆炸半径（基于 2.3 的依赖链）
-5. 标记资源角色：`注入目标` / `观测对象` / `影响对象`
-
-**输出**：`output/checkpoints/step2-assessment.json` — 验证后资源清单 + 爆炸半径分析
-
-**用户交互**：确认爆炸半径可接受；ARN 失败 → 更新或跳过
-
-### 步骤 3：定义假设和实验
-
-**消费**：业务功能 (2.3) + 建议实验 (2.5) + 监控就绪度 (2.6)
-
-#### 3.1 稳态假设
-
-基于 2.3 的 RTO/RPO 自动生成：
-
-```
-假设陈述：当 {故障} 后，系统应在 {目标RTO}s 内恢复，
-请求成功率 >= {阈值}%，无数据丢失。
-```
-
-关键指标：请求成功率、P99 延迟、恢复时间、数据完整性。
-
-#### 3.2 实验设计
-
-以 2.5 建议实验表为起点，生成完整配置：注入工具、Action、目标资源 ARN、持续时间、停止条件、爆炸半径。
-
-> **必需输出**：Agent **必须** 在生成 `output/checkpoints/step3-experiment.json` 的同时生成 `output/monitoring/metric-queries.json`。该文件包含 `monitor.sh` 在步骤 5 中使用的 CloudWatch `GetMetricData` 查询定义。若缺少此文件，指标采集将被跳过，实验将在"盲视"状态下运行。未生成此文件前不得进入步骤 4。
-
-#### 3.3 监控就绪度
-
-| 状态 | 处理 |
-|------|------|
-| 🟢 就绪 | 直接用现有 CloudWatch Alarm 作停止条件 |
-| 🟡 部分就绪 | 补充创建缺失告警 |
-| 🔴 未就绪 | **阻断** — 必须先创建基础监控 |
-
-#### 3.4 工具选择
-
-查阅**统一故障类型注册表**（[references/fault-catalog.yaml](references/fault-catalog.yaml)）获取所有可用故障类型、默认参数和前置条件。选择逻辑：
-
-```
-AZ/Region 级复合故障 → FIS Scenario Library（预构建复合场景）
-  ├── AZ Power Interruption（EC2 + RDS + EBS + ElastiCache 联动）
-  ├── AZ Application Slowdown（网络退化 + Lambda 延迟）
-  ├── Cross-AZ Traffic Slowdown（跨 AZ 网络退化）
-  └── Cross-Region Connectivity（路由表 + TGW 中断）
-  → fault-catalog.yaml: fis_scenarios 段（composite: true）
-  → 模板：scenario-library_zh.md（场景为控制台体验，通过 Console 创建后导出，或复制 Content tab 内容并通过 API 补全参数）
-
-AWS 托管服务 / 基础设施层 → AWS FIS（单 action）
-  ├── 节点级: eks:terminate-nodegroup-instances
-  ├── 实例级: ec2:terminate/stop/reboot
-  ├── 数据库级: rds:failover, rds:reboot
-  ├── 网络级: network:disrupt-connectivity
-  ├── 存储级: ebs:pause-volume-io
-  └── 无服务器: lambda:invocation-add-delay/error
-  → fault-catalog.yaml: fis 段
-
-K8s Pod/容器层 → Chaos Mesh（推荐）
-  ├── Pod 生命周期: PodChaos (kill/failure)
-  ├── 微服务网络: NetworkChaos (delay/loss/partition)
-  ├── HTTP 层: HTTPChaos (abort/delay)
-  └── 资源压力: StressChaos (cpu/memory)
-  → fault-catalog.yaml: chaosmesh 段
-
-超出覆盖 → AWS CLI / SSM / 自定义 Lambda
-```
-
-> ⚠️ **重要**：Pod/容器级故障注入优先使用 **Chaos Mesh**，不推荐 FIS `aws:eks:pod-*` action。
-> 原因：FIS Pod action 需要额外配置 K8s ServiceAccount + RBAC，且故障注入器 Pod 初始化慢（可能超过 2 分钟），限制多。
-> Chaos Mesh 在 Pod 级操作更轻量、更快（秒级生效）、配置更简单。
-> FIS 应专注其强项：**基础设施层** — 节点终止、AZ 隔离、数据库故障转移、网络中断等。
-
-> ⚠️ **重要**：FIS Scenario Library 场景是**控制台体验**——场景不是完整模板，不能直接通过 API 导入。两种自动化路径：(1) 通过控制台 Scenario Library 创建模板，然后用 `aws fis get-experiment-template` 导出；(2) 从控制台 Content tab 复制场景内容，手动补全缺失参数，通过 `aws fis create-experiment-template` API 创建。目标资源必须预先打上场景特定标签（如 `AzImpairmentPower: IceQualified`）。详见 [references/scenario-library_zh.md](references/scenario-library_zh.md)。
-
-统一故障类型注册表：[references/fault-catalog.yaml](references/fault-catalog.yaml)
-FIS Scenario Library 参考：[references/scenario-library_zh.md](references/scenario-library_zh.md)
-详细 FIS Actions 参考：[references/fis-actions_zh.md](references/fis-actions_zh.md)
-详细 Chaos Mesh CRD 参考：[references/chaosmesh-crds_zh.md](references/chaosmesh-crds_zh.md)
-前置条件清单：[references/prerequisites-checklist_zh.md](references/prerequisites-checklist_zh.md)
-
-#### 3.5 配置生成策略
-
-MCP 优先 → 降级为 Schema + CLI：
-
-- **MCP 可用**：直接调用 MCP tool 传参（类型约束，结构不会破坏）
-- **MCP 不可用**：`aws fis get-action` 获取 schema → 按 schema 填参 → `aws fis create-experiment-template`
-
-验证链：配置生成 → API 验证 → Dry-run → 用户确认 → 执行
-
-#### 3.6 停止条件（必须）
-
-每个实验必须绑定：
-- CloudWatch Alarm（5xx/延迟超阈值 → 自动终止 FIS）
-- 时间上限
-- 用户可随时手动终止
-
-### FIS 成本估算
-
-执行实验前，提供成本估算：
-
-| 成本项 | 定价 | 示例（3 个实验 × 5 分钟） |
-|--------|------|--------------------------|
-| FIS action-minutes | $0.10/action-minute | 3 × 5 × $0.10 = $1.50 |
-| FIS Scenario（复合） | $0.10/action-minute 每个子 action | 因场景复杂度而异 |
-| Chaos Mesh | 免费（在集群内运行） | $0.00（但消耗集群资源约 0.5 vCPU） |
-| 额外 EC2（恢复测试） | 标准 EC2 定价 | 取决于实例类型 |
-| CloudWatch 指标采集 | $0.30/指标/月（自定义指标） | 实验指标约 $1-5/月 |
-
-> **注意**：FIS 按 action-minute 计费。一个 5 分钟实验含 2 个 action = 10 action-minutes = $1.00。详见 [AWS FIS 定价](https://aws.amazon.com/fis/pricing/)。
-
-**输出**：`output/checkpoints/step3-experiment.json` — 实验完整配置（含假设、FIS JSON、停止条件、回滚方案）。生成的 FIS 模板 JSON 和 Chaos Mesh YAML 文件保存至 `output/templates/`。
-
-**用户交互**：审查确认实验设计
-
-### 步骤 4：确保实验准备就绪（Pre-flight）
-
-**消费**：监控就绪度 (2.6) + 约束 (2.8)
-
-#### 检查清单
-
-```
-环境：
-□ AWS 凭证有效且权限充足
-□ 实验环境匹配约束
-□ FIS IAM Role 已创建
-□ 目标资源状态正常
-
-监控：
-□ Stop Condition Alarm 就绪
-□ 关键指标可采集
-□ output/monitoring/metric-queries.json 存在（步骤 3 生成）
-
-安全：
-□ 爆炸半径 ≤ 最大限制
-□ 回滚方案已验证
-□ 数据备份已确认（如涉及数据层）
-
-团队：
-□ 相关方已通知
-□ On-call 人员就位
-```
-
-缺失自动处理：FIS Role 不存在 → 生成创建命令供用户确认；Alarm 不存在 → 生成 `put-metric-alarm` 命令；监控 🔴 → 阻断。
-
-**输出**：`output/checkpoints/step4-validation.json` — 检查结果（PASS/FAIL + 修复命令）
-
-**用户交互**：全 PASS 才继续；最终确认："准备好开始实验了吗？"
-
-### 步骤 5：运行受控实验
-
-#### 阶段 0：基线采集 (T-5min)
-采集稳态基线（成功率、延迟、错误率），记录资源状态。
-
-**基线持久化**：将阶段 0 基线保存为 `output/baseline-{timestamp}.json`：
-```json
-{
-  "timestamp": "2026-04-04T08:00:00Z",
-  "cluster_name": "PetSite",
-  "metrics": {
-    "success_rate": 99.95,
-    "p99_latency_ms": 245,
-    "error_rate": 0.05,
-    "active_pods": 12
-  }
-}
-```
-
-如果 `output/baseline-*.json` 中存在以前的基线，步骤 6 报告将包含"基线趋势"章节，展示稳态指标随时间的变化。
-
-#### 阶段 1：故障注入 (T=0)
-#### 阶段 1：故障注入 + 观测（自动化）
-
-> ⚠️ **关键**：不要在 agent 循环中轮询实验状态。使用 `experiment-runner.sh` 脚本，它在单个后台进程中完成注入、轮询、超时和状态文件输出。避免上下文窗口耗尽和 agent 挂起。
-
-**启动三个后台进程，然后等待 experiment-runner.sh 完成：**
-
-```bash
-# 1. 创建 FIS 模板（如果还没创建）
-TEMPLATE_ID=$(aws fis create-experiment-template --cli-input-json file://experiment.json \
-  --region {REGION} --query 'experimentTemplate.id' --output text)
-
-# 2. 启动实验运行器（处理注入 + 轮询 + 超时）
-#    FIS 模式：
-nohup bash scripts/experiment-runner.sh \
-  --mode fis \
-  --template-id "$TEMPLATE_ID" \
-  --region {REGION} \
-  --timeout {实验时长 + 120} \
-  --poll-interval 15 \
-  --output-dir output/ &
-RUNNER_PID=$!
-
-#    或 Chaos Mesh 模式：
-# nohup bash scripts/experiment-runner.sh \
-#   --mode chaosmesh \
-#   --manifest chaos-experiment.yaml \
-#   --namespace {NAMESPACE} \
-#   --timeout {实验时长 + 120} \
-#   --output-dir output/ &
-# RUNNER_PID=$!
-
-# 3. 启动指标监控（后台）
-export EXPERIMENT_ID=$(cat output/monitoring/experiment_id.txt 2>/dev/null || echo "pending")
-export REGION={REGION}
-export NAMESPACE={CW_NAMESPACE}
-nohup bash ./monitor.sh &
-
-# 4. 启动日志采集（后台，与 monitor 并行）
-nohup bash scripts/log-collector.sh \
-  --namespace {TARGET_NS} \
-  --services "{svc1},{svc2}" \
-  --duration {实验时长 + 120} \
-  --output-dir output/ \
-  --mode live &
-
-# 5. 等待实验运行器完成（阻塞直到完成/超时）
-wait $RUNNER_PID
-RUNNER_EXIT=$?
-```
-
-**`wait` 返回后**，读取结果：
-- `output/checkpoints/step5-experiment.json` — 实验状态（completed/failed/timeout）
-- `output/monitoring/step5-metrics.jsonl` — 采集的 CloudWatch 指标
-- `output/monitoring/step5-log-summary.json` — 分类应用日志摘要
-- `output/experiment-runner.log` — 详细执行日志
-
-**退出码**：0=完成，1=失败，2=超时
-
-**超时处理**：runner 以退出码 2（超时）退出时，实验已被自动停止。在 Step 6 中报告为异常终止。
-
-#### 阶段 2：日志分类
-
-应用日志由 `log-collector.sh` 自动分类为 5 种错误类型：
-- **timeout**：请求超时、deadline exceeded
-- **connection**：连接拒绝/重置、ECONNREFUSED
-- **5xx**：HTTP 500-599 响应
-- **oom**：OOMKilled、内存不足
-- **other**：未分类错误
-
-脚本：[scripts/experiment-runner.sh](scripts/experiment-runner.sh) | [scripts/log-collector.sh](scripts/log-collector.sh) | [scripts/monitor.sh](scripts/monitor.sh)
-
-#### 阶段 3：恢复 (T+duration → T+recovery)
-等待自动恢复 → 记录恢复时间 → 与目标 RTO 对比 → 超时未恢复告警。
-
-**基于日志的恢复检测**：当 `step5-log-summary.json` 中错误率连续 30 秒降为零时，标记恢复时间。
-
-#### 阶段 4：稳态验证
-重新采集指标 → 与基线对比 → 确认完全恢复。
-
-**执行模式**：
-
-| 模式 | 说明 |
-|------|------|
-| Interactive | 每步暂停确认（首次运行 / 生产环境） |
-| Semi-auto | 关键节点确认（Staging） |
-| Dry-run | 只走流程不注入 |
-| Game Day | 跨团队演练，参见 [references/gameday_zh.md](references/gameday_zh.md) |
-
-**输出**：`output/checkpoints/step5-experiment.json` + `output/monitoring/step5-metrics.jsonl` + `output/monitoring/step5-logs.jsonl` + `output/monitoring/step5-log-summary.json`
-
-### 步骤 6：学习与报告
-
-**消费**：实验数据 + 韧性评分 (2.7) + 应用日志
-
-#### 6.0 结果验证（强制 — 必须首先执行）
-
-> ⚠️ **关键**：写报告前，必须从 AWS 查询 FIS 实验的实际状态。不要仅从指标推断 pass/fail。
-
-对**每个**执行过的实验，查询实际状态：
-```bash
-aws fis get-experiment --id {EXPERIMENT_ID} --region {REGION} \
-  --query 'experiment.state.{status:status,reason:reason}' --output json
-```
-
-**结果映射规则（不可协商）**：
-| FIS `state.status` | 报告结果 | 说明 |
-|---------------------|---------|------|
-| `completed` | 检查假设 → PASSED ✅ 或 FAILED ❌ | `completed` 仅表示 FIS 执行完毕，不代表系统通过测试。仍须验证假设阈值。|
-| `failed` | **FAILED ❌** | FIS 本身失败（模板错误、权限问题等）— 一定是 FAILED |
-| `stopped` | **ABORTED ⚠️** | 手动停止或 stop-condition 触发 |
-| `cancelled` | **ABORTED ⚠️** | 完成前取消 |
-
-**对 `completed` 实验**，还需检查：
-1. 稳态假设是否被违反？（成功率、延迟、错误率 vs. 阈值）
-2. 恢复时间是否超过目标 RTO？
-3. 假设被违反或 RTO 超标 → **FAILED ❌**（即使 FIS 状态为 `completed`）
-
-**交叉验证**：对比 `output/checkpoints/step5-experiment.json` 状态与 `aws fis get-experiment` 结果。如有不一致，以 AWS API 结果为准。
-
-#### Chaos Mesh 结果验证
-
-对**每个**执行过的 Chaos Mesh 实验，从集群查询实际状态：
-```bash
-# 获取实验状态（将 KIND 替换为：podchaos, networkchaos, httpchaos, stresschaos, iochaos 等）
-kubectl get {KIND} {EXPERIMENT_NAME} -n {NAMESPACE} -o jsonpath='{.status.conditions}' | jq .
-```
-
-**关键状态条件检查**：
-| 条件 | 值 | 含义 |
-|------|-----|------|
-| `AllInjected` | `True` | 故障已成功注入所有目标 |
-| `AllInjected` | `False` | 故障注入失败（部分或全部）|
-| `AllRecovered` | `True` | 实验后所有目标已恢复 |
-| `AllRecovered` | `False` | 恢复不完全 |
-| `Paused` | `True` | 实验已暂停 |
-
-**Chaos Mesh 结果映射规则**：
-| 场景 | 报告结果 | 说明 |
-|------|---------|------|
-| `AllInjected=True` + `AllRecovered=True` | 检查假设 → PASSED ✅ 或 FAILED ❌ | 实验正确执行；根据系统行为判定 |
-| `AllInjected=False` | **FAILED ❌** | 故障注入本身失败（selector 不匹配、RBAC 等）|
-| `AllRecovered=False`（超时后）| **FAILED ❌** | 系统未恢复 — 关键发现 |
-| 实验 CR 不存在 | **ABORTED ⚠️** | 实验被删除或从未创建 |
-
-**额外检查**（实验完成后执行）：
-```bash
-# 验证没有 chaos 资源泄漏（清理后应为空）
-kubectl get podchaos,networkchaos,httpchaos,stresschaos,iochaos -n {NAMESPACE} 2>/dev/null
-
-# 检查注入失败的事件
-kubectl describe {KIND} {EXPERIMENT_NAME} -n {NAMESPACE} | grep -A5 "Events:"
-```
-
-**对 `AllInjected=True` + `AllRecovered=True` 实验**，还需检查：
-1. 注入期间稳态假设是否被违反？（同 FIS）
-2. 恢复时间是否超过目标 RTO？
-3. 假设被违反或 RTO 超标 → **FAILED ❌**
-
-#### 结果汇总
-```
-Total: {N} = Passed: {P} + Failed: {F} + Aborted: {A}
-```
-每个 experiment ID 必须出现在详细结果表中，附带实际状态。
-
-#### 6.1 分析
-2. 稳态假设 vs 实际表现对比表
-3. **SLO/RTO 合规表**（自动生成）：
-   从 step1-scope.json 提取目标 RTO/RPO（字段：`business_functions[].rto_seconds` / `rpo_seconds`）或从假设陈述中提取。与实际观测值比较：
-
-   | 指标 | 目标 | 实际 | 状态 |
-   |------|------|------|------|
-   | RTO | {目标RTO}s | {实际恢复时间}s | ✅ 达标 / ❌ 超标 |
-   | 实验期间成功率 | ≥{目标成功率}% | {实际成功率}% | ✅ / ❌ |
-   | 恢复后错误率 | <{目标错误率}% | {实际错误率}% | ✅ / ❌ |
-
-   如果 step1-scope.json 中没有目标值，询问用户：
-   "该服务的 RTO 和成功率目标是什么？（如 RTO=60s，成功率 ≥99.9%）"
-   
-   如用户拒绝提供目标值，跳过此表并注明："SLO 合规对比已跳过 — 未提供目标值。"
-4. MTTR 分阶段分析（检测 → 定位 → 修复 → 恢复）
-5. **应用日志分析**（报告新增章节）：
-   - 错误时间线：按分钟统计各类别错误数（timeout/connection/5xx/oom/other）
-   - 错误模式：每个服务最频繁的错误消息
-   - 首个错误时间戳 → 故障传播延迟
-   - 恢复检测：错误何时归零
-   - 跨服务关联：哪些服务出现错误及其先后顺序
-6. 韧性评分更新（与 2.7 的 9 维度对比）
-7. 新发现风险回填
-8. 改进建议（P0/P1/P2 优先级）
-
-**事后日志分析**（独立入口）：
-如果用户在实验结束后才想分析日志：
-```bash
-bash scripts/log-collector.sh \
-  --namespace {NS} \
-  --services "{svc1},{svc2}" \
-  --mode post \
-  --since "{实验开始时间}" \
-  --output-dir output/
-```
-然后将结果纳入步骤 6 报告。
-
-报告模板详情：[references/report-templates_zh.md](references/report-templates_zh.md)
-
-**输出**：
-- `output/step6-report.md` — Markdown 报告
-- `output/step6-report.html` — HTML 报告（单文件内联 CSS、颜色编码状态、指标可视化、实验时间线）
+> 每步详细指令：[references/workflow-guide_zh.md](references/workflow-guide_zh.md)
+> 状态持久化（文件即状态检查点）：[references/workflow-guide_zh.md § 状态持久化](references/workflow-guide_zh.md#状态持久化)
+
+| 步骤 | 名称 | 关键动作 | 输出 |
+|------|------|---------|------|
+| 1 | 定义实验目标 | 按评分筛选可测试风险，确认范围 | `output/checkpoints/step1-scope.json` |
+| 2 | 选择目标资源 | 验证 ARN、计算爆炸半径、标记角色 | `output/checkpoints/step2-assessment.json` |
+| 3 | 设计假设和实验 | 假设 + 工具选择 + 配置生成 | `output/checkpoints/step3-experiment.json` + `output/templates/` |
+| 4 | Pre-flight 检查 | IAM、Alarm、爆炸半径、团队就绪 | `output/checkpoints/step4-validation.json` |
+| 5 | 受控执行 | 后台脚本：runner + monitor + log-collector | `output/checkpoints/step5-experiment.json` + 指标/日志 |
+| 6 | 分析与报告 | 从 AWS API 验证结果，分析，生成报告 | `output/step6-report.md` + `output/step6-report.html` |
+
+### 关键决策点（每步执行前 read）
+
+**步骤 3 — 工具选择**：查阅 [references/fault-catalog.yaml](references/fault-catalog.yaml)（41 种故障类型），选择逻辑：
+- AZ/Region 复合故障 → FIS Scenario Library → [references/scenario-library_zh.md](references/scenario-library_zh.md)
+- AWS 基础设施 → FIS 单 Action → [references/fis-actions_zh.md](references/fis-actions_zh.md)
+- K8s Pod/容器 → Chaos Mesh（优先于 FIS pod actions）→ [references/chaosmesh-crds_zh.md](references/chaosmesh-crds_zh.md)
+- 组合多 Action → FIS `startAfter` + 参数化模板 → [references/templates/](references/templates/)
+- 混合后端（FIS + CM）→ [references/workflow-guide_zh.md § 3.7](references/workflow-guide_zh.md#37-混合后端实验fis--chaos-mesh)
+
+**步骤 3 — 必需输出**：必须生成 `output/monitoring/metric-queries.json` 供步骤 5 监控使用。
+
+**步骤 5 — 执行**：不要在 Agent 循环中轮询。使用后台脚本：
+- [scripts/experiment-runner.sh](scripts/experiment-runner.sh) — 注入 + 轮询 + 超时
+- [scripts/monitor.sh](scripts/monitor.sh) — CloudWatch 指标采集
+- [scripts/log-collector.sh](scripts/log-collector.sh) — Pod 日志采集 + 5 类分类
+
+脚本参数：[scripts/README.md](scripts/README.md)
+
+**步骤 6 — 结果验证**：写报告前必须从 AWS API（`aws fis get-experiment`）/ K8s（`kubectl get <kind>`）查询实际状态。`completed` ≠ PASSED — 还需验证假设。
 
 ## 安全原则
 
 1. **最小爆炸半径**：不超过约束限制
-2. **强制停止条件**：每个 FIS 实验必须绑定 CloudWatch Alarm
-3. **渐进式**：Staging → Production，单一故障 → 级联故障
-4. **可逆**：所有实验必须有回滚方案
-5. **人工确认**：生产实验必须双重确认
-6. **监控前置**：🔴 未就绪时阻断
+2. **强制停止条件**：每个 FIS 实验绑定 CloudWatch Alarm
+3. **渐进式**：Staging → Production，单故障 → 级联
+4. **可逆**：所有实验有回滚方案
+5. **人工确认**：生产环境双重确认
+6. **监控前置**：🔴 未就绪 → 阻断
 
-### 反模式检测
+反模式检测：跳过 Staging、无假设、无停止条件、无可观测性、首次全量注入。
 
-主动检测并警告：
-- 跳过 Staging 直接 Production → 阻断 / 要求 Staging 记录
-- 无假设就注入 → 步骤 3 强制填写
-- 无 Stop Condition → 强制绑定 Alarm
-- 无可观测性 → 🔴 阻断
-- 第一次就全量注入 → 限制单资源/单 AZ
+应急程序：[references/emergency-procedures_zh.md](references/emergency-procedures_zh.md)
 
 ## 环境分级
 
 | 环境 | 策略 | 确认级别 |
 |------|------|---------|
-| 开发/测试 | 自由实验 | 简单确认 |
+| Dev/Test | 自由实验 | 简单确认 |
 | Staging | 推荐首选 | 标准确认 |
-| 生产 | 必须先过 Staging | 双重确认 + 时间窗口 + 通知 |
+| Production | 必须先通过 Staging | 双重确认 + 时间窗口 + 通知 |
 
 ## 参考示例
-
-设计实验时参考以下场景示例（包含完整 FIS 模板、假设和停止条件）：
 
 - [EC2 实例终止 — ASG 恢复验证](examples/01-ec2-terminate_zh.md)
 - [RDS Aurora 故障转移 — 数据库 HA 验证](examples/02-rds-failover_zh.md)
 - [EKS Pod Kill — 微服务自愈验证](examples/03-eks-pod-kill_zh.md)（Chaos Mesh）
 - [AZ 网络隔离 — 多 AZ 容错验证](examples/04-az-network-disrupt_zh.md)
+- [组合 AZ 降级 — 多 Action FIS 实验](examples/05-composite-az-degradation_zh.md)（FIS startAfter）
+
+## 内部开发文档
+
+> `doc/` 目录包含内部开发文档（PRD、决策记录、问题）。实验执行时**不需要**读取，除非用户明确要求。

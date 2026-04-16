@@ -126,6 +126,8 @@ K8s Pod / 容器层  →  Chaos Mesh（推荐）
 - **组合实验**：FIS 原生多 Action 模板 + `startAfter` 编排（并行、串行、定时延迟）
 - **混合后端编排**：FIS + Chaos Mesh 同时注入，定义明确的熔断顺序
 - **参数化模板**：`{{placeholder}}` 格式的可复用模板，适用于标准化场景
+- **FIS 模板库集成**：来自 [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) 的 19 场景索引 + 5 个内嵌可直接部署模板
+- **3 种进阶注入模式**：SSM 自动化编排（动态资源注入）、安全组操作、资源策略拒绝（渐进式）
 - **三层状态管理**：`state.json` v2 状态机 + `dashboard.md` Markdown 看板 + 终端 ASCII 看板
 - **会话中断恢复**：Agent 会话中断后可通过 `state.json` 检查点自动恢复
 
@@ -199,6 +201,9 @@ watch -n 5 -c bash scripts/render-dashboard.sh
 - [EKS Pod Kill — 微服务自愈验证](examples/03-eks-pod-kill.md)（Chaos Mesh）
 - [AZ 网络隔离 — 多 AZ 容错验证](examples/04-az-network-disrupt.md)
 - [组合 AZ 降级 — 多 Action FIS 实验](examples/05-composite-az-degradation_zh.md)（FIS 多 Action + `startAfter`）
+- [数据库连接池耗尽 — 连接池韧性验证](examples/06-database-connection-exhaustion_zh.md)（SSM 自动化编排）
+- [Redis 连接中断 — 缓存层韧性验证](examples/07-redis-connection-failure_zh.md)（安全组操作）
+- [SQS 队列不可用 — 消息队列韧性验证](examples/08-sqs-queue-impairment_zh.md)（渐进式资源策略拒绝）
 
 ## 目录结构
 
@@ -212,6 +217,13 @@ chaos-engineering-on-aws/
 │   ├── workflow-guide.md / _zh.md  # 6 步流程详细指令
 │   ├── fault-catalog.yaml      # 统一故障类型注册表：42 个动作（24 FIS + 14 CM + 4 Scenario）
 │   ├── scenario-library.md / _zh.md  # FIS Scenario Library JSON skeleton 与要求
+│   ├── fis-template-library-index.md / _zh.md  # aws-samples/fis-template-library 19 场景索引
+│   ├── fis-templates/              # 5 个内嵌的可直接部署 FIS 模板
+│   │   ├── database-connection-exhaustion/  # SSM 自动化：动态 EC2 负载生成器
+│   │   ├── redis-connection-failure/        # SSM 自动化：安全组操作
+│   │   ├── sqs-queue-impairment/           # SSM 自动化：渐进式策略拒绝
+│   │   ├── cloudfront-impairment/          # SSM 自动化：S3 源站拒绝策略
+│   │   └── aurora-global-failover/         # SSM 自动化：跨区域切换
 │   ├── templates/              # 参数化 FIS 多 Action 模板（{{placeholder}} 格式）
 │   │   ├── az-power-interruption.json       # AZ 断电（4 action，并行）
 │   │   ├── cascade-db-to-app.json           # DB 级联故障（3 action，串行 + 延迟）
@@ -222,7 +234,7 @@ chaos-engineering-on-aws/
 │   ├── chaosmesh-crds.md / _zh.md  # Chaos Mesh CRD 参考
 │   ├── report-templates.md / _zh.md # 报告生成模板
 │   └── gameday.md / _zh.md     # Game Day 演练指南
-├── examples/                   # 实验场景示例（01-05，中英文对）
+├── examples/                   # 实验场景示例（01-08，中英文对）
 ├── scripts/
 │   ├── README.md               # 脚本使用指南（参数、退出码、示例）
 │   ├── experiment-runner.sh    # 实验执行（FIS + Chaos Mesh，--one-shot 支持 pod-kill）
@@ -236,6 +248,22 @@ chaos-engineering-on-aws/
 ```
 
 ## 近期变更
+
+### v1.5.0 — 2026-04-16
+
+**FIS 模板库集成（P1）**
+- `references/fis-template-library-index.md` / `_zh.md` — 新增：来自 [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) 的全量 19 场景索引，按服务分类
+- `references/fis-templates/` — 新增：5 个内嵌可直接部署的 FIS 模板（含 IAM 策略、SSM 自动化文档、部署 README）
+- `references/scenario-library.md` / `_zh.md` — 新增外部模板库章节
+- `references/workflow-guide.md` / `_zh.md` — 新增 SSM 自动化编排实验章节（3 种模式）
+
+**新增示例（P2）**
+- `examples/06-database-connection-exhaustion.md` / `_zh.md` — 数据库连接池耗尽实验
+- `examples/07-redis-connection-failure.md` / `_zh.md` — Redis 连接中断实验
+- `examples/08-sqs-queue-impairment.md` / `_zh.md` — SQS 队列渐进式故障实验
+
+**假设验证增强（P2）**
+- `examples/01-05`（10 个文件）— 所有现有示例新增验证要点清单
 
 ### v1.4.0 — 2026-04-15
 

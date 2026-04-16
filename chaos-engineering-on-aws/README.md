@@ -126,6 +126,8 @@ K8s Pod / Container Layer  →  Chaos Mesh (preferred)
 - **Composite experiments**: FIS native multi-action templates with `startAfter` orchestration (parallel, sequential, timed delays)
 - **Mixed-backend orchestration**: Run FIS + Chaos Mesh simultaneously with defined abort ordering
 - **Parameterized templates**: Reusable `{{placeholder}}` templates for standardized scenarios
+- **FIS Template Library integration**: 19-scenario index from [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) with 5 embedded ready-to-deploy templates
+- **3 advanced injection patterns**: SSM Automation orchestration (dynamic resource injection), Security Group manipulation, Resource Policy denial (progressive)
 - **Three-layer state management**: `state.json` v2 state machine + `dashboard.md` Markdown board + terminal ASCII dashboard
 - **Session interruption recovery**: Resume experiments after agent session interruption via `state.json` checkpoint
 
@@ -199,6 +201,9 @@ watch -n 5 -c bash scripts/render-dashboard.sh
 - [EKS Pod Kill — Microservice Self-healing](examples/03-eks-pod-kill.md) (Chaos Mesh)
 - [AZ Network Isolation — Multi-AZ Fault Tolerance](examples/04-az-network-disrupt.md)
 - [Composite AZ Degradation — Multi-Action FIS Experiment](examples/05-composite-az-degradation.md) (FIS multi-action + `startAfter`)
+- [Database Connection Exhaustion — Connection Pool Resilience](examples/06-database-connection-exhaustion.md) (SSM Automation orchestration)
+- [Redis Connection Failure — Cache Layer Resilience](examples/07-redis-connection-failure.md) (Security Group manipulation)
+- [SQS Queue Impairment — Message Queue Resilience](examples/08-sqs-queue-impairment.md) (Progressive resource policy denial)
 
 ## Directory Structure
 
@@ -212,6 +217,13 @@ chaos-engineering-on-aws/
 │   ├── workflow-guide.md / _zh.md  # Detailed 6-step workflow instructions
 │   ├── fault-catalog.yaml      # Unified fault type registry: 42 actions (24 FIS + 14 CM + 4 Scenario)
 │   ├── scenario-library.md / _zh.md  # FIS Scenario Library JSON skeletons & requirements
+│   ├── fis-template-library-index.md / _zh.md  # 19-scenario index from aws-samples/fis-template-library
+│   ├── fis-templates/              # 5 embedded ready-to-deploy FIS templates
+│   │   ├── database-connection-exhaustion/  # SSM Automation: dynamic EC2 load generator
+│   │   ├── redis-connection-failure/        # SSM Automation: Security Group manipulation
+│   │   ├── sqs-queue-impairment/           # SSM Automation: progressive policy denial
+│   │   ├── cloudfront-impairment/          # SSM Automation: S3 origin deny policy
+│   │   └── aurora-global-failover/         # SSM Automation: cross-region switchover
 │   ├── templates/              # Parameterized FIS multi-action templates ({{placeholder}} format)
 │   │   ├── az-power-interruption.json       # AZ power interruption (4 actions, parallel)
 │   │   ├── cascade-db-to-app.json           # DB cascade fault (3 actions, serial with delay)
@@ -222,7 +234,7 @@ chaos-engineering-on-aws/
 │   ├── chaosmesh-crds.md / _zh.md  # Chaos Mesh CRD reference
 │   ├── report-templates.md / _zh.md # Report generation templates
 │   └── gameday.md / _zh.md     # Game Day exercise guide
-├── examples/                   # Experiment scenario examples (01-05, EN/ZH pairs)
+├── examples/                   # Experiment scenario examples (01-08, EN/ZH pairs)
 ├── scripts/
 │   ├── README.md               # Script usage guide (parameters, exit codes, examples)
 │   ├── experiment-runner.sh    # Experiment execution (FIS + Chaos Mesh, --one-shot for pod-kill)
@@ -236,6 +248,30 @@ chaos-engineering-on-aws/
 ```
 
 ## Recent Changes
+
+### v1.5.0 — 2026-04-16
+
+**FIS Template Library Integration (P1)**
+- `references/fis-template-library-index.md` / `_zh.md` — New: Full 19-scenario index from [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library), organized by service category (Compute, Database, Cache, CDN, NoSQL, Messaging, Networking, SAP)
+- `references/fis-templates/` — New: 5 embedded ready-to-deploy FIS templates with IAM policies, SSM Automation documents, and deployment READMEs:
+  - `database-connection-exhaustion/` — Dynamic EC2 load generator pattern (SSM Automation)
+  - `redis-connection-failure/` — Security Group manipulation pattern
+  - `sqs-queue-impairment/` — Progressive resource policy denial (4 escalating rounds)
+  - `cloudfront-impairment/` — S3 origin deny policy pattern
+  - `aurora-global-failover/` — Cross-region switchover/failover
+- `references/scenario-library.md` / `_zh.md` — Added External Template Library section linking to embedded templates and full index
+- `references/workflow-guide.md` / `_zh.md` — Added SSM Automation Orchestrated Experiments section (3 patterns: Dynamic Resource Injection, Security Group Manipulation, Resource Policy Denial)
+
+**New Examples (P2)**
+- `examples/06-database-connection-exhaustion.md` / `_zh.md` — New: Database connection pool exhaustion experiment (SSM Automation orchestration)
+- `examples/07-redis-connection-failure.md` / `_zh.md` — New: Redis connection failure experiment (Security Group manipulation)
+- `examples/08-sqs-queue-impairment.md` / `_zh.md` — New: SQS queue progressive impairment experiment (resource policy denial)
+
+**Hypothesis Enhancement (P2)**
+- `examples/01-05` (all 10 files) — Added "What does this enable you to verify?" / "验证要点" checklists to all existing examples
+
+**Skill Reference Updates**
+- `SKILL_EN.md` / `SKILL_ZH.md` — Added fis-templates and fis-template-library-index references to Tool Selection section
 
 ### v1.4.0 — 2026-04-15
 

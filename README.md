@@ -96,6 +96,8 @@ These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.am
 - Application log analysis section in reports (error timeline, cross-service correlation, recovery detection)
 - Markdown + HTML dual-format reports with MTTR analysis
 - Game Day mode for team exercises
+- **19-scenario FIS Template Library** index with 5 embedded ready-to-deploy templates (database connection exhaustion, Redis connection failure, SQS queue impairment, CloudFront impairment, Aurora global failover)
+- 3 advanced injection patterns: SSM Automation orchestration, Security Group manipulation, Resource Policy denial
 
 **Invoke:** Mention "chaos engineering", "fault injection", or "混沌工程" in conversation.
 
@@ -232,11 +234,13 @@ Download individual skill folders from the [GitHub repository](https://github.co
 │   │   ├── fis-actions.md             # AWS FIS actions reference
 │   │   ├── chaosmesh-crds.md          # Chaos Mesh CRD reference
 │   │   ├── scenario-library.md        # FIS Scenario Library templates
+│   │   ├── fis-template-library-index.md  # 19-scenario index from aws-samples/fis-template-library
+│   │   ├── fis-templates/             # 5 embedded ready-to-deploy FIS templates (DB conn, Redis, SQS, CF, Aurora Global)
 │   │   ├── templates/                 # Parameterized FIS multi-action templates
 │   │   ├── report-templates.md        # Report templates (MD + HTML)
 │   │   ├── emergency-procedures.md    # Emergency rollback procedures
 │   │   └── gameday.md                 # Game Day execution guide
-│   ├── examples/                      # Experiment scenario examples (01-05)
+│   ├── examples/                      # Experiment scenario examples (01-08)
 │   ├── scripts/
 │   │   ├── experiment-runner.sh       # FIS/ChaosMesh experiment executor
 │   │   ├── monitor.sh                 # CloudWatch metric collection

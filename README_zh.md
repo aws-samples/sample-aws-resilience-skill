@@ -95,6 +95,8 @@
 - 报告中包含应用日志分析章节（错误时间线、跨服务关联、恢复检测）
 - Markdown + HTML 双格式报告（含 MTTR 分阶段分析）
 - Game Day 团队演练模式
+- **19 场景 FIS 模板库**索引 + 5 个内嵌可直接部署模板（数据库连接耗尽、Redis 连接中断、SQS 队列不可用、CloudFront 不可用、Aurora 全局故障转移）
+- 3 种进阶注入模式：SSM 自动化编排、安全组操作、资源策略拒绝
 
 **调用方式：** 在对话中提及 "混沌工程"、"故障注入" 或 "chaos engineering"。
 
@@ -231,11 +233,13 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 │   │   ├── fis-actions.md             # AWS FIS Actions 参考
 │   │   ├── chaosmesh-crds.md          # Chaos Mesh CRD 参考
 │   │   ├── scenario-library.md        # FIS Scenario Library 模板
+│   │   ├── fis-template-library-index.md  # aws-samples/fis-template-library 19 场景索引
+│   │   ├── fis-templates/             # 5 个内嵌可直接部署的 FIS 模板
 │   │   ├── templates/                 # 参数化 FIS 多 Action 模板
 │   │   ├── report-templates.md        # 报告模板（MD + HTML）
 │   │   ├── emergency-procedures.md    # 紧急回滚流程
 │   │   └── gameday.md                 # Game Day 执行指南
-│   ├── examples/                      # 实验场景示例（01-05）
+│   ├── examples/                      # 实验场景示例（01-08）
 │   ├── scripts/
 │   │   ├── experiment-runner.sh       # FIS/ChaosMesh 实验执行器
 │   │   ├── monitor.sh                 # CloudWatch 指标采集

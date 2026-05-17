@@ -4,7 +4,7 @@
 
 A collection of AI-powered Agent Skills for comprehensive AWS system resilience — from maturity assessment through risk analysis to chaos engineering validation. Built for [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Kiro](https://kiro.dev/), [OpenClaw](https://openclaw.dev/), and any AI coding assistant that supports the skill/prompt framework.
 
-## How the Four Skills Fit Together
+## How the Skills Fit Together
 
 These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.amazon.com/prescriptive-guidance/latest/resilience-lifecycle-framework/overview.html), forming a complete resilience improvement pipeline:
 
@@ -40,6 +40,8 @@ These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.am
 | 3 | **chaos-engineering-on-aws** | Stage 3: Evaluate & Test | Assessment report from Skill #2 | Experiment results + validation report + updated resilience score |
 | 4 | **eks-resilience-checker** | Stage 3: Evaluate & Test | EKS cluster kubectl access | 26-check compliance report + experiment recommendations |
 | 5 | **aws-well-architected-review** | Cross-cutting | AWS account with read-only access | 6-pillar WA review report + risk portfolio + improvement roadmap |
+| 6 | **cjis-reviewer** | Compliance Readiness | AWS account with read-only access | CJIS gap assessment + remediation roadmap |
+| 7 | **ferpa-reviewer** | Compliance Readiness | AWS account with read-only access | FERPA gap assessment + remediation roadmap |
 
 ### Recommended Workflow
 
@@ -132,6 +134,41 @@ These skills map to the [AWS Resilience Lifecycle Framework](https://docs.aws.am
 - Optional sync to AWS WA Tool console
 
 **Invoke:** Mention "WA review", "Well-Architected assessment", "architecture review", or "架构评审" in conversation.
+
+### 6. CJIS Reviewer (`cjis-reviewer`)
+
+**What it does:** Assesses AWS environments against the FBI CJIS Security Policy (v5.9.5), identifies gaps across 13 policy areas, and produces a prioritized remediation roadmap.
+
+**Best for:** Law enforcement and criminal justice workloads — preparing for triennial CJSA/FBI audits or evaluating new CJI deployments on AWS.
+
+**Key features:**
+- 4-phase automated assessment (Bootstrap → Discover → Analyze → Report)
+- Programmatic checks for 6 technical policy areas (PA 4, 5, 6, 7, 8, 10)
+- Audit-heat prioritized scanning — most-cited findings surface first
+- Organizational questionnaire for non-technical PAs (1, 2, 3, 9, 11, 12, 13)
+- Quick Scan (~10 min), Standard (~25 min), and Full (~40 min) modes
+- Markdown + HTML dual-format reports
+
+**Invoke:** Mention "CJIS assessment", "CJIS readiness", "criminal justice on AWS", or any CJIS policy area (PA 1-13).
+
+> ⚠️ **Assessment aid only** — does not certify or guarantee CJIS compliance. A qualified CSO or auditor must validate findings.
+
+### 7. FERPA Reviewer (`ferpa-reviewer`)
+
+**What it does:** Assesses AWS environments against FERPA (Family Educational Rights and Privacy Act) and common state student-privacy laws, identifies gaps, and produces a remediation roadmap.
+
+**Best for:** Education technology workloads — K-12 and higher-ed institutions evaluating AWS environments that handle student education records.
+
+**Key features:**
+- 4-phase automated assessment (Bootstrap → Discover → Analyze → Report)
+- Programmatic checks across FERPA control domains (disclosure controls, auditing, access control, authentication, encryption, retention/destruction)
+- State law addenda coverage (COPPA, state-specific student privacy laws)
+- Strict read-only credential boundary enforcement
+- Markdown + HTML dual-format reports
+
+**Invoke:** Mention "FERPA assessment", "FERPA readiness", "student data on AWS", or "education records compliance".
+
+> ⚠️ **Assessment aid only** — does not certify or guarantee FERPA compliance. Qualified legal counsel and institutional compliance officers must validate findings.
 
 ## Fault Injection Tool Selection
 
@@ -269,6 +306,36 @@ Download individual skill folders from the [GitHub repository](https://github.co
 │   ├── README.md / README_zh.md
 │   ├── sample-app/                    # Sample K8s deployments for testing
 │   └── expected-output/               # Reference assessment output
+│
+├── cjis-reviewer/                     # Skill 6: CJIS Readiness Reviewer
+│   ├── SKILL.md                       # Skill definition
+│   ├── references/                    # Reference documents (loaded on demand)
+│   │   ├── aws-service-mapping.md     # CJIS requirement → AWS service matrix
+│   │   ├── credential-boundary.md     # Read-only IAM gate logic
+│   │   ├── policy-areas.md            # Deep-dive on all 13 CJIS policy areas
+│   │   ├── programmatic-checks/       # Per-PA automated check definitions
+│   │   ├── readiness-checklist.md     # Full readiness checklist by PA
+│   │   ├── report-template.md         # Fixed report structure
+│   │   ├── severity-classification.md # Audit-aligned severity levels
+│   │   └── workflow-overview.md       # 4-phase flow details
+│   └── scripts/
+│       └── generate-html-report.py    # HTML report renderer
+│
+├── ferpa-reviewer/                    # Skill 7: FERPA Readiness Reviewer
+│   ├── README.md                      # Skill documentation
+│   ├── SKILL.md                       # Skill definition
+│   ├── references/                    # Reference documents (loaded on demand)
+│   │   ├── aws-service-mapping.md     # FERPA requirement → AWS service matrix
+│   │   ├── control-domains.md         # FERPA control domain definitions
+│   │   ├── credential-boundary.md     # Read-only IAM gate logic
+│   │   ├── programmatic-checks/       # Per-domain automated check definitions
+│   │   ├── readiness-checklist.md     # Full readiness checklist
+│   │   ├── report-template.md         # Fixed report structure
+│   │   ├── severity-classification.md # Severity levels
+│   │   ├── state-law-addenda.md       # State-specific student privacy laws
+│   │   └── workflow-overview.md       # 4-phase flow details
+│   └── scripts/
+│       └── generate-html-report.py    # HTML report renderer
 │
 ├── .kiro/skills/                      # Kiro skill registration (auto-synced)
 ├── README.md                          # This file

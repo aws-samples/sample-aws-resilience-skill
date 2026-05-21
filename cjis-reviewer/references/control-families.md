@@ -1,7 +1,7 @@
 # CJIS Control Families — NIST SP 800-53 Alignment
 
 > Based on CJIS Security Policy v6.0 (effective December 2024).
-> Last verified against official source: 2025-05-21.
+> Last verified against official source: 2026-05-21.
 > Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
 
 CJIS Security Policy v6.0 replaced the "13 Policy Areas" (PA 1-13) structure with NIST SP 800-53 control families. This document maps all 18 control families, their priority ratings, assessability, and key changes from v5.9.5.

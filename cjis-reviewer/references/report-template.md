@@ -1,7 +1,7 @@
 # CJIS Assessment Report Template
 
 > Based on CJIS Security Policy v6.0 (effective December 2024).
-> Last verified against official source: 2025-05-21.
+> Last verified against official source: 2026-05-21.
 > Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
 
 Use this template verbatim when emitting the final Markdown report. A consistent shape is what makes reports reproducible across engagements and auditable as evidence.

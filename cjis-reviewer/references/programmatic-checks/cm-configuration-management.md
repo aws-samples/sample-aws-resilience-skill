@@ -1,7 +1,7 @@
 # CM — Configuration Management — Programmatic Checks
 
 > Based on CJIS Security Policy v6.0 (effective December 2024).
-> Last verified against official source: 2025-05-21.
+> Last verified against official source: 2026-05-21.
 > Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
 
 > Execute in order. Each check uses read-only AWS CLI. Record results as

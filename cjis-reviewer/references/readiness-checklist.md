@@ -1,7 +1,7 @@
 # CJIS Readiness Checklist
 
 > Based on CJIS Security Policy v6.0 (effective December 2024).
-> Last verified against official source: 2025-05-21.
+> Last verified against official source: 2026-05-21.
 > Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
 
 Use this checklist when performing a CJIS compliance gap assessment. Flag each item

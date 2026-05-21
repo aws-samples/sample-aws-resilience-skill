@@ -1,6 +1,6 @@
 # FCD 7 — Encryption at Rest & In Transit — Programmatic Checks
 
-> Based on PTAC guidance, NIST SP 800-171 §3.13. Last verified: 2025-05-15.
+> Based on PTAC guidance, NIST SP 800-171 §3.13. Last verified: 2026-05-21.
 
 > Execute in order. Read-only AWS CLI. Severity per [`../severity-classification.md`](../severity-classification.md).
 

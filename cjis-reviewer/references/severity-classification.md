@@ -1,7 +1,7 @@
 # Severity Classification (CJIS v6.0 — Priority-Aligned)
 
 > Based on CJIS Security Policy v6.0 (effective December 2024).
-> Last verified against official source: 2025-05-21.
+> Last verified against official source: 2026-05-21.
 > Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
 
 Findings from CJIS checks are classified by the control's priority rating in v6.0 and how non-compliance affects an actual audit. The classes below are what the skill uses in reports and priority lists — they align directly with what a CSA auditor would flag.

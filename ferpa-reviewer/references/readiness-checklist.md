@@ -1,7 +1,7 @@
 # FERPA Readiness Checklist
 
 > Based on 34 CFR Part 99 (FERPA), PTAC "Data Security Checklist," and NIST SP 800-171.
-> Last verified against official sources: 2025-05-15.
+> Last verified against official sources: 2026-05-21.
 > Check https://studentprivacy.ed.gov/ for PTAC updates and https://www.ecfr.gov/current/title-34/subtitle-A/part-99 for regulation changes.
 
 Use this checklist when performing a FERPA gap assessment or preparing for a state-contract annual review, DPA renewal, SOC 2 engagement, or SPPO complaint response. Flag each item as: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A

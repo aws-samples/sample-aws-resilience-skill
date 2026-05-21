@@ -1,6 +1,6 @@
 # Credential Permission Boundary
 
-> Last verified: 2025-05-15.
+> Last verified: 2026-05-21.
 
 ## Principle
 

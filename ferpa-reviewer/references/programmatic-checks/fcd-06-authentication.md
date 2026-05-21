@@ -1,5 +1,7 @@
 # FCD 6 — Authentication — Programmatic Checks
 
+> Based on PTAC guidance, NIST SP 800-171 §3.5. Last verified: 2025-05-15.
+
 > Execute in order. Read-only AWS CLI. Severity per [`../severity-classification.md`](../severity-classification.md).
 
 FERPA itself doesn't specify authentication requirements — "reasonable methods." The PTAC "Data Security Checklist," NIST SP 800-171 (3.5.x), and every modern state EdTech DPA establish the baseline:

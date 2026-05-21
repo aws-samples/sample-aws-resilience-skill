@@ -1,5 +1,7 @@
 # FCD 4 — Auditing & Access Logging — Programmatic Checks
 
+> Based on 34 CFR §99.32, PTAC guidance, NIST SP 800-171 §3.3. Last verified: 2025-05-15.
+
 > Execute in order. Each check uses read-only AWS CLI. Record results as
 > `COMPLIANT` / `NON_COMPLIANT` / `NOT_APPLICABLE` / `UNABLE_TO_ASSESS` with severity per
 > [`../severity-classification.md`](../severity-classification.md).

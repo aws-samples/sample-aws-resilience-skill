@@ -1,5 +1,6 @@
 ---
 name: ferpa-reviewer
+allowed-tools: Bash(aws *), Read, Write, Grep, Glob
 description: >
   Assess AWS environments against FERPA (Family Educational Rights and Privacy
   Act, 20 U.S.C. § 1232g; 34 CFR Part 99) and common state student-privacy laws,

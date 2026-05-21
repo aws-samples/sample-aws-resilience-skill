@@ -1,5 +1,7 @@
 # Credential Permission Boundary
 
+> Last verified: 2025-05-15.
+
 ## Principle
 
 The FERPA assessment operates in **strict read-only mode**. Credentials used to run programmatic checks MUST NOT have any write, modify, or delete permissions — a compliance tool that could accidentally mutate a production system containing student education records is itself a breach risk.

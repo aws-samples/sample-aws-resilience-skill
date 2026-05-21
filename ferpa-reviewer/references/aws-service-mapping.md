@@ -1,5 +1,9 @@
 # FERPA Requirements → AWS Service Mapping
 
+> Based on 34 CFR Part 99 (FERPA), PTAC "Data Security Checklist," and NIST SP 800-171.
+> Last verified against official sources: 2025-05-15.
+> Check https://studentprivacy.ed.gov/ for PTAC updates and https://www.ecfr.gov/current/title-34/subtitle-A/part-99 for regulation changes.
+
 Complete mapping of FERPA and PTAC-derived safeguard requirements to specific AWS services and configurations.
 
 FERPA itself is regulation, not a security framework — the mappings below draw from 34 CFR Part 99, PTAC "Data Security Checklist," NIST SP 800-171 (the baseline adopted by most state EdTech contracts), and common state-law-specific clauses.

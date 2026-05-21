@@ -1,116 +1,133 @@
-# CJIS Requirements → AWS Service Mapping
+# CJIS Control Families — AWS Service Mapping
 
-Complete mapping of CJIS Security Policy requirements to specific AWS services and configurations.
+> Based on CJIS Security Policy v6.0 (effective December 2024).
+> Last verified against official source: 2025-05-21.
+> Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
+
+Complete mapping of CJIS v6.0 control families to specific AWS services and configurations.
 
 ---
 
-## Encryption
+## AC — Access Control
 
-| CJIS Requirement | AWS Service | Configuration |
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| AC-2 | Account management | IAM Identity Center, IAM | Centralized user lifecycle; credential report for health monitoring |
+| AC-3 | Access enforcement | IAM Policies, S3 BPA, SGs | Least-privilege policies; account-level S3 Block Public Access |
+| AC-4 | Information flow enforcement | VPC, NACLs, VPC Endpoints | Dedicated CJI VPCs; VPC endpoints for private AWS API access |
+| AC-5 | Separation of duties | IAM Roles, Permission Sets | Distinct admin/operator/reader roles; SCPs for boundary |
+| AC-6 | Least privilege | IAM Access Analyzer | Identify unused permissions; scope policies to specific resources |
+| AC-7 | Unsuccessful logon attempts | Cognito, AD | Cognito advanced security lockout; AD Group Policy (5 attempts) |
+| AC-11 | Session lock | IAM Identity Center, STS | Permission set session duration; STS role max session <= 30 min |
+| AC-12 | Session termination | IAM Identity Center | Automatic session termination on inactivity |
+| AC-17 | Remote access | Client VPN, SSM Session Manager | Encrypted audited access; no direct SSH/RDP from internet |
+| AC-22 | Publicly accessible content | S3 BPA, CloudFront | Account-level block; origin access control on distributions |
+
+## AU — Audit and Accountability
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| AU-2 | Event logging | CloudTrail | Enable in all regions; multi-region trail; management + data events |
+| AU-3 | Content of audit records | CloudTrail Data Events | S3 object-level and Lambda invocation logging for CJI |
+| AU-4 | Audit log storage capacity | S3, CloudWatch Logs | Dedicated log bucket with lifecycle; CloudWatch retention |
+| AU-5 | Response to audit failures | CloudWatch Alarms, SNS | Alert on CloudTrail delivery failures |
+| AU-6 | Audit record review | CloudTrail Lake, Athena, Security Hub | Query capability for investigations; aggregated findings |
+| AU-8 | Time stamps | CloudTrail Log Validation | Log file validation ensures timestamp integrity |
+| AU-9 | Protection of audit info | S3 Object Lock, KMS | WORM on log buckets; CMK encryption on CloudTrail logs |
+| AU-11 | Audit record retention | S3 Lifecycle, CloudWatch | Retain >= 3 years per v6.0 requirements |
+| AU-12 | Audit record generation | VPC Flow Logs | Enable for all CJI VPC subnets |
+
+## IA — Identification and Authentication
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| IA-2 | Identification and authentication | IAM MFA, Identity Center | MFA required for all CJI access; root MFA; hardware tokens (FIDO2) |
+| IA-4 | Identifier management | IAM, Identity Center | Unique user per person; no shared accounts; credential report audit |
+| IA-5 | Authenticator management | IAM Password Policy | Min 20 chars, complexity, 90-day max age, 10+ reuse prevention |
+| IA-7 | Cryptographic module auth | KMS, FIPS Endpoints | `AWS_USE_FIPS_ENDPOINT=true`; GovCloud for default FIPS |
+| IA-8 | Non-organizational users | Identity Center, SAML, OIDC | Federated access for external users |
+| IA-11 | Re-authentication | STS Session Duration | Max session <= 3600s for CJI roles; re-auth on sensitive ops |
+
+## CM — Configuration Management
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| CM-2 | Baseline configuration | AWS Config | Enable recording all resource types; deploy compliance rules |
+| CM-3 | Configuration change control | Config, CloudTrail | Config delivery channel with SNS; CloudTrail for who-changed-what |
+| CM-6 | Configuration settings | Security Hub | CIS Benchmark, NIST 800-53, AWS FSBP standards enabled |
+| CM-7 | Least functionality | Security Groups, Lambda | Block unnecessary ports; restrict function invocation |
+| CM-8 | System component inventory | Config, SSM Inventory | Config resource counts; SSM managed instance coverage |
+| CM-12 | Information location | Config Advanced Queries | Query resource locations for CJI data mapping |
+
+## SC — Systems and Communications Protection
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| SC-7 | Boundary protection | VPC, NACLs, SGs, GuardDuty, WAF | No IGW on CJI VPC; GuardDuty enabled; WAF on internet-facing LBs |
+| SC-8 | Transmission confidentiality | ALB/NLB TLS, RDS SSL, S3 Policy | TLS 1.2+ on LBs; force_ssl on RDS; `aws:SecureTransport` deny |
+| SC-12 | Cryptographic key management | KMS | CMKs with annual rotation for all CJI encryption |
+| SC-13 | Cryptographic protection | FIPS Endpoints, GovCloud | FIPS 140-2/3 validated TLS for all API calls |
+| SC-28 | Protection of info at rest | EBS, RDS, S3, DynamoDB, EFS + KMS | Default encryption; CMKs for CJI resources |
+
+## SI — System and Information Integrity
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| SI-2 | Flaw remediation | Inspector, SSM Patch Manager | Enable Inspector for EC2/Lambda/ECR; automate patching |
+| SI-3 | Malicious code protection | GuardDuty Malware Protection | Enable EBS malware scanning |
+| SI-4 | System monitoring | GuardDuty, Security Hub, CloudWatch | Threat detection + aggregation + alerting |
+| SI-7 | Software integrity | ECR Image Scanning, Lambda Code Signing | Scan-on-push; code signing for CJI functions |
+
+## CP — Contingency Planning
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| CP-9 | System backup | AWS Backup | Plans covering all CJI resources; KMS-encrypted vaults |
+| CP-10 | System recovery | RDS Multi-AZ, S3 CRR, Backup copy rules | Multi-AZ for databases; cross-region replication for DR |
+
+## MP — Media Protection
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| MP-2 | Media access | IAM, KMS Key Policies | Restrict who can decrypt CJI data via key policies |
+| MP-4 | Media storage | S3, EBS, RDS (all encrypted) | Encryption at rest with CMK for all CJI stores |
+| MP-5 | Media transport | TLS, VPN, Direct Connect | Encrypt all CJI in transit; MACsec on DX |
+| MP-6 | Media sanitization | S3 Lifecycle, KMS Key Deletion | Crypto-shred via key deletion; lifecycle for retention |
+
+## IR — Incident Response
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| IR-4 | Incident handling | GuardDuty, Detective, Incident Manager | Threat detection + investigation + response runbooks |
+| IR-5 | Incident monitoring | Security Hub, EventBridge | Aggregated findings; automated routing to IR team |
+| IR-6 | Incident reporting | SNS, ChatBot | Alert IR team on critical findings; escalation to CSO |
+
+## RA — Risk Assessment
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| RA-5 | Vulnerability monitoring | Inspector, Security Hub | Continuous vulnerability scanning; risk aggregation |
+
+## CA — Assessment, Authorization, and Monitoring
+
+| Control | Requirement | AWS Service | Configuration |
+|---|---|---|---|
+| CA-2 | Control assessments | Audit Manager | Automated evidence collection for CJIS-relevant frameworks |
+| CA-7 | Continuous monitoring | Security Hub, Config | Continuous compliance posture; Config conformance packs |
+
+## Section 5.1 — Information Exchange Agreements
+
+| Requirement | AWS Service | Configuration |
 |---|---|---|
-| Encrypt CJI at rest (FIPS 140-2/3) | KMS | Use CMKs; KMS HSMs are FIPS 140-2 Level 2 validated by default |
-| EBS encryption | EBS + KMS | Enable default encryption at account level: `aws ec2 enable-ebs-encryption-by-default` |
-| S3 encryption | S3 + KMS | Bucket policy to deny `s3:PutObject` without `s3:x-amz-server-side-encryption: aws:kms` |
-| RDS encryption | RDS + KMS | Enable at creation; cannot retrofit — migrate via snapshot if needed |
-| DynamoDB encryption | DynamoDB + KMS | Use customer-managed CMK: `SSESpecification: { SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: <key> }` |
-| Encrypt CJI in transit (TLS 1.2+) | ACM, ALB/NLB, CloudFront | Enforce TLS 1.2 minimum on load balancers and CloudFront distributions |
-| FIPS-validated TLS endpoints | AWS FIPS endpoints | Set `AWS_USE_FIPS_ENDPOINT=true` or use `<service>-fips.<region>.amazonaws.com` |
-| VPN encryption (FIPS) | Site-to-Site VPN | Use AES-256-GCM + SHA-256+ cipher suites in tunnel options |
-| Direct Connect encryption | Direct Connect + MACsec | Enable MACsec on dedicated connections for link-layer encryption |
+| CJIS Security Addendum | AWS Artifact | Download state-specific CJIS Security Addendum |
+| Shared responsibility model | AWS Documentation | Document customer vs AWS responsibilities |
+| Region/account isolation | Organizations, SCPs | Restrict CJI to approved accounts and regions |
 
-## Access Control & Authentication
+## Section 5.20 — Mobile Devices
 
-| CJIS Requirement | AWS Service | Configuration |
+| Requirement | AWS Service | Configuration |
 |---|---|---|
-| MFA for all CJI access | IAM Identity Center | Enable MFA requirement in Identity Center settings; support FIDO2 + TOTP |
-| MFA enforcement on IAM | IAM | Policy condition: `"Condition": {"BoolIfExists": {"aws:MultiFactorAuthPresent": "true"}}` |
-| Root account MFA | IAM | Enable hardware MFA on root; delete root access keys |
-| Least privilege | IAM + Access Analyzer | Use Access Analyzer to identify unused permissions; scope policies to specific resources |
-| RBAC | IAM Identity Center | Define permission sets per role (CJI-Admin, CJI-ReadOnly, CJI-Operator) |
-| Account lockout | Cognito / AD | Cognito: configure advanced security with lockout. AD: Group Policy for lockout after 5 attempts |
-| Password policy | IAM | `aws iam update-account-password-policy --minimum-password-length 20 --require-symbols --max-password-age 90 --password-reuse-prevention 24` |
-| Session timeout (30 min) | IAM Identity Center | Set session duration on permission sets; STS role max session |
-| No shared accounts | IAM Identity Center | One user per person; audit with credential report |
-| Remote access encryption | Client VPN / SSM | Client VPN with MFA; SSM Session Manager for instance access |
-
-## Network Protection
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Network segmentation | VPC | Dedicated CJI VPC(s); no peering with non-CJI VPCs unless strictly controlled |
-| Boundary protection | Security Groups, NACLs | SGs: allow only required ports between tiers. NACLs: deny all except explicit allows. |
-| No internet exposure | VPC design | No IGW in CJI VPC; use NAT Gateway only if outbound is required (patching) |
-| IDS/IPS | Network Firewall | Deploy in CJI VPC with Suricata-compatible rules for threat detection |
-| DDoS protection | Shield Advanced | Enable on any internet-facing endpoints (if applicable) |
-| DNS privacy | Route 53 Resolver | Use private hosted zones; no public DNS records for CJI resources |
-| Private AWS API access | VPC Endpoints | Create interface/gateway endpoints for S3, KMS, CloudTrail, SSM, etc. |
-| Agency connectivity | Site-to-Site VPN / Direct Connect | IPsec VPN or DX with encryption for all agency-to-cloud traffic |
-| Web application protection | WAF | Deploy on ALB/CloudFront if any CJI app has web interface |
-
-## Auditing & Logging
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| API audit logging | CloudTrail | Enable in all regions; enable data events for CJI S3 buckets and Lambda |
-| Log integrity | CloudTrail | Enable log file validation |
-| Log encryption | CloudTrail + KMS | Encrypt logs with CMK |
-| Network flow logging | VPC Flow Logs | Enable for all CJI VPC subnets; send to CloudWatch Logs or S3 |
-| Log retention (1 year) | S3 / CloudWatch | S3 lifecycle: retain ≥365 days. CloudWatch: set retention to 365 days. |
-| Log protection | S3 Object Lock | Enable Governance or Compliance mode on log buckets |
-| Centralized logging | CloudWatch, OpenSearch | Aggregate all logs in dedicated logging account |
-| Log analysis / alerting | CloudWatch Alarms, EventBridge | Alert on: root login, MFA disable, SG changes, unauthorized API calls |
-| Log querying | Athena, CloudTrail Lake | Query CloudTrail and Flow Logs for investigations |
-
-## Threat Detection & Incident Response
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Threat detection | GuardDuty | Enable in all CJI accounts and regions; enable S3 and EKS protection |
-| Sensitive data detection | Macie | Enable on CJI S3 buckets; create custom data identifiers for CJI patterns |
-| Vulnerability scanning | Inspector | Enable for EC2, Lambda, ECR; auto-scan on deploy |
-| Investigation | Detective | Enable for graph-based security investigation |
-| Automated response | EventBridge + Lambda | Auto-isolate compromised instances, revoke leaked credentials |
-| IR management | Incident Manager | Define response plans and runbooks for CJI incidents |
-| Alerting | SNS, ChatBot | Route Security Hub critical findings to IR team |
-
-## Configuration Management
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Configuration compliance | Config | Enable recording; deploy managed rules for CJIS checks |
-| Conformance packs | Config | Deploy packs: encryption checks, public access checks, logging checks |
-| Patch management | Systems Manager Patch Manager | Define patch baselines; schedule maintenance windows; auto-approve critical patches |
-| Desired state | Systems Manager State Manager | Enforce configurations (CIS benchmarks, agent installations) |
-| Image hardening | EC2 Image Builder + Inspector | Build hardened AMIs from CIS/STIG baselines; scan before publishing |
-| Container scanning | ECR + Inspector | Enable scan-on-push for container images |
-| Change tracking | Config, CloudTrail | Config records resource changes; CloudTrail records who made them |
-| Approved services | Organizations SCPs | Deny access to non-approved AWS services in CJI accounts |
-
-## Compliance & Audit Evidence
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Compliance posture | Security Hub | Enable; review findings dashboard regularly |
-| Automated evidence | Audit Manager | Create CJIS assessment; schedule automated evidence collection |
-| AWS compliance reports | Artifact | Download SOC 2, FedRAMP High, ISO 27001 reports for inherited controls |
-| Resource inventory | Config, Systems Manager | Config: full resource inventory. SSM: managed instance inventory. |
-| Credential report | IAM | `aws iam generate-credential-report` — review MFA status, key age, last login |
-
-## Data Protection & Privacy
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Data classification | Macie | Auto-discover and classify CJI in S3 |
-| Data loss prevention | S3 Block Public Access, VPC endpoints | Account-level S3 BPA; VPC endpoints to prevent data exfil via internet |
-| Data retention | S3 Lifecycle | Define retention rules aligned with CJI retention requirements |
-| Data deletion | S3 Lifecycle, KMS key deletion | Crypto-shred: delete KMS key to render encrypted CJI unrecoverable |
-| Backup encryption | AWS Backup + KMS | Ensure all backups are encrypted with CMK |
-
-## Mobile / Remote Access
-
-| CJIS Requirement | AWS Service | Configuration |
-|---|---|---|
-| Virtual desktop (avoid CJI on device) | WorkSpaces | Deploy in CJI VPC; enable MFA; restrict clipboard/printing |
-| Application streaming | AppStream 2.0 | Stream CJI applications; no local data storage |
-| Secure remote access | Client VPN | Deploy in CJI VPC with MFA and certificate-based auth |
-| Instance access (no SSH) | SSM Session Manager | Encrypted, logged sessions without open inbound ports |
+| Virtual desktop (CJI stays in cloud) | WorkSpaces | Deploy in CJI VPC; enable MFA; restrict clipboard |
+| Application streaming | AppStream 2.0 | Stream CJI apps; no local data storage |
+| Secure remote access | Client VPN | Deploy with MFA and certificate-based auth |
+| Instance access (no SSH) | SSM Session Manager | Encrypted logged sessions without open ports |

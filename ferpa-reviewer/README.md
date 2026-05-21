@@ -1,8 +1,10 @@
-# ferpa-compliance
+# FERPA Reviewer
 
-FERPA compliance assessor for AWS environments handling student education records. Runs a read-only 4-phase assessment (Bootstrap → Discover → Analyze → Report) using `Describe`/`Get`/`List` AWS CLI calls, identifies gaps against the 10 FERPA Control Domains, and produces an audit-ready remediation report.
+FERPA compliance assessor for AWS environments handling student education records. Runs a read-only 4-phase assessment (Bootstrap → Discover → Analyze → Report) using `Describe`/`Get`/`List` AWS CLI calls, identifies gaps against the 10 FERPA Control Domains, and produces a remediation report.
 
 Built for EdTech vendors operating as "school officials," K-12 districts, and higher-ed institutions. Covers 34 CFR Part 99, PTAC guidance, and the NIST SP 800-171 baseline most state contracts adopt.
+
+> **Advisory tool, not a compliance determination.** This skill is an assessment aid that helps identify potential gaps — it does not certify, attest to, or guarantee FERPA compliance. It is additive to (not a replacement for) qualified legal counsel, institutional compliance officers, and formal compliance regimes such as SOC 2 Type II engagements or state-contract annual reviews. Human judgement must validate all findings before any reliance for audit or contractual purposes.
 
 ## When to use
 
@@ -21,20 +23,8 @@ Also handles state-specific questions for SOPIPA (CA), Ed Law 2-d (NY), SB 820 (
 
 ## How to run
 
-### For SAs working with customers
-
-Per [SA EngSec guidelines](https://console.harmony.a2z.com/engsec-docs/SA/customer-AWS-accounts), SAs should not perform programmatic work in customer AWS accounts without an approved exception. The recommended approach:
-
-1. **Share this skill with your customer** — they run it on their own account
-2. **Guide them over a screen share** if needed (over-the-shoulder is allowed per EngSec)
-3. **Review the generated report together** and walk through the remediation roadmap
-
-This avoids any cross-account access and keeps you compliant with engagement security policy.
-
-### For customers running it themselves
-
 1. **Prerequisites**: AWS CLI installed, credentials with read-only access (e.g., `SecurityAudit` managed policy). The skill enforces a credential boundary check — it will refuse to run if write permissions are detected.
-2. **Start**: Tell Kiro "Assess my environment for FERPA compliance"
+2. **Start**: Tell your AI coding assistant "Assess my environment for FERPA compliance"
 3. **Answer the bootstrap questions**: Your role (vendor/K-12/higher-ed), account/region, US states in scope, scan mode, and which data stores hold student records
 4. **Wait**: Phases 2-4 run automatically
 5. **Get the report**: Output lands in `ferpa-reports/ferpa-assessment-{YYYY-MM-DD}.md`

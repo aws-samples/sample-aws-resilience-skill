@@ -1,5 +1,7 @@
 # FCD 3 — Disclosure Controls & Data Sharing — Programmatic Checks
 
+> Based on 34 CFR §99.31–§99.33, PTAC guidance. Last verified: 2026-05-21.
+
 > Execute in order. Read-only AWS CLI. Severity per [`../severity-classification.md`](../severity-classification.md).
 
 FCD 3 covers the §99.31(a)(1)(i)(B) "school official" exception operationally: who can access student records, which external principals are receiving them, and whether those flows are authorized.

@@ -1,5 +1,7 @@
 # FCD 7 — Encryption at Rest & In Transit — Programmatic Checks
 
+> Based on PTAC guidance, NIST SP 800-171 §3.13. Last verified: 2026-05-21.
+
 > Execute in order. Read-only AWS CLI. Severity per [`../severity-classification.md`](../severity-classification.md).
 
 FERPA doesn't mandate encryption. PTAC guidance and modern state EdTech DPAs do — unencrypted S3 buckets exposed to the internet are the most common root cause in state-AG breach notifications for EdTech vendors.

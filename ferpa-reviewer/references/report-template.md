@@ -1,5 +1,9 @@
 # FERPA Assessment Report Template
 
+> Based on 34 CFR Part 99 (FERPA), PTAC "Data Security Checklist," and NIST SP 800-171.
+> Last verified against official sources: 2026-05-21.
+> Check https://studentprivacy.ed.gov/ for PTAC updates and https://www.ecfr.gov/current/title-34/subtitle-A/part-99 for regulation changes.
+
 Use this template verbatim when emitting the final Markdown report. A consistent shape is what makes reports reproducible across engagements and auditable as DPA-review, state-contract-attestation, or SPPO-response evidence.
 
 Output path: `ferpa-reports/ferpa-assessment-{YYYY-MM-DD}.md`

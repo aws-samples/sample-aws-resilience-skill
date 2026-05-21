@@ -1,10 +1,14 @@
 # Workflow Overview
 
+> Based on CJIS Security Policy v6.0 (effective December 2024).
+> Last verified against official source: 2026-05-21.
+> Check https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center for newer versions.
+
 ## 4-Phase Assessment Flow
 
 ```
 Phase 1: Bootstrap  (~2 min)     → Credential gate + scope confirmation (human-in-loop)
-Phase 2: Discover   (~10-25 min) → Per-PA programmatic scan (automated)
+Phase 2: Discover   (~10-40 min) → Per-family programmatic scan (automated)
 Phase 3: Analyze    (~5 min)     → Gap consolidation + remediation roadmap (automated)
 Phase 4: Report     (~2 min)     → Markdown report, optional HTML render (automated)
 ```
@@ -14,14 +18,15 @@ flowchart TD
     A[User: Assess my env for CJIS] --> B{Phase 1: Bootstrap}
     B -->|Credentials read-only| C[Phase 2: Discover]
     B -->|Write perms / no creds| X[HALT — fix credentials]
-    C --> C1[PA 4 — Auditing]
-    C1 --> C2[PA 6 — Authentication]
-    C2 --> C3[PA 8 — Media/Encryption at rest]
-    C3 --> C4[PA 10 — Systems & Comms]
-    C4 --> C5[PA 5 — Access Control]
-    C5 --> C6[PA 7 — Config Management]
-    C6 --> D[Phase 3: Analyze]
-    D --> D1[Per-PA status rollup]
+    C --> C1[IA — Identification & Auth]
+    C1 --> C2[SC — Systems & Comms]
+    C2 --> C3[AC — Access Control]
+    C3 --> C4[AU — Audit & Accountability]
+    C4 --> C5[CM — Config Management]
+    C5 --> C6[SI — System Integrity]
+    C6 --> C7[CP — Contingency Planning]
+    C7 --> D[Phase 3: Analyze]
+    D --> D1[Per-family status rollup]
     D1 --> D2[Audit Blockers → Quick Wins]
     D2 --> D3[Organizational items → questionnaire]
     D3 --> E[Phase 4: Report]
@@ -41,31 +46,38 @@ flowchart TD
   1. Verify `aws --version`
   2. `aws sts get-caller-identity` — record ARN, account, region
   3. Validate against [`credential-boundary.md`](credential-boundary.md) — HALT if write-capable
-  4. Confirm scope with user: account(s), region(s), which PAs (default = audit-heavy set), GovCloud vs commercial
-  5. Confirm state CSA (affects PA 1 addendum check)
+  4. Confirm scope with user: account(s), region(s), which families (default = P1 + P2 technical families), GovCloud vs commercial
+  5. Confirm state CSA (affects Section 5.1 addendum check)
 
-### Phase 2: Discover (~10-25 min)
+### Phase 2: Discover (~10-40 min)
 - **Human interaction**: NO
 - **Inputs**: Bootstrap config
-- **Outputs**: Per-PA findings with severity
-- **Order**: PA 4 → 6 → 8 → 10 → 5 → 7 (audit-heat order — gets the critical findings early so a long scan doesn't waste time)
+- **Outputs**: Per-family findings with severity
+- **Order** (by priority and audit impact):
+  1. IA (P1 — #1 audit finding area)
+  2. SC (P1 — boundary + encryption)
+  3. AC (P1 — access control)
+  4. AU (P2 — auditing)
+  5. CM (P1 — config management)
+  6. SI (P1 — flaw remediation)
+  7. CP (P2 — contingency)
 - **Execution rules**:
-  - Load each PA's check file on demand from `references/programmatic-checks/`
-  - Do NOT preload all check files — context blows up on a 6-PA scan
+  - Load each family's check file on demand from `references/programmatic-checks/`
+  - Do NOT preload all check files — context blows up on a 7-family scan
   - Each check records a result: `COMPLIANT` / `NON_COMPLIANT` / `NOT_APPLICABLE` / `UNABLE_TO_ASSESS`
   - Per-finding severity per [`severity-classification.md`](severity-classification.md)
-  - Emit a short per-PA summary before moving to the next PA
+  - Emit a short per-family summary before moving to the next family
   - If AccessDenied on a check → mark `UNABLE_TO_ASSESS` and continue (do not halt)
 
 ### Phase 3: Analyze (~5 min)
 - **Human interaction**: NO
-- **Inputs**: All per-PA findings
+- **Inputs**: All per-family findings
 - **Outputs**: Gap table, roadmap, questionnaire items
 - Steps:
-  1. Roll up per-PA status (Compliant / Substantially Compliant / At Risk / Non-Compliant / Not Assessed)
-  2. Extract Audit Blockers across all PAs → top of the remediation roadmap
+  1. Roll up per-family status (Compliant / Substantially Compliant / At Risk / Non-Compliant / Not Assessed)
+  2. Extract Audit Blockers across all families → top of the remediation roadmap
   3. Group remediation into phases: Immediate (0-2 wks), Short-term (2-8 wks), Medium-term (2-6 mo), Long-term (6-12 mo)
-  4. Surface organizational items (PA 1, 2, 11, 12, 13 mostly) as questionnaire items for the user
+  4. Surface organizational items (Section 5.1, AT, PE, PS, IR, MA, PL, SA, SR, CA) as questionnaire items for the user
 
 ### Phase 4: Report (~2 min)
 - **Human interaction**: NO
@@ -77,24 +89,26 @@ flowchart TD
 
 ## Assessment modes
 
-| Mode | PAs covered | Time | When to use |
+| Mode | Families covered | Time | When to use |
 |---|---|---|---|
-| **Quick Scan** | PA 4, 6, 8, 10 | ~10 min | "Am I going to fail a CJIS audit?" — hits the 4 audit-heat-heavy PAs |
-| **Standard** | PA 4, 5, 6, 7, 8, 10 | ~20-25 min | Default. Covers all technically-assessable PAs |
-| **Full** | All 13 PAs (standard + questionnaire for 1, 2, 3, 9, 11, 12, 13) | ~30-40 min | Pre-audit readiness |
-| **Questionnaire only** | Organizational PAs | ~15 min | No AWS access or write-only creds — walk through readiness-checklist.md |
+| **Quick Scan** | IA + SC + AC (P1 families only) | ~10 min | "Am I going to fail a CJIS audit?" — hits the 3 highest-risk P1 families |
+| **Standard** | IA + SC + AC + AU + CM + SI | ~25 min | Default. Covers all P1 families + AU (critical P2) |
+| **Full** | Standard + CP + questionnaire for AT, PE, PS, IR, MA, PL, SA, SR, CA | ~40 min | Pre-audit readiness — all technical + organizational |
+| **Questionnaire only** | Organizational families | ~15 min | No AWS access or write-only creds — walk through readiness-checklist.md |
 
-## Security-First ordering rationale
+## Priority-First ordering rationale
 
-The PA order in Standard/Full mode is audit-heat-weighted, not numeric:
+The family order in Standard/Full mode is priority-and-audit-heat-weighted:
 
-1. **PA 4 (Auditing)** first because without logging nothing else can be verified
-2. **PA 6 (Authentication)** — #1 audit finding nationwide
-3. **PA 8 + PA 10 (Encryption at rest + in transit)** — pair together; both FIPS-dependent
-4. **PA 5 (Access Control)** — depends on PA 6 auth being established
-5. **PA 7 (Config Management)** — last because it pulls data on EC2/patch state that can take the longest
+1. **IA (P1)** first — #1 audit finding nationwide. MFA gaps are the most common audit failure.
+2. **SC (P1)** — boundary protection + encryption at rest/transit. FIPS compliance is binary.
+3. **AC (P1)** — access control, public exposure, least privilege.
+4. **AU (P2)** — auditing. Without logging, nothing else can be verified at audit.
+5. **CM (P1)** — config management, patching. Pulls EC2/SSM data that can take longest.
+6. **SI (P1)** — flaw remediation, monitoring. Depends on Inspector/GuardDuty state.
+7. **CP (P2)** — contingency planning. Backup verification, least likely to be an Audit Blocker.
 
-This deviates from numeric PA order intentionally — the WAR skill uses Security-First for the same reason, and for CJIS the audit-heat order maximizes value when a scan is interrupted.
+This order maximizes value when a scan is interrupted — the highest-risk findings surface first.
 
 ## Error handling
 

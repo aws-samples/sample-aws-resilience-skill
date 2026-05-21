@@ -1,5 +1,9 @@
 # FERPA Control Domains — Detailed AWS Implementation Guide
 
+> Based on 34 CFR Part 99 (FERPA), PTAC "Data Security Checklist," and NIST SP 800-171.
+> Last verified against official sources: 2026-05-21.
+> Check https://studentprivacy.ed.gov/ for PTAC updates and https://www.ecfr.gov/current/title-34/subtitle-A/part-99 for regulation changes.
+
 Deep-dive on each of the 10 FERPA Control Domains (FCDs) with specific AWS implementation guidance.
 
 FERPA itself does not enumerate "control domains" — the statute and 34 CFR Part 99 describe rights, exceptions, and a general "reasonable methods" safeguard expectation. The 10 FCDs used here distill FERPA, the ED Privacy Technical Assistance Center (PTAC) "Data Security Checklist," and the NIST SP 800-171 controls most state EdTech contracts adopt into assessment-sized buckets.

@@ -1,5 +1,9 @@
 # Severity Classification (FERPA-specific)
 
+> Based on 34 CFR Part 99 (FERPA), PTAC "Data Security Checklist," and NIST SP 800-171.
+> Last verified against official sources: 2026-05-21.
+> Check https://studentprivacy.ed.gov/ for PTAC updates and https://www.ecfr.gov/current/title-34/subtitle-A/part-99 for regulation changes.
+
 Findings from FERPA checks are classified by how they affect real-world outcomes — a state-AG breach-notification decision, a U.S. Dept. of Education SPPO complaint investigation, a state-contract annual review, or a SOC 2 Type II opinion. The classes below are what an auditor, DPA reviewer, or state-ED privacy officer would flag.
 
 ## Per-finding severity

@@ -1,8 +1,9 @@
 # State Student-Privacy Law Addenda
 
-FERPA is the federal floor. Every state layers on additional requirements via state student-privacy laws, state breach-notification laws, and standard DPA templates adopted by school districts. This file covers the four most common states in EdTech sales cycles (CA, NY, TX, IL), plus a short reference to other states that appear often, plus a note on COPPA (federal but frequently co-invoked with FERPA for K-12 under-13).
+> Last verified against official sources: 2026-05-21.
+> State laws change frequently — always verify against the current statute when signing a contract.
 
-**All content is as of the last revision of this file.** State laws change — always verify against the current statute when signing a contract.
+FERPA is the federal floor. Every state layers on additional requirements via state student-privacy laws, state breach-notification laws, and standard DPA templates adopted by school districts. This file covers the four most common states in EdTech sales cycles (CA, NY, TX, IL), plus a short reference to other states that appear often, plus a note on COPPA (federal but frequently co-invoked with FERPA for K-12 under-13).
 
 ---
 

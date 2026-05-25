@@ -13,11 +13,11 @@ aws ec2 describe-instances --filters Name=instance-state-name,Values=running \
 
 Count instances by architecture. Graviton (arm64) instances use ~60% less energy per compute unit.
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| 0% Graviton adoption | MEDIUM | No Graviton instances — significant energy efficiency opportunity |
-| < 30% Graviton | LOW | {pct}% Graviton adoption — room for improvement |
-| > 30% Graviton | INFO | Good Graviton adoption at {pct}% ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| 0% Graviton adoption | MEDIUM | No Graviton instances — significant energy efficiency opportunity  Migrate to Graviton (m7g/c7g/r7g): rebuild ARM-compatible AMIs/containers, then `aws ec2 modify-instance-attribute --instance-id {id} --instance-type '{Value=m7g.large}'`. ~20% less energy + 20% cheaper. |
+| < 30% Graviton | LOW | {pct}% Graviton adoption — room for improvement  Migrate to Graviton (m7g/c7g/r7g): rebuild ARM-compatible AMIs/containers, then `aws ec2 modify-instance-attribute --instance-id {id} --instance-type '{Value=m7g.large}'`. ~20% less energy + 20% cheaper. |
+| > 30% Graviton | INFO | Good Graviton adoption at {pct}% ✅  Migrate to Graviton (m7g/c7g/r7g): rebuild ARM-compatible AMIs/containers, then `aws ec2 modify-instance-attribute --instance-id {id} --instance-type '{Value=m7g.large}'`. ~20% less energy + 20% cheaper. |
 
 ---
 
@@ -34,11 +34,11 @@ for inst in $(aws ec2 describe-instances --filters Name=instance-state-name,Valu
 done
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Average CPU < 10% fleet-wide | MEDIUM | Fleet under-utilized — right-sizing reduces energy waste |
-| Average CPU 10-40% | LOW | Moderate utilization — some right-sizing opportunity |
-| Average CPU > 40% | INFO | Fleet well-utilized ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Average CPU < 10% fleet-wide | MEDIUM | Fleet under-utilized — right-sizing reduces energy waste  Right-size aggressively or terminate idle instances |
+| Average CPU 10-40% | LOW | Moderate utilization — some right-sizing opportunity  Apply Compute Optimizer right-sizing recommendations |
+| Average CPU > 40% | INFO | Fleet well-utilized ✅  — |
 
 ---
 
@@ -48,11 +48,11 @@ done
 aws lambda list-functions --query 'Functions[].{Name:FunctionName,Runtime:Runtime,Arch:Architectures[0],Memory:MemorySize}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Functions on x86_64 | LOW | {count} Lambda functions on x86_64 — arm64 is 20% more energy efficient |
-| Functions on deprecated runtimes | LOW | {count} functions on older runtimes (less efficient) |
-| arm64 + current runtimes | INFO | Lambda using efficient configurations ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Functions on x86_64 | LOW | {count} Lambda functions on x86_64 — arm64 is 20% more energy efficient  `aws lambda update-function-configuration --function-name {name} --architectures arm64` (rebuild deps), ~20% perf/$ improvement |
+| Functions on deprecated runtimes | LOW | {count} functions on older runtimes (less efficient)  `aws lambda update-function-configuration --function-name {name} --runtime python3.12` |
+| arm64 + current runtimes | INFO | Lambda using efficient configurations ✅  — |
 
 ---
 
@@ -65,10 +65,10 @@ aws s3api list-buckets --query 'Buckets[].Name' --output text | tr '\t' '\n' | h
 done
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Large buckets without intelligent tiering | LOW | {count} buckets without Intelligent Tiering — cold data uses unnecessary storage |
-| Tiering configured | INFO | S3 Intelligent Tiering in use ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Large buckets without intelligent tiering | LOW | {count} buckets without Intelligent Tiering — cold data uses unnecessary storage  `aws s3api put-bucket-intelligent-tiering-configuration --bucket {bucket} --id default --intelligent-tiering-configuration Id=default,Status=Enabled,Tierings=[{Days=90,AccessTier=ARCHIVE_ACCESS},{Days=180,AccessTier=DEEP_ARCHIVE_ACCESS}]` |
+| Tiering configured | INFO | S3 Intelligent Tiering in use ✅  — |
 
 ---
 
@@ -78,10 +78,10 @@ done
 aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[].{Name:AutoScalingGroupName,Min:MinSize,Max:MaxSize,Desired:DesiredCapacity}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Min == Max (no scaling) | LOW | ASG {name} cannot scale — over-provisioning wastes energy |
-| Dynamic scaling active | INFO | Auto Scaling configured for demand-driven capacity ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Min == Max (no scaling) | LOW | ASG {name} cannot scale — over-provisioning wastes energy  `aws autoscaling put-scaling-policy --auto-scaling-group-name {name} --policy-name cpu-target --policy-type TargetTrackingScaling --target-tracking-configuration file://policy.json` |
+| Dynamic scaling active | INFO | Auto Scaling configured for demand-driven capacity ✅  — |
 
 ---
 

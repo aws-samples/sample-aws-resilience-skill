@@ -107,3 +107,35 @@ After all checks pass, log:
 • Framework: General WA (6 pillars, Security-First)
 • Mode: Autopilot
 ```
+
+---
+
+## Context Budget — DON'T-FETCH List
+
+> 来源：service-screener-v2 wa-summarizer prompt 的 negative scope 设计。Agent 最常见失败是一口气拉下大 dump 把上下文窗口吃光。**以下 API/输出默认不调**，需要时走 subagent 或写文件。
+
+### 默认禁调的大输出类 API
+
+| Forbidden by default | 代替方案 |
+|----------------------|----------|
+| `aws cloudtrail lookup-events`（动辄上百万行） | 需要查安全事件时用 Athena + S3 trail logs、或限定 `--start-time` 几小时 + `--max-results 50` |
+| `aws ec2 describe-snapshots --owner-ids self`（账号老上千条） | 限定 `--filters "Name=start-time,..."` 只看近 30 天 |
+| `aws s3api list-objects-v2`（文件多的 bucket 极易爆炸） | 只针对明确小 bucket，加 `--max-items 100` |
+| `aws config get-resource-config-history`（按资源个数 × 添加频率） | 限定 `--resource-id` + `--limit 10` |
+| `aws ec2 describe-instances`（大账号上千台） | 加 `--filters Name=instance-state-name,Values=running` + `--query 'Reservations[].Instances[].{Id:InstanceId,Type:InstanceType,AZ:Placement.AvailabilityZone,State:State.Name}'`，不要拉全量字段 |
+| `aws iam get-account-authorization-details`（返回全账号 IAM dump） | 拆分：`list-users` / `list-roles` / 按需 `get-policy-version` |
+| `aws lambda list-functions` 不加 `--query`（FunctionVersion 可能上千） | 加 `--query 'Functions[].{Name:FunctionName,Runtime:Runtime,Memory:MemorySize}'` |
+| `aws ce get-cost-and-usage` 不限定 granularity/group-by | 限定 `--granularity DAILY --time-period 近 30 天 --group-by Type=DIMENSION,Key=SERVICE` |
+| 任何返回 >500KB 的单次调用 | **走 subagent**：spawn 个子 session 调用、提炼后只拿总结回主 session |
+
+### 动手前的 3 个必问
+
+1. **调用返回多少条记录？** 不确定先加 `--max-items 5` 探路
+2. **返回体多大？** >50KB 的单次输出不要 read 到主 context
+3. **这条 finding 需要这么多详情吗？** Severity + count 差不多了，完整资源 ID 列表走 Appendix
+
+### subagent 隔离原则
+
+- 3+ 个服务同时调 list · 单个输出 >150 行 · 需要多轮过滤聚合 → spawn subagent
+- 主 session 只拿结论 + 决策，不拿原始 dump
+- subagent 带回的 finding 表格限 50 行，超出走附件

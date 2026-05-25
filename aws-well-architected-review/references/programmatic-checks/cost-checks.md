@@ -10,10 +10,10 @@
 aws ce get-anomaly-monitors --query 'AnomalyMonitors[].{Name:MonitorName,Type:MonitorType}' --output json 2>/dev/null
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| No monitors | MEDIUM | No Cost Anomaly Detection — unexpected spend won't be caught |
-| Monitors active | INFO | Cost Anomaly Detection active ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| No monitors | MEDIUM | No Cost Anomaly Detection — unexpected spend won't be caught  `aws ce create-anomaly-monitor --anomaly-monitor MonitorName=service-anomaly,MonitorType=DIMENSIONAL,MonitorDimension=SERVICE` |
+| Monitors active | INFO | Cost Anomaly Detection active ✅  — |
 
 ---
 
@@ -32,10 +32,10 @@ for inst in $(aws ec2 describe-instances --filters Name=instance-state-name,Valu
 done
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Instances < 5% CPU avg | HIGH | {count} potentially idle EC2 instances (avg CPU < 5%) |
-| All utilized | INFO | No idle instances detected ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Instances < 5% CPU avg | HIGH | {count} potentially idle EC2 instances (avg CPU < 5%)  `# ⚠️ verify before run: aws ec2 stop-instances --instance-ids {id}` then evaluate termination after 7 days idle |
+| All utilized | INFO | No idle instances detected ✅  — |
 
 ---
 
@@ -46,10 +46,10 @@ aws ec2 describe-volumes --filters Name=status,Values=available \
   --query 'Volumes[].{VolumeId:VolumeId,Size:Size,Type:VolumeType,CreateTime:CreateTime}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Unattached volumes | MEDIUM | {count} unattached EBS volumes ({total_gb} GB) — wasting ${est_monthly}/mo |
-| No unattached | INFO | No unattached EBS volumes ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Unattached volumes | MEDIUM | {count} unattached EBS volumes ({total_gb} GB) — wasting ${est_monthly}/mo  `# snapshot first: aws ec2 create-snapshot --volume-id {vol} --description 'pre-deletion'; aws ec2 delete-volume --volume-id {vol}` |
+| No unattached | INFO | No unattached EBS volumes ✅  — |
 
 ---
 
@@ -59,10 +59,10 @@ aws ec2 describe-volumes --filters Name=status,Values=available \
 aws ec2 describe-addresses --query 'Addresses[?AssociationId==null].{PublicIp:PublicIp,AllocationId:AllocationId}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Unassociated EIPs | LOW | {count} unassociated Elastic IPs ($3.65/mo each) |
-| All associated | INFO | All Elastic IPs associated ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Unassociated EIPs | LOW | {count} unassociated Elastic IPs ($3.65/mo each)  `aws ec2 release-address --allocation-id {alloc-id}` |
+| All associated | INFO | All Elastic IPs associated ✅  — |
 
 ---
 
@@ -74,10 +74,10 @@ aws ec2 describe-instances --filters Name=instance-state-name,Values=running \
   --query 'Reservations[].Instances[?starts_with(InstanceType, `t2`) || starts_with(InstanceType, `m4`) || starts_with(InstanceType, `c4`) || starts_with(InstanceType, `r4`)].{Id:InstanceId,Type:InstanceType}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Old gen instances | MEDIUM | {count} old-gen instances — newer generations offer 20-40% better price/perf |
-| All current gen | INFO | All instances on cost-efficient current gen ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Old gen instances | MEDIUM | {count} old-gen instances — newer generations offer 20-40% better price/perf  Stop+modify: `aws ec2 modify-instance-attribute --instance-id {id} --instance-type '{Value=m6i.large}'`. Save 10-20% |
+| All current gen | INFO | All instances on cost-efficient current gen ✅  — |
 
 ---
 
@@ -90,11 +90,11 @@ aws ce get-reservation-coverage --time-period Start=$(date -d '30 days ago' -u +
   --query 'Total.CoverageHours.CoverageHoursPercentage' --output text 2>/dev/null
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Coverage < 50% | HIGH | Savings Plans/RI coverage at {pct}% — significant savings opportunity |
-| Coverage 50-80% | MEDIUM | Savings Plans/RI coverage at {pct}% — room for improvement |
-| Coverage > 80% | INFO | Good Savings Plans/RI coverage at {pct}% ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Coverage < 50% | HIGH | Savings Plans/RI coverage at {pct}% — significant savings opportunity  `aws ce get-savings-plans-purchase-recommendation --savings-plans-type COMPUTE_SP --term-in-years ONE_YEAR --payment-option NO_UPFRONT --lookback-period-in-days SIXTY_DAYS` then commit |
+| Coverage 50-80% | MEDIUM | Savings Plans/RI coverage at {pct}% — room for improvement  Increase commit per Cost Explorer recommendation; aim for 70%+ baseline |
+| Coverage > 80% | INFO | Good Savings Plans/RI coverage at {pct}% ✅  — |
 
 ---
 
@@ -105,10 +105,10 @@ aws ec2 describe-nat-gateways --filter Name=state,Values=available \
   --query 'NatGateways[].{Id:NatGatewayId,SubnetId:SubnetId,VpcId:VpcId}' --output json
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Multiple NAT GWs | LOW | {count} NAT Gateways — review if all needed ($32/mo each + data transfer) |
-| Single NAT GW | INFO | NAT Gateway configuration noted |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Multiple NAT GWs | LOW | {count} NAT Gateways — review if all needed ($32/mo each + data transfer)  Add VPC Gateway endpoint for S3 (free): `aws ec2 create-vpc-endpoint --vpc-id {vpc} --service-name com.amazonaws.{region}.s3 --route-table-ids {rt}`; Interface endpoints for chatty services |
+| Single NAT GW | INFO | NAT Gateway configuration noted  — |
 
 ---
 
@@ -121,10 +121,10 @@ aws s3api list-buckets --query 'Buckets[].Name' --output text | tr '\t' '\n' | h
 done
 ```
 
-| Result | Severity | Finding |
-|--------|----------|---------|
-| Buckets without lifecycle | MEDIUM | {count} S3 buckets without lifecycle rules — no automatic tiering |
-| All with lifecycle | INFO | All S3 buckets have lifecycle policies ✅ |
+| Result | Severity | Finding  | Remediation |
+|--------|----------|----------------------|
+| Buckets without lifecycle | MEDIUM | {count} S3 buckets without lifecycle rules — no automatic tiering  `aws s3api put-bucket-lifecycle-configuration --bucket {bucket} --lifecycle-configuration file://lifecycle.json` (transition >30d to IA, >90d to Glacier IR) |
+| All with lifecycle | INFO | All S3 buckets have lifecycle policies ✅  — |
 
 ---
 

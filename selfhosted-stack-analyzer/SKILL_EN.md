@@ -116,5 +116,30 @@ python3 scripts/generate-html-report.py analysis-output/weakness-report-{date}.m
 
 ## Quick start
 
+### Step-by-step trigger (original, still supported)
+
 - Collect: say **"Phase 1 collect"** → confirm cluster & namespaces → run `collect.sh`.
 - Analyze: say **"Phase 2 analyze"** with the bundle path → get the topology diagram + weakness report.
+
+### One-line fixed trigger (recommended, auto-chains collect + analyze)
+
+**Fixed template**:
+
+```
+Start collecting the environment for account <account/AWS profile>, region <region>,
+then proceed to collection and start the analysis.
+```
+
+**Examples**:
+- `Start collecting the environment for account 926093770964, region ap-northeast-1, then proceed to collection and start the analysis.`
+- `开始采集 926093770964，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
+
+**On receiving this sentence, the agent MUST run the full pipeline below without pausing for per-step confirmation**, except when account/region is missing or ambiguous, or when critical (★) evidence is missing after collection:
+
+1. **Parse parameters**: extract `<account/profile>` and `<region>`. If either is missing/ambiguous, ask — never guess which AWS account to target.
+2. **Auto-detect substrate** (no need to ask the user): run `aws eks list-clusters` and `aws ec2 describe-vpcs` + a sample `describe-instances` to check for Name-tag/`allTags` patterns (`tikv-*`/`tidb-*`/`redis-*`/`kafka-*`/`mysql-*`, `tidb-poc:role`, etc.). If both EKS and raw-EC2 middleware are found, collect both; report the detection result briefly (informational, not a decision the user needs to make).
+3. **Run Phase 1 collection** (Steps 1-3): `collect.sh` for EKS, `collect-ec2.sh` for raw EC2. Self-check the manifest; if a ★ item is missing, stop and ask before proceeding — never analyze an incomplete bundle silently.
+4. **Immediately proceed to Phase 2 analysis** (Steps 4-7) without waiting for another user message — same evidence-tier hard rules apply (see Key Notes #6); automation does not relax the no-fabrication rule.
+5. **Reply once at the end** with a summary: detected environment, collection scale, report output paths, and the top findings. Don't narrate every intermediate tool call.
+
+> This one-liner is a **shortcut composition** of the step-by-step flow — same underlying Steps 1-8, just collapsed into one pass. The agent only interrupts to ask when account/region is missing or when critical evidence is missing.

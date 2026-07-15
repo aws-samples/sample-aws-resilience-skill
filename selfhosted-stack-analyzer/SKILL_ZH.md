@@ -193,5 +193,45 @@ python3 scripts/generate-html-report.py analysis-output/weakness-report-{date}.m
 
 ## 快速开始
 
+### 分步触发（原有方式，仍支持）
+
 - 采集阶段：说 **"开始采集"** / **"Phase 1 collect"** → 确认集群与 namespace → 运行 `collect.sh`。
 - 分析阶段：说 **"分析这个 bundle"** / **"Phase 2 analyze"** 并提供 bundle 路径 → 产出拓扑图与薄弱点报告。
+
+### 一句话固定触发（推荐，自动串联采集 + 分析）
+
+**固定模板**：
+
+```
+开始采集 <账号/AWS Profile>，<region> 的系统环境，就进入采集阶段，并开始分析
+```
+
+**示例**：
+- `开始采集 926093770964，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
+- `开始采集 prod-profile，us-east-1 的系统环境，就进入采集阶段，并开始分析`
+- `Start collecting the environment for account 926093770964, region ap-northeast-1, then run the analysis`
+
+**AI 收到这句话后必须执行的完整流程**（不在中途逐项确认，除非缺关键信息或发现证据不足）：
+
+1. **解析参数**：从句子中提取 `<账号/Profile>` 和 `<region>`。
+   - `<账号/Profile>` 可以是 AWS Account ID（如 `926093770964`）、`AWS_PROFILE` 名称，或"当前登录账号"（若用户未指定，用 `aws sts get-caller-identity` 确认当前账号并告知用户，不擅自换账号）。
+   - 若账号或 region 缺失/含糊，**必须先追问**，不能猜测账号信息。
+
+2. **自动判定承载底座**（不追问用户，AI 自己查）：
+   - 先跑 `aws eks list-clusters --region <region>`，看是否有 EKS 集群。
+   - 再跑 `aws ec2 describe-vpcs --region <region>` + 抽样 `describe-instances` 看 Name tag/`allTags`，判断是否存在裸 EC2 自建中间件（命中 `tikv-*`/`tidb-*`/`redis-*`/`kafka-*`/`mysql-*` 等模式或 `tidb-poc:role` 类标签）。
+   - 若两者都存在，**两个采集脚本都跑**；若只有一种，只跑对应的。
+   - 把判定结果和依据简短告知用户（如："检测到 EKS 集群 X + VPC Y 内有裸 EC2 自建 TiDB 栈，将采集两种底座"），不需要用户确认即可继续（这是信息通报，不是需要用户决策的分支）。
+
+3. **执行阶段一采集**（对应 Step 1-3）：
+   - EKS 底座 → `bash scripts/collect.sh --cluster <CLUSTER_NAME> --region <region> --output ./evidence-bundle`（namespace 用 `--all-namespaces` 效果，不单独限定，除非用户后续要求聚焦）。
+   - 裸 EC2 底座 → `bash scripts/collect-ec2.sh --region <region> --output ./evidence-bundle`（不指定 `--vpcs` 则采集全部非默认 VPC）。
+   - 采集完成后做 Step 3 的自检（看 `manifest.json` 的 `apiErrors`/`collected`/`failed`），**若关键证据缺失（★标记项）应停下来告知用户并询问是否继续**，不要在证据不足的情况下静默进入分析。
+
+4. **无需用户再发一句话，直接进入阶段二分析**（对应 Step 4-7）：
+   - 建拓扑模型 → 跑薄弱点检查目录 → 风险分级 → 生成 `analysis-output/` 下的报告（MD + HTML）。
+   - 全程遵守"关键注意事项"第 6 条的证据分级硬规则——**这条硬规则不因为是"一句话触发的自动化流程"而放松**，没有主机层证据的结论依然要标 UNKNOWN，不能因为是自动化模式就编结论。
+
+5. **最终只需回复一次总结**：环境判定结果、采集到的规模（多少实例/多少组件）、报告产出路径、Top 风险摘要。中间过程的工具调用不需要逐条向用户播报。
+
+> **与分步触发的关系**：这句固定语是分步触发的**组合快捷方式**，底层执行的还是同样的 Step 1-8，只是把"确认环境→跑采集脚本→确认 bundle→跑分析"这几步原本需要用户多次来回确认的地方，改成 AI 自主判断+一次性执行到底，仅在**账号/region 缺失**或**证据关键缺口**这两种情况下才打断向用户提问。

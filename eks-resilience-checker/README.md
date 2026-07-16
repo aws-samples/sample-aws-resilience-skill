@@ -93,6 +93,89 @@ When MCP is unavailable, the skill falls back to `kubectl` + `aws` CLI.
 }
 ```
 
+## Manual / Standalone Script Usage
+
+The checks are also implemented as standalone bash scripts (`scripts/assess.sh` and `scripts/multi-cluster-assess.sh`), so they can be run **without an AI agent** — useful in customer environments where Kiro CLI / Claude Code / other agents are not installed. Requires only `kubectl`, `aws` CLI, and `jq`.
+
+### Single Cluster
+
+```bash
+cd scripts
+chmod +x assess.sh
+
+# Auto-detect cluster + region from current kubectl/aws config
+./assess.sh
+
+# Explicit cluster/region
+./assess.sh --cluster my-cluster --region us-west-2
+
+# Restrict to specific namespaces
+./assess.sh --cluster my-cluster --region us-west-2 --namespaces "app1,app2,app3"
+
+# Custom output directory
+./assess.sh --cluster my-cluster --region us-west-2 --output-dir ./my-output
+```
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|--------------|
+| `--cluster` | No | Auto-detect from kubeconfig context | EKS cluster name |
+| `--region` | No | Auto-detect from AWS config | AWS region |
+| `--namespaces` | No | All non-system namespaces | Comma-separated target namespaces |
+| `--output-dir` | No | `./output` | Directory for output files |
+
+Exit codes: `0` = all checks passed, `1` = one or more checks failed, `2` = script error (missing tools, connectivity, permissions).
+
+### Multiple Clusters
+
+When the account has many EKS clusters, use `multi-cluster-assess.sh` to orchestrate `assess.sh` across all of them. **Do not run `assess.sh` concurrently for many clusters yourself** — the EKS control-plane APIs (`describe-cluster`, `list-access-entries`, `describe-addon`) share an **account-level** rate limit, and `assess.sh` swallows throttling errors silently (falls back to `unknown`/empty results instead of failing loudly), so unmanaged concurrency can produce misleading PASS/INFO results without any visible error.
+
+`multi-cluster-assess.sh` handles this by:
+- Running clusters sequentially or in small bounded batches (default concurrency: 2)
+- Sleeping between clusters/batches (default: 5s) to stay under account-level throttling limits
+- Switching kubeconfig context (`aws eks update-kubeconfig`) before each cluster automatically
+- Setting `AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS=10` so transient throttling is retried instead of silently degrading results
+- Producing a cross-cluster rollup report sorted by compliance score, so you know which cluster to fix first
+
+```bash
+cd scripts
+chmod +x multi-cluster-assess.sh
+
+# Explicit cluster list
+./multi-cluster-assess.sh --clusters "prod-a,prod-b,staging-a" --region us-west-2
+
+# Auto-discover every cluster in the account/region
+./multi-cluster-assess.sh --discover --region us-west-2
+
+# Increase concurrency (use with caution — values above ~5 risk account-level EKS API throttling)
+./multi-cluster-assess.sh --discover --region us-west-2 --concurrency 3 --delay 10
+```
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|--------------|
+| `--clusters "c1,c2"` | One of `--clusters`/`--discover` required | — | Explicit comma-separated cluster list |
+| `--discover` | One of `--clusters`/`--discover` required | — | Auto-discover clusters via `aws eks list-clusters` (requires `--region`) |
+| `--region` | Yes | — | AWS region |
+| `--namespaces` | No | All non-system namespaces | Passed through to `assess.sh` |
+| `--output-dir` | No | `./output` | Base directory; each cluster gets its own `output/<cluster-name>/` subfolder |
+| `--concurrency` | No | `2` | Max clusters assessed in parallel |
+| `--delay` | No | `5` | Seconds to sleep between clusters/batches |
+| `--skip-kubeconfig-update` | No | off | Skip the automatic `aws eks update-kubeconfig` call (use if kubeconfig is pre-provisioned for all clusters) |
+
+Output layout:
+
+```
+output/
+├── prod-a/
+│   ├── assessment.json
+│   ├── assessment-report.md
+│   ├── assessment-report.html
+│   └── remediation-commands.sh
+├── prod-b/
+│   └── ...
+├── rollup-summary.md            # Cross-cluster summary, sorted by compliance score
+└── rollup-summary.json
+```
+
 ## Check Categories
 
 ### Application Checks (A1-A14)
@@ -210,20 +293,20 @@ See [examples/petsite-assessment.md](examples/petsite-assessment.md) for a sampl
 ```
 eks-resilience-checker/
 ├── SKILL.md                            # Entry point (language detection → routing)
-├── SKILL_EN.md / SKILL_ZH.md          # Instructions (bilingual, ~226/221 lines)
-├── README.md / README_zh.md            # Documentation (bilingual)
-├── references/                         # Reference docs (loaded on demand by Agent)
-│   ├── EKS-Resiliency-Checkpoints.md / _zh.md  # 26-check descriptions & rationale
-│   ├── check-commands.md / _zh.md      # kubectl/aws commands per check + PASS/FAIL criteria
-│   ├── eks-resiliency-checks-mcp.md / _zh.md   # MCP-based check execution (alternative)
-│   ├── remediation-templates.md / _zh.md        # Fix command templates with YAML examples
-│   ├── fail-to-experiment-mapping.md / _zh.md   # FAIL → chaos experiment mapping table
-│   └── eks-auth-setup.md / _zh.md      # EKS authentication setup guide (2 methods)
+├── SKILL_EN.md                         # English instructions
+├── SKILL_ZH.md                         # Chinese instructions
+├── README.md                           # This file (English)
+├── README_zh.md                        # Chinese version
+├── doc/
+│   └── prd.md                          # Product requirements
+├── references/
+│   ├── EKS-Resiliency-Checkpoints.md   # 26-check detailed descriptions
+│   ├── check-commands.md               # kubectl/aws commands per check
+│   ├── remediation-templates.md        # Fix command templates
+│   └── fail-to-experiment-mapping.md   # FAIL → experiment mapping table
 ├── scripts/
-│   ├── assess.sh                       # Automated 26-check assessment script (standalone)
-│   └── README.md                       # Script usage guide
-├── examples/
-│   └── petsite-assessment.md           # PetSite cluster assessment example
-└── doc/                                # Internal development docs (NOT loaded by Agent)
-    └── prd.md                          # Product requirements
+│   ├── assess.sh                       # Assessment main script (standalone, single cluster)
+│   └── multi-cluster-assess.sh         # Multi-cluster orchestration wrapper (standalone)
+└── examples/
+    └── petsite-assessment.md           # PetSite cluster assessment example
 ```

@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Requires Bash 4.0+ (uses associative arrays, `declare -A`). macOS ships Bash
+# 3.2 by default — install a newer bash (e.g. `brew install bash`) and run with
+# it, or run on a Linux host.
+if [[ -z "${BASH_VERSINFO:-}" || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+  echo "ERROR: this script requires Bash 4.0 or newer (found ${BASH_VERSION:-unknown})." >&2
+  echo "       macOS default is Bash 3.2. Install a newer bash and re-run, e.g.:" >&2
+  echo "         brew install bash && /opt/homebrew/bin/bash $0 ..." >&2
+  echo "         (Intel Homebrew: /usr/local/bin/bash)" >&2
+  exit 1
+fi
+
 # EKS Resilience Assessment — 26 best-practice checks
 # Outputs: assessment.json, assessment-report.md, assessment-report.html, remediation-commands.sh
 
@@ -138,7 +149,7 @@ check_a1() {
   log "A1: Singleton Pods"
   local raw found status
   raw=$(kube_json get pods --all-namespaces)
-  found=$(echo "$raw" | jq '[.items[] | select((.metadata.ownerReferences // []) | length == 0) | select(.metadata.namespace | test("^kube-") | not) | {namespace:.metadata.namespace, name:.metadata.name}]')
+  found=$(echo "$raw" | jq '[.items[] | select((.metadata.ownerReferences // []) | length == 0) | select(.metadata.namespace | test("^kube-") | not) | select((.status.phase // "") as $p | $p != "Succeeded" and $p != "Failed") | {namespace:.metadata.namespace, name:.metadata.name}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A1" "Avoid Running Singleton Pods" "application" "critical" "$status" \
     "$found" "$found" "Wrap standalone pods in a Deployment, StatefulSet, or Job controller." \
@@ -163,7 +174,7 @@ check_a3() {
   log "A3: Pod Anti-Affinity"
   local deps found status
   deps=$(kube_json get deployments --all-namespaces)
-  found=$(echo "$deps" | jq '[.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) | select(.spec.template.spec.affinity.podAntiAffinity == null) | {namespace:.metadata.namespace, name:.metadata.name, replicas:.spec.replicas}]')
+  found=$(echo "$deps" | jq '[.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) | select((.spec.template.spec.affinity.podAntiAffinity == null) and ((.spec.template.spec.topologySpreadConstraints // []) | length == 0)) | {namespace:.metadata.namespace, name:.metadata.name, replicas:.spec.replicas}]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A3" "Use Pod Anti-Affinity" "application" "warning" "$status" \
     "$found" "$found" "Add podAntiAffinity to spread replicas across nodes." \
@@ -210,13 +221,22 @@ check_a6() {
   deps=$(kube_json get deployments --all-namespaces)
   sts=$(kube_json get statefulsets --all-namespaces)
   pdbs=$(kubectl get pdb --all-namespaces -o json 2>/dev/null | jq '[.items[] | {namespace:.metadata.namespace, selector:.spec.selector.matchLabels}]' || echo '[]')
+  # A PDB "covers" a workload only when its selector.matchLabels is a subset of
+  # the workload's pod-template labels (an empty selector matches everything in
+  # the namespace). Matching by namespace alone would wrongly treat every
+  # workload as protected as soon as one unrelated PDB exists in the namespace.
   found=$(echo "{\"d\":$deps,\"s\":$sts,\"p\":$pdbs}" | jq '. as $root |
-    [.d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
-     {namespace:.metadata.namespace, name:.metadata.name, kind:"Deployment"} |
-     select(. as $w | $root.p | map(select(.namespace == $w.namespace)) | length == 0)] +
-    [.s.items[] | select(.metadata.namespace | test("^kube-") | not) |
-     {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet"} |
-     select(. as $w | $root.p | map(select(.namespace == $w.namespace)) | length == 0)]')
+    ([.d.items[] | select(.metadata.namespace | test("^kube-") | not) | select(.spec.replicas > 1) |
+       {namespace:.metadata.namespace, name:.metadata.name, kind:"Deployment", labels:(.spec.template.metadata.labels // {})}] +
+     [.s.items[] | select(.metadata.namespace | test("^kube-") | not) |
+       {namespace:.metadata.namespace, name:.metadata.name, kind:"StatefulSet", labels:(.spec.template.metadata.labels // {})}])
+    | map(select(. as $w |
+        ($root.p | map(select(
+           .namespace == $w.namespace
+           and (.selector != null)
+           and ((.selector | to_entries) | all(. as $e | $w.labels[$e.key] == $e.value))
+        )) | length) == 0))
+    | map({namespace, name, kind})')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "A6" "Use Pod Disruption Budgets" "application" "warning" "$status" \
     "$found" "$found" "Create PodDisruptionBudgets for critical workloads." \
@@ -385,26 +405,33 @@ check_c1() {
   log_types=$(aws eks describe-cluster --name "$CLUSTER_NAME" --region "$REGION" \
     --query 'cluster.logging.clusterLogging[?enabled==`true`].types[]' --output json 2>/dev/null || echo '[]')
   if echo "$log_types" | jq -e 'index("api")' >/dev/null 2>&1; then
-    status="PASS"; findings=$(jq -nc --argjson t "$log_types" '["Enabled log types: \($t | join(", "))"]')
+    status="PASS"; findings=$(jq -nc --argjson t "$log_types" '["Enabled control plane log types: \($t | join(", "))"]')
+  elif echo "$log_types" | jq -e 'length > 0' >/dev/null 2>&1; then
+    status="FAIL"; findings=$(jq -nc --argjson t "$log_types" '["API server (api) log not enabled. Currently enabled: \($t | join(", "))"]')
   else
-    status="FAIL"; findings='["API server logging not enabled"]'
+    status="FAIL"; findings='["No control plane logging enabled"]'
   fi
   emit_result "C1" "Monitor Control Plane Logs" "control_plane" "warning" "$status" \
-    "$findings" '[]' "Enable at least api log type via aws eks update-cluster-config." \
+    "$findings" '[]' "Enable at least the api log type via aws eks update-cluster-config." \
     'CloudWatch Logs: ~$0.50/GB ingested (control plane ~1-5 GB/month)'
 }
 
 check_c2() {
   log "C2: Cluster Authentication"
-  local status findings detected=0
+  local status findings detected=0 ae_unknown=0
   local access_entries
-  access_entries=$(aws eks list-access-entries --cluster-name "$CLUSTER_NAME" --region "$REGION" --output json 2>/dev/null || echo '{}')
-  if echo "$access_entries" | jq -e '.accessEntries | length > 0' >/dev/null 2>&1; then detected=1; fi
+  if access_entries=$(aws eks list-access-entries --cluster-name "$CLUSTER_NAME" --region "$REGION" --output json 2>/dev/null); then
+    if echo "$access_entries" | jq -e '.accessEntries | length > 0' >/dev/null 2>&1; then detected=1; fi
+  else
+    ae_unknown=1
+  fi
   local auth_cm
   auth_cm=$(kubectl get configmap aws-auth -n kube-system -o json 2>/dev/null || echo '{}')
   if echo "$auth_cm" | jq -e '.data.mapRoles != null or .data.mapUsers != null' >/dev/null 2>&1; then detected=1; fi
   if [[ $detected -ge 1 ]]; then
     status="PASS"; findings='["Cluster authentication configured"]'
+  elif [[ $ae_unknown -eq 1 ]]; then
+    status="INFO"; findings='["Access-entries query failed (e.g. missing eks:ListAccessEntries) and no aws-auth ConfigMap detected — authentication config could not be confirmed"]'
   else
     status="FAIL"; findings='["No access entries or aws-auth ConfigMap found"]'
   fi
@@ -417,13 +444,15 @@ check_c3() {
   log "C3: Large Cluster Optimizations"
   local status findings
   local svc_count
-  svc_count=$(kubectl get services --all-namespaces --no-headers 2>/dev/null | wc -l)
+  svc_count=$(kubectl get services --all-namespaces --no-headers 2>/dev/null | wc -l | tr -d '[:space:]' || true)
+  svc_count=${svc_count:-0}
   if [[ "$svc_count" -lt 1000 ]]; then
     status="PASS"
     findings='["Service count '"$svc_count"' < 1000; no large-cluster optimizations needed"]'
   else
     local kp_mode warm_ip optimized=0
-    kp_mode=$(kubectl get configmap kube-proxy-config -n kube-system -o json 2>/dev/null | jq -r '.data.config' 2>/dev/null | grep -oP '"mode"\s*:\s*"\K[^"]+' || echo "unknown")
+    kp_mode=$(kubectl get configmap kube-proxy-config -n kube-system -o json 2>/dev/null | jq -r '.data.config // ""' 2>/dev/null | jq -R 'fromjson? | .mode // empty' 2>/dev/null | head -n1 || echo "")
+    [[ -z "$kp_mode" ]] && kp_mode="unknown"
     warm_ip=$(kubectl get daemonset aws-node -n kube-system -o json 2>/dev/null | jq '[.spec.template.spec.containers[0].env[] | select(.name | test("WARM_IP_TARGET|WARM_ENI_TARGET|MINIMUM_IP_TARGET"))]' || echo '[]')
     [[ "$kp_mode" == "ipvs" ]] && optimized=$((optimized + 1))
     [[ $(echo "$warm_ip" | jq 'length') -gt 0 ]] && optimized=$((optimized + 1))
@@ -440,25 +469,44 @@ check_c3() {
 
 check_c4() {
   log "C4: Endpoint Access Control"
-  local status findings
+  local status findings remediation
   local vpc_cfg
   vpc_cfg=$(aws eks describe-cluster --name "$CLUSTER_NAME" --region "$REGION" \
     --query 'cluster.resourcesVpcConfig.{endpointPublicAccess:endpointPublicAccess,endpointPrivateAccess:endpointPrivateAccess,publicAccessCidrs:publicAccessCidrs}' \
     --output json 2>/dev/null || echo '{}')
-  local pub_access cidrs
-  pub_access=$(echo "$vpc_cfg" | jq -r '.endpointPublicAccess // "unknown"')
-  cidrs=$(echo "$vpc_cfg" | jq -r '.publicAccessCidrs // []')
-  if [[ "$pub_access" == "false" ]]; then
-    status="PASS"; findings='["Fully private endpoint"]'
-  elif echo "$cidrs" | jq -e 'index("0.0.0.0/0")' >/dev/null 2>&1; then
-    status="FAIL"; findings='["Public endpoint open to 0.0.0.0/0"]'
-  elif [[ "$pub_access" == "true" ]]; then
-    status="PASS"; findings=$(jq -nc --argjson c "$cidrs" '["Public endpoint restricted to: \($c | join(", "))"]')
+  local pub_access priv_access cidrs open
+  # Normalize to "true"/"false"/"unknown" WITHOUT jq's // — which treats boolean
+  # `false` as empty and would turn a private cluster (endpointPublicAccess=false)
+  # into "unknown", bypassing the private-endpoint PASS gate.
+  pub_access=$(echo "$vpc_cfg"  | jq -r '.endpointPublicAccess  | if . == null or . == "unknown" then "unknown" else (. | tostring) end')
+  priv_access=$(echo "$vpc_cfg" | jq -r '.endpointPrivateAccess | if . == null or . == "unknown" then "unknown" else (. | tostring) end')
+  cidrs=$(echo "$vpc_cfg" | jq -c '.publicAccessCidrs // []')
+  # "open" = reachable from the entire internet. Not a plain string match for
+  # "0.0.0.0/0": also catches equivalent wide splits like
+  # ["0.0.0.0/1","128.0.0.0/1"] by flagging any prefix length <= 1.
+  open=$(echo "$cidrs" | jq -c 'if (index("0.0.0.0/0") != null) then true elif (length > 0) and (([.[] | (split("/")[1] // "32" | tonumber)] | min) <= 1) then true else false end')
+
+  if [[ "$pub_access" == "unknown" ]]; then
+    status="INFO"; findings='["Endpoint access configuration unavailable (data missing or query failed) — cannot assess"]'
+    remediation="Re-run with eks:DescribeCluster permission to capture the endpoint configuration."
+  elif [[ "$pub_access" == "false" ]]; then
+    status="PASS"; findings='["Fully private endpoint (public access disabled)"]'
+    remediation="None — the API server endpoint is private."
+  elif [[ "$open" == "true" ]]; then
+    status="FAIL"
+    findings=$(jq -nc --argjson c "$cidrs" '["Public endpoint open to the entire internet — current publicAccessCidrs: \(if ($c | length) > 0 then ($c | join(", ")) else "0.0.0.0/0" end)"]')
+    if [[ "$priv_access" == "true" ]]; then
+      remediation="Public+private mode: restrict publicAccessCidrs to trusted ranges, or disable public access (endpointPublicAccess=false)."
+    else
+      remediation="Public-only: enable private endpoint access first, then restrict publicAccessCidrs or disable public access."
+    fi
   else
-    status="INFO"; findings='["Unable to determine endpoint access configuration"]'
+    status="PASS"
+    findings=$(jq -nc --argjson c "$cidrs" '["Public endpoint restricted to: \($c | join(", "))"]')
+    remediation="Acceptable — public access is CIDR-restricted. Review the allow-list periodically."
   fi
   emit_result "C4" "EKS Control Plane Endpoint Access Control" "control_plane" "critical" "$status" \
-    "$findings" '[]' "Restrict public endpoint access or use a fully private endpoint." \
+    "$findings" '[]' "$remediation" \
     'Zero — endpoint access configuration only'
 }
 
@@ -470,7 +518,7 @@ check_c5() {
   found=$(echo "{\"m\":$mut,\"v\":$val}" | jq '
     [(.m.items[], .v.items[]) | {name:.metadata.name, webhooks:[.webhooks[]? |
       select((.namespaceSelector == null) and (.objectSelector == null) and
-        (.rules[]? | (.apiGroups[]? == "*") or (.apiVersions[]? == "*") or (.resources[]? == "*"))) |
+        (any(.rules[]?; (.apiGroups[]? == "*") or (.apiVersions[]? == "*") or (.resources[]? == "*")))) |
       {name:.name}]} | select(.webhooks | length > 0)]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "C5" "Avoid Catch-All Admission Webhooks" "control_plane" "warning" "$status" \
@@ -506,7 +554,7 @@ check_d2() {
   local status findings
   local nodes_json az_info
   nodes_json=$(kube_json get nodes)
-  az_info=$(echo "$nodes_json" | jq '[.items[] | {name:.metadata.name, az:.metadata.labels["topology.kubernetes.io/zone"]}] | group_by(.az) | map({az:.[0].az, count:length})')
+  az_info=$(echo "$nodes_json" | jq '[.items[] | {name:.metadata.name, az:.metadata.labels["topology.kubernetes.io/zone"]} | select(.az != null and .az != "")] | group_by(.az) | map({az:.[0].az, count:length})')
   local az_count
   az_count=$(echo "$az_info" | jq 'length')
   if [[ "$az_count" -lt 2 ]]; then
@@ -529,18 +577,26 @@ check_d2() {
 
 check_d3() {
   log "D3: Resource Requests/Limits"
-  local deps found status
+  local deps sts ds found status
   deps=$(kube_json get deployments --all-namespaces)
-  found=$(echo "$deps" | jq '[.items[] | select(.metadata.namespace | test("^kube-") | not) |
-    {namespace:.metadata.namespace, name:.metadata.name, containers_missing_resources:
-      [.spec.template.spec.containers[] | {name:.name,
-        has_cpu_request:(.resources.requests.cpu != null), has_cpu_limit:(.resources.limits.cpu != null),
-        has_mem_request:(.resources.requests.memory != null), has_mem_limit:(.resources.limits.memory != null)}
-       | select(.has_cpu_request == false or .has_cpu_limit == false or .has_mem_request == false or .has_mem_limit == false)]}
-    | select(.containers_missing_resources | length > 0)]')
+  sts=$(kube_json get statefulsets --all-namespaces)
+  ds=$(kube_json get daemonsets --all-namespaces)
+  found=$(echo "{\"d\":$deps,\"s\":$sts,\"a\":$ds}" | jq '
+    [ (.d.items[] | . + {_kind:"Deployment"}),
+      (.s.items[] | . + {_kind:"StatefulSet"}),
+      (.a.items[] | . + {_kind:"DaemonSet"}) ]
+    | [ .[] | select(.metadata.namespace | test("^kube-") | not) |
+        {namespace:.metadata.namespace, name:.metadata.name, kind:._kind, containers_missing_resources:
+          [ ((.spec.template.spec.containers // [])[]      | . + {_ctype:"container"}),
+            ((.spec.template.spec.initContainers // [])[]  | . + {_ctype:"initContainer"}) ]
+          | map({name:.name, type:._ctype,
+                 has_cpu_request:(.resources.requests.cpu != null), has_cpu_limit:(.resources.limits.cpu != null),
+                 has_mem_request:(.resources.requests.memory != null), has_mem_limit:(.resources.limits.memory != null)}
+                | select(.has_cpu_request == false or .has_cpu_limit == false or .has_mem_request == false or .has_mem_limit == false))}
+        | select(.containers_missing_resources | length > 0) ]')
   if [[ $(echo "$found" | jq 'length') -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
   emit_result "D3" "Configure Resource Requests/Limits" "data_plane" "critical" "$status" \
-    "$found" "$found" "Set CPU/memory requests and limits for all containers." \
+    "$found" "$found" "Set CPU/memory requests and limits for all containers (including initContainers) in Deployments, StatefulSets, and DaemonSets." \
     'Zero — may expose need for more capacity if requests were unset'
 }
 
@@ -549,12 +605,15 @@ check_d4() {
   local missing=()
   for ns in "${FILTERED_NS[@]}"; do
     local count
-    count=$(kubectl get resourcequota -n "$ns" --no-headers 2>/dev/null | wc -l)
-    if [[ "$count" -eq 0 ]]; then missing+=("$ns"); fi
+    count=$(kubectl get resourcequota -n "$ns" --no-headers 2>/dev/null | wc -l | tr -d '[:space:]' || true)
+    if [[ "${count:-0}" -eq 0 ]]; then missing+=("$ns"); fi
   done
   local found status
-  found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.')
-  if [[ ${#missing[@]} -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    found='[]'; status="PASS"
+  else
+    found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.'); status="FAIL"
+  fi
   emit_result "D4" "Namespace ResourceQuotas" "data_plane" "warning" "$status" \
     "$found" "$found" "Create ResourceQuota in each namespace to enforce resource limits." \
     'Zero — K8s quota configuration only'
@@ -565,12 +624,15 @@ check_d5() {
   local missing=()
   for ns in "${FILTERED_NS[@]}"; do
     local count
-    count=$(kubectl get limitrange -n "$ns" --no-headers 2>/dev/null | wc -l)
-    if [[ "$count" -eq 0 ]]; then missing+=("$ns"); fi
+    count=$(kubectl get limitrange -n "$ns" --no-headers 2>/dev/null | wc -l | tr -d '[:space:]' || true)
+    if [[ "${count:-0}" -eq 0 ]]; then missing+=("$ns"); fi
   done
   local found status
-  found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.')
-  if [[ ${#missing[@]} -eq 0 ]]; then status="PASS"; else status="FAIL"; fi
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    found='[]'; status="PASS"
+  else
+    found=$(printf '%s\n' "${missing[@]}" | jq -R . | jq -sc '.'); status="FAIL"
+  fi
   emit_result "D5" "Namespace LimitRanges" "data_plane" "warning" "$status" \
     "$found" "$found" "Create LimitRange in each namespace to set default resource constraints." \
     'Zero — K8s LimitRange configuration only'
@@ -580,7 +642,7 @@ check_d6() {
   log "D6: CoreDNS Metrics Monitoring"
   local status findings detected=0
   local metrics_port
-  metrics_port=$(kubectl get deployment coredns -n kube-system -o json 2>/dev/null | jq '[.spec.template.spec.containers[0].ports[] | select(.containerPort == 9153)] | length' || echo "0")
+  metrics_port=$(kubectl get deployment coredns -n kube-system -o json 2>/dev/null | jq '[(.spec.template.spec.containers[0].ports // [])[] | select(.containerPort == 9153)] | length' 2>/dev/null || echo "0")
   local svcmon
   svcmon=$(kubectl get servicemonitor -n kube-system -o json 2>/dev/null | jq '[.items[] | select(.spec.selector.matchLabels["k8s-app"] == "kube-dns" or (.metadata.name | test("coredns|dns")))] | length' || echo "0")
   local prom_ann

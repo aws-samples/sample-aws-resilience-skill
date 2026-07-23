@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Requires Bash 4.0+ (the assess.sh it drives uses associative arrays). macOS
+# ships Bash 3.2 — install a newer bash (`brew install bash`) and run with it.
+if [[ -z "${BASH_VERSINFO:-}" || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+  echo "ERROR: this script requires Bash 4.0 or newer (found ${BASH_VERSION:-unknown})." >&2
+  echo "       macOS default is Bash 3.2. Install a newer bash and re-run, e.g.:" >&2
+  echo "         brew install bash && /opt/homebrew/bin/bash $0 ..." >&2
+  echo "         (Intel Homebrew: /usr/local/bin/bash)" >&2
+  exit 1
+fi
+
 ###############################################################################
 # multi-cluster-assess.sh
 #
@@ -76,7 +86,9 @@ discover_clusters() {
   [[ -n "$REGION" ]] || die "--discover requires --region"
   log "Discovering clusters in region $REGION ..."
   local list
-  list=$(aws eks list-clusters --region "$REGION" --output json 2>/dev/null | jq -r '.clusters[]?')
+  # `|| true` so a failed/throttled list-clusters does not trip `set -e` before
+  # the friendly die below can report it.
+  list=$(aws eks list-clusters --region "$REGION" --output json 2>/dev/null | jq -r '.clusters[]?' || true)
   [[ -n "$list" ]] || die "No clusters found in region $REGION (or list-clusters call failed/was throttled)"
   CLUSTER_ARR=()
   while IFS= read -r c; do

@@ -107,31 +107,36 @@ START_EPOCH=$(date +%s)
 
 # ---------------------------------------------------------------------------
 # Error classification
+# Uses bash regex with nocasematch (bash 3.1+, works on macOS's bash 3.2) —
+# no subprocess forks. The previous grep-based version forked up to 5
+# processes per log line, which silently dropped logs on high-volume services.
 # ---------------------------------------------------------------------------
 classify_line() {
-    local line="$1"
-    if echo "$line" | grep -qiE 'timeout|timed.out|deadline.exceeded|context.deadline'; then
-        echo "timeout"
-    elif echo "$line" | grep -qiE 'connection.refused|connection.reset|ECONNREFUSED|ECONNRESET|no.route.to.host|connect.failed'; then
-        echo "connection"
-    elif echo "$line" | grep -qiE 'HTTP [5][0-9]{2}|status.?=.?5[0-9]{2}|Internal.Server.Error|Bad.Gateway|Service.Unavailable|Gateway.Timeout'; then
-        echo "5xx"
-    elif echo "$line" | grep -qiE 'OOMKilled|out.of.memory|Cannot.allocate.memory|memory.cgroup|killed.process'; then
-        echo "oom"
-    else
-        echo "other"
+    local line="$1" result="other"
+    shopt -s nocasematch
+    if [[ "$line" =~ timeout|timed.out|deadline.exceeded|context.deadline ]]; then
+        result="timeout"
+    elif [[ "$line" =~ connection.refused|connection.reset|ECONNREFUSED|ECONNRESET|no.route.to.host|connect.failed ]]; then
+        result="connection"
+    elif [[ "$line" =~ HTTP\ 5[0-9][0-9]|status.?=.?5[0-9][0-9]|Internal.Server.Error|Bad.Gateway|Service.Unavailable|Gateway.Timeout ]]; then
+        result="5xx"
+    elif [[ "$line" =~ OOMKilled|out.of.memory|Cannot.allocate.memory|memory.cgroup|killed.process ]]; then
+        result="oom"
     fi
+    shopt -u nocasematch
+    echo "$result"
 }
 
 detect_level() {
-    local line="$1"
-    if echo "$line" | grep -qiE 'ERROR|FATAL|PANIC|CRITICAL'; then
-        echo "ERROR"
-    elif echo "$line" | grep -qiE 'WARN'; then
-        echo "WARN"
-    else
-        echo "INFO"
+    local line="$1" result="INFO"
+    shopt -s nocasematch
+    if [[ "$line" =~ ERROR|FATAL|PANIC|CRITICAL ]]; then
+        result="ERROR"
+    elif [[ "$line" =~ WARN ]]; then
+        result="WARN"
     fi
+    shopt -u nocasematch
+    echo "$result"
 }
 
 # ---------------------------------------------------------------------------
@@ -174,14 +179,13 @@ process_line() {
         '{timestamp:$ts, pod:$pod, service:$svc, level:$level, category:$cat, message:$msg}' \
         >> "$LOGS_FILE"
 
-    # Write minute-tagged copy for summary timeline
-    jq -cn \
-        --arg ts "$ts" \
-        --arg level "$level" \
-        --arg cat "$category" \
-        --argjson min "$minute" \
-        '{timestamp:$ts, level:$level, category:$cat, _minute:$min}' \
-        >> "$INTERNAL_FILE"
+    # Write minute-tagged copy for summary timeline.
+    # printf instead of jq: level/category/minute are generated values and ts
+    # is sanitized below, so JSON-escaping via jq (one fork per line) is
+    # unnecessary overhead here.
+    local safe_ts="${ts//[\"\\\\]/}"
+    printf '{"timestamp":"%s","level":"%s","category":"%s","_minute":%d}\n' \
+        "$safe_ts" "$level" "$category" "$minute" >> "$INTERNAL_FILE"
 }
 
 # ---------------------------------------------------------------------------
@@ -225,6 +229,9 @@ cleanup() {
 }
 
 trap cleanup SIGTERM SIGINT
+# Also remove the temp file on abnormal exits (e.g. set -e aborts) where the
+# SIGTERM/SIGINT cleanup path never runs.
+trap 'rm -f "$INTERNAL_FILE"' EXIT
 
 # ---------------------------------------------------------------------------
 # Write summary JSON (built from the JSONL file)
@@ -354,58 +361,73 @@ print_status() {
 }
 
 # ---------------------------------------------------------------------------
-# Live mode: stream logs in background
+# Live mode: stream logs in background with periodic pod re-discovery.
+# Chaos experiments kill pods; their replacements get new names, so a
+# one-time discovery at startup would miss all post-injection logs.
 # ---------------------------------------------------------------------------
-run_live() {
-    for svc in "${SVC_LIST[@]}"; do
-        local pods
-        # Try label app=$svc first
-        pods=$(kubectl get pods -l "app=$svc" -n "$NAMESPACE" \
-            -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+TRACKED_PODS=" "   # space-delimited set (portable to bash 3.2, no assoc arrays)
 
-        # Fallback: resolve deployment's actual selector labels
-        if [[ -z "$pods" ]]; then
-            local selector
-            selector=$(kubectl get deployment "$svc" -n "$NAMESPACE" \
-                -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
-                jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")' 2>/dev/null || true)
-            if [[ -n "$selector" ]]; then
-                pods=$(kubectl get pods -l "$selector" -n "$NAMESPACE" \
-                    -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
-            fi
+is_tracked() { [[ "$TRACKED_PODS" == *" $1 "* ]]; }
+
+resolve_pods_for_service() {
+    local svc="$1" pods selector
+    # Try label app=$svc first
+    pods=$(kubectl get pods -l "app=$svc" -n "$NAMESPACE" \
+        -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+    # Fallback: resolve deployment's actual selector labels
+    if [[ -z "$pods" ]]; then
+        selector=$(kubectl get deployment "$svc" -n "$NAMESPACE" \
+            -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
+            jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")' 2>/dev/null || true)
+        if [[ -n "$selector" ]]; then
+            pods=$(kubectl get pods -l "$selector" -n "$NAMESPACE" \
+                -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
         fi
+    fi
+    echo "$pods"
+}
 
+start_stream() {
+    local pod="$1" svc="$2"
+    (
+        # Per-pod stream: pod name is known, no --prefix parsing needed
+        kubectl logs -f --timestamps "$pod" -n "$NAMESPACE" 2>/dev/null \
+        | while IFS= read -r line; do
+            process_line "$line" "$pod" "$svc"
+        done
+    ) &
+    BG_PIDS+=($!)
+    echo "[log-collector] Streaming pod=$pod service=$svc (PID=$!)" >&2
+}
+
+discover_streams() {
+    local svc pod pods
+    for svc in "${SVC_LIST[@]}"; do
+        pods=$(resolve_pods_for_service "$svc")
         if [[ -z "$pods" ]]; then
             echo "[log-collector] WARN: no pods found for service=$svc" >&2
             continue
         fi
-
         for pod in $pods; do
-            (
-                kubectl logs -f --prefix --timestamps "$pod" -n "$NAMESPACE" 2>/dev/null \
-                | while IFS= read -r line; do
-                    local pod_name="$pod"
-                    local log_line="$line"
-                    # --prefix format: [pod/name] timestamp message
-                    if [[ "$line" =~ ^\[pod/([^\]]+)\]\  ]]; then
-                        pod_name="${BASH_REMATCH[1]}"
-                        log_line="${line#*] }"
-                    fi
-                    process_line "$log_line" "$pod_name" "$svc"
-                done
-            ) &
-            BG_PIDS+=($!)
-            echo "[log-collector] Streaming pod=$pod service=$svc (PID=$!)" >&2
+            is_tracked "$pod" && continue
+            TRACKED_PODS="${TRACKED_PODS}${pod} "
+            start_stream "$pod" "$svc"
         done
     done
+}
 
-    # Wait for duration, printing status every SUMMARY_INTERVAL seconds
-    # Use "sleep N & wait $!" pattern so SIGTERM can interrupt the sleep
+run_live() {
+    discover_streams
+
+    # Wait for duration, printing status every SUMMARY_INTERVAL seconds.
+    # Use "sleep N & wait $!" pattern so SIGTERM can interrupt the sleep.
     local elapsed=0
     while (( elapsed < DURATION )); do
         sleep "$SUMMARY_INTERVAL" &
         wait $! || true  # interrupted by SIGTERM → trap fires immediately
         elapsed=$(( $(date +%s) - START_EPOCH ))
+        # Re-discover: pick up replacement pods created after chaos injection
+        discover_streams
         print_status "$elapsed"
     done
 
@@ -413,41 +435,36 @@ run_live() {
 }
 
 # ---------------------------------------------------------------------------
-# Post mode: collect logs since a timestamp
+# Post mode: collect logs since a timestamp.
+# Iterates every pod of each service — `kubectl logs deployment/x` would only
+# return logs from one arbitrary pod, losing data for multi-replica services.
 # ---------------------------------------------------------------------------
 run_post() {
     for svc in "${SVC_LIST[@]}"; do
         echo "[log-collector] Collecting post-experiment logs for service=$svc since=$SINCE" >&2
 
-        local log_output
-        log_output=$(kubectl logs --since-time="$SINCE" --timestamps \
-            "deployment/$svc" -n "$NAMESPACE" 2>/dev/null || true)
-
-        if [[ -z "$log_output" ]]; then
-            echo "[log-collector] WARN: no logs for service=$svc" >&2
+        local pods
+        pods=$(resolve_pods_for_service "$svc")
+        if [[ -z "$pods" ]]; then
+            echo "[log-collector] WARN: no pods found for service=$svc" >&2
             continue
         fi
 
-        # Determine pod name from deployment
-        local pod_name
-        pod_name=$(kubectl get pods -l "app=$svc" -n "$NAMESPACE" \
-            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-        if [[ -z "$pod_name" ]]; then
-            local selector
-            selector=$(kubectl get deployment "$svc" -n "$NAMESPACE" \
-                -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
-                jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")' 2>/dev/null || true)
-            if [[ -n "$selector" ]]; then
-                pod_name=$(kubectl get pods -l "$selector" -n "$NAMESPACE" \
-                    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-            fi
-        fi
-        pod_name="${pod_name:-${svc}-post}"
+        local pod log_output
+        for pod in $pods; do
+            log_output=$(kubectl logs --since-time="$SINCE" --timestamps \
+                "$pod" -n "$NAMESPACE" 2>/dev/null || true)
 
-        while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
-            process_line "$line" "$pod_name" "$svc"
-        done <<< "$log_output"
+            if [[ -z "$log_output" ]]; then
+                echo "[log-collector] WARN: no logs for pod=$pod service=$svc" >&2
+                continue
+            fi
+
+            while IFS= read -r line; do
+                [[ -z "$line" ]] && continue
+                process_line "$line" "$pod" "$svc"
+            done <<< "$log_output"
+        done
     done
 
     write_summary

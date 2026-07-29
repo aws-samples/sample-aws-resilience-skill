@@ -13,10 +13,12 @@ DASHBOARD="$OUTPUT_DIR/dashboard.md"
 
 TIMESTAMP=$(date -u +%FT%TZ)
 
-# Read state (snapshot copy to avoid reading partial writes)
+# Read state (snapshot copy to avoid reading partial writes; mktemp avoids
+# predictable temp filenames)
 if [[ -f "$STATE_FILE" ]]; then
-    TMPF="/tmp/.dashboard-state-$$.json"
-    STATE=$(cp "$STATE_FILE" "$TMPF" 2>/dev/null && cat "$TMPF" && rm -f "$TMPF" || echo '{}')
+    TMPF=$(mktemp "${TMPDIR:-/tmp}/dashboard-state.XXXXXX")
+    STATE=$(cp "$STATE_FILE" "$TMPF" 2>/dev/null && cat "$TMPF" || echo '{}')
+    rm -f "$TMPF"
 else
     STATE='{}'
 fi

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# validate-skill.sh — 静态验证 chaos-engineering-on-aws skill 的完整性
+# validate-skill.sh — Static integrity validation for the chaos-engineering-on-aws skill
 set -uo pipefail
 
-SKILL_DIR="/home/ubuntu/tech/sample-aws-resilience-skill/chaos-engineering-on-aws"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PASS=0
 FAIL=0
 WARN=0
@@ -16,7 +16,7 @@ echo "  Chaos Engineering Skill — 静态验证"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# ─── 1. JSON 模板语法 ──────────────────────────────────────────────
+# ─── 1. JSON template syntax ──────────────────────────────────────
 echo "【1】JSON 模板语法验证"
 for f in "$SKILL_DIR"/references/templates/*.json; do
     if jq empty "$f" 2>/dev/null; then
@@ -25,13 +25,26 @@ for f in "$SKILL_DIR"/references/templates/*.json; do
         fail "$(basename "$f") — JSON 语法错误"
     fi
 done
+# Also syntax-check fis-templates (upstream fis-template-library integration)
+fis_tpl_bad=0
+fis_tpl_total=0
+while IFS= read -r f; do
+    ((fis_tpl_total++))
+    if ! jq empty "$f" 2>/dev/null; then
+        fail "fis-templates/${f#*fis-templates/} — JSON 语法错误"
+        ((fis_tpl_bad++))
+    fi
+done < <(find "$SKILL_DIR/references/fis-templates" -name "*.json" 2>/dev/null)
+if [[ $fis_tpl_total -gt 0 && $fis_tpl_bad -eq 0 ]]; then
+    pass "references/fis-templates/ 全部 $fis_tpl_total 个 JSON 语法正确"
+fi
 
-# ─── 2. FIS 模板结构验证 ───────────────────────────────────────────
+# ─── 2. FIS template structure (required fields) ──────────────────
 echo ""
-echo "【2】FIS 模板结构验证（必需字段）"
+echo "【2】FIS 模板结构验证(必需字段)"
 for f in "$SKILL_DIR"/references/templates/*.json; do
     fname=$(basename "$f")
-    # 必须有 actions, targets, stopConditions, roleArn
+    # Must contain actions, targets, stopConditions, roleArn
     for field in actions targets stopConditions roleArn; do
         if jq -e ".$field" "$f" >/dev/null 2>&1; then
             pass "$fname — 包含 .$field"
@@ -40,22 +53,22 @@ for f in "$SKILL_DIR"/references/templates/*.json; do
         fi
     done
     
-    # 每个 action 必须有 actionId 和 targets
+    # Every action must have an actionId and targets
     action_count=$(jq '.actions | length' "$f")
     for key in $(jq -r '.actions | keys[]' "$f"); do
         if jq -e ".actions[\"$key\"].actionId" "$f" >/dev/null 2>&1; then
             pass "$fname → action '$key' 有 actionId"
         else
-            # aws:fis:wait 也有 actionId
+            # aws:fis:wait also carries an actionId
             fail "$fname → action '$key' 缺失 actionId"
         fi
     done
     echo "  📊 $fname: $action_count 个 action"
 done
 
-# ─── 3. startAfter 引用完整性 ─────────────────────────────────────
+# ─── 3. startAfter reference integrity ────────────────────────────
 echo ""
-echo "【3】startAfter 引用完整性（action 名称必须存在）"
+echo "【3】startAfter 引用完整性(action 名称必须存在)"
 for f in "$SKILL_DIR"/references/templates/*.json; do
     fname=$(basename "$f")
     all_actions=$(jq -r '.actions | keys[]' "$f")
@@ -76,45 +89,51 @@ for f in "$SKILL_DIR"/references/templates/*.json; do
     fi
 done
 
-# ─── 4. 占位符一致性 ──────────────────────────────────────────────
+# ─── 4. Placeholder consistency ───────────────────────────────────
 echo ""
-echo "【4】占位符格式验证（必须是 {{name}} 格式）"
+echo "【4】占位符格式验证(必须是 {{name}} 格式)"
 for f in "$SKILL_DIR"/references/templates/*.json; do
     fname=$(basename "$f")
-    placeholders=$(grep -oP '\{\{[a-zA-Z_]+\}\}' "$f" | sort -u)
+    placeholders=$(grep -oE '\{\{[a-zA-Z_]+\}\}' "$f" | sort -u)
     count=$(echo "$placeholders" | grep -c . || true)
     echo "  📋 $fname: $count 个占位符"
     for p in $placeholders; do
         pass "$fname — 占位符 $p 格式正确"
     done
-    # 检查有没有不规范的占位符（如 {name} 单大括号）
-    bad=$(grep -oP '(?<!\{)\{[a-zA-Z_]+\}(?!\})' "$f" 2>/dev/null || true)
+    # Detect malformed placeholders (e.g. single-brace {name})
+    bad=$(grep -oE '\{+[a-zA-Z_]+\}+' "$f" | sort -u | grep -vE '^\{\{[a-zA-Z_]+\}\}$' || true)
     if [[ -n "$bad" ]]; then
         fail "$fname — 不规范占位符: $bad"
     fi
 done
 
-# ─── 5. YAML 语法 ────────────────────────────────────────────────
+# ─── 5. YAML syntax ───────────────────────────────────────────────
 echo ""
 echo "【5】fault-catalog.yaml 语法验证"
-if python3 -c "import yaml; yaml.safe_load(open('$SKILL_DIR/references/fault-catalog.yaml'))" 2>/dev/null; then
+if ! python3 -c "import yaml" 2>/dev/null; then
+    warn "python3/pyyaml 不可用 — 跳过 YAML 语法验证(pip install pyyaml)"
+elif python3 -c "import yaml; yaml.safe_load(open('$SKILL_DIR/references/fault-catalog.yaml'))" 2>/dev/null; then
     pass "fault-catalog.yaml — YAML 语法正确"
-    # 统计条目
-    total=$(grep "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | wc -l)
-    fis=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep "backend: fis$" | wc -l)
-    cm=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep "backend: chaosmesh" | wc -l)
-    scenario=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep "backend: fis-scenario" | wc -l)
-    echo "  📊 总计 $total 个 fault（FIS: $fis, CM: $cm, Scenario: $scenario）"
-    if [[ $total -eq 42 ]]; then
-        pass "fault 总数 = 42（与 README 一致）"
-    else
-        fail "fault 总数 = $total（README 声称 42）"
-    fi
 else
     fail "fault-catalog.yaml — YAML 语法错误"
 fi
+# Count entries (no pyyaml dependency)
+total=$(grep -c "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" || true)
+fis=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep -c "backend: fis$" || true)
+cm=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep -c "backend: chaosmesh" || true)
+scenario=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep -c "backend: fis-scenario" || true)
+echo "  📊 总计 $total 个 fault (FIS: $fis, CM: $cm, Scenario: $scenario)"
+# Compare against the count claimed in README (no hardcoded 42)
+readme_claim=$(grep -oE 'Fault Catalog Summary: [0-9]+' "$SKILL_DIR/README.md" | grep -oE '[0-9]+' | head -1)
+if [[ -z "$readme_claim" ]]; then
+    warn "README.md 未找到 'Fault Catalog Summary: N' 声明 — 跳过数量比对"
+elif [[ $total -eq $readme_claim ]]; then
+    pass "fault 总数 = $total(与 README 声明一致)"
+else
+    fail "fault 总数 = $total(README 声称 $readme_claim)"
+fi
 
-# ─── 6. Shell 脚本语法 ───────────────────────────────────────────
+# ─── 6. Shell script syntax ───────────────────────────────────────
 echo ""
 echo "【6】Shell 脚本语法验证"
 for f in "$SKILL_DIR"/scripts/*.sh; do
@@ -125,13 +144,13 @@ for f in "$SKILL_DIR"/scripts/*.sh; do
     fi
 done
 
-# ─── 7. Markdown 链接验证 ────────────────────────────────────────
+# ─── 7. Markdown internal links ───────────────────────────────────
 echo ""
-echo "【7】Markdown 内部链接验证（README → 文件是否存在）"
+echo "【7】Markdown 内部链接验证(README → 文件是否存在)"
 for readme in README.md README_zh.md; do
     echo "  --- $readme ---"
-    # 提取 Markdown 链接中的相对路径
-    links=$(grep -oP '\]\((?!http)([^)]+)\)' "$SKILL_DIR/$readme" | sed 's/\](//' | sed 's/)//' | sort -u)
+    # Extract relative paths from Markdown links
+    links=$(grep -oE '\]\([^)]+\)' "$SKILL_DIR/$readme" | sed 's/^](//; s/)$//' | grep -v '^http' | sort -u)
     for link in $links; do
         target="$SKILL_DIR/$link"
         if [[ -e "$target" ]]; then
@@ -142,19 +161,19 @@ for readme in README.md README_zh.md; do
     done
 done
 
-# ─── 8. 中英文章节编号对齐 ────────────────────────────────────────
+# ─── 8. EN/ZH section alignment ───────────────────────────────────
 echo ""
 echo "【8】SKILL 中英文章节对齐"
 # After refactoring, SKILL files are ~120 lines directory-style. Check section headers match.
 zh_sections=$(grep "^## " "$SKILL_DIR/SKILL_ZH.md" | wc -l)
 en_sections=$(grep "^## " "$SKILL_DIR/SKILL_EN.md" | wc -l)
 if [[ "$zh_sections" -eq "$en_sections" ]]; then
-    pass "SKILL_ZH.md 与 SKILL_EN.md 顶级章节数一致（各 $zh_sections 个）"
+    pass "SKILL_ZH.md 与 SKILL_EN.md 顶级章节数一致(各 $zh_sections 个)"
 else
     fail "顶级章节数不一致！ZH=$zh_sections EN=$en_sections"
 fi
 
-# ─── 9. 示例文件中英文配对 ────────────────────────────────────────
+# ─── 9. EN/ZH example file pairing ────────────────────────────────
 echo ""
 echo "【9】示例文件中英文配对"
 for en in "$SKILL_DIR"/examples/*[!_zh].md; do
@@ -167,7 +186,7 @@ for en in "$SKILL_DIR"/examples/*[!_zh].md; do
     fi
 done
 
-# ─── 10. experiment-runner.sh CM CR 检查逻辑 ─────────────────────
+# ─── 10. experiment-runner.sh CM CR existence check ───────────────
 echo ""
 echo "【10】experiment-runner.sh — CM CR 存在性检查"
 if grep -q "CR not found" "$SKILL_DIR/scripts/experiment-runner.sh"; then
@@ -181,7 +200,7 @@ else
     fail "缺少 ABORTED 状态"
 fi
 
-# ─── 11. FIS 模板 target 引用验证 ────────────────────────────────
+# ─── 11. FIS template action→target references ────────────────────
 echo ""
 echo "【11】FIS 模板 action→target 引用验证"
 for f in "$SKILL_DIR"/references/templates/*.json; do
@@ -199,19 +218,19 @@ for f in "$SKILL_DIR"/references/templates/*.json; do
     done
 done
 
-# ─── 12. SKILL 文件行数（context management） ────────────────────
+# ─── 12. SKILL file line count (context management) ───────────────
 echo ""
-echo "【12】SKILL 文件行数检查（目录模式 ≤ 150 行）"
+echo "【12】SKILL 文件行数检查(目录模式 ≤ 150 行)"
 for f in SKILL_EN.md SKILL_ZH.md; do
     lines=$(wc -l < "$SKILL_DIR/$f")
     if [[ $lines -le 150 ]]; then
-        pass "$f — $lines 行（≤ 150，目录模式 ✓）"
+        pass "$f — $lines 行(≤ 150，目录模式 ✓)"
     else
-        fail "$f — $lines 行（> 150，应精简为目录+指针）"
+        fail "$f — $lines 行(> 150，应精简为目录+指针)"
     fi
 done
 
-# ─── 13. 新增必要文件存在性 ──────────────────────────────────────
+# ─── 13. Required new files existence ─────────────────────────────
 echo ""
 echo "【13】新增文件存在性检查"
 for f in "references/workflow-guide.md" "references/workflow-guide_zh.md" "scripts/README.md"; do
@@ -222,7 +241,7 @@ for f in "references/workflow-guide.md" "references/workflow-guide_zh.md" "scrip
     fi
 done
 
-# ─── 14. fault-catalog 快速索引 ──────────────────────────────────
+# ─── 14. fault-catalog quick index ────────────────────────────────
 echo ""
 echo "【14】fault-catalog.yaml 快速索引"
 if grep -q "Quick Index" "$SKILL_DIR/references/fault-catalog.yaml"; then
@@ -231,7 +250,7 @@ else
     fail "fault-catalog.yaml 缺少 Quick Index"
 fi
 
-# ─── 15. doc/ 目录声明 ──────────────────────────────────────────
+# ─── 15. doc/ exclusion statement ─────────────────────────────────
 echo ""
 echo "【15】doc/ 排除声明"
 if grep -qi "internal\|NOT needed\|不需要" "$SKILL_DIR/SKILL_EN.md"; then
@@ -245,7 +264,7 @@ else
     fail "SKILL_ZH.md 缺少 doc/ 排除声明"
 fi
 
-# ─── 16. 新脚本存在性 ──────────────────────────────────────────────
+# ─── 16. v1.4.0 new scripts existence ─────────────────────────────
 echo ""
 echo "【16】v1.4.0 新脚本存在性"
 for script in update-dashboard.sh render-dashboard.sh; do
@@ -261,7 +280,7 @@ for script in update-dashboard.sh render-dashboard.sh; do
     fi
 done
 
-# ─── 17. 脚本新参数验证 ─────────────────────────────────────────
+# ─── 17. New script flags ─────────────────────────────────────────
 echo ""
 echo "【17】脚本新参数验证"
 if grep -q "\-\-one-shot" "$SKILL_DIR/scripts/experiment-runner.sh"; then
@@ -280,7 +299,7 @@ else
     fail "experiment-runner.sh 缺少 --pod-label"
 fi
 
-# ─── 18. monitor.sh CM 模式验证 ─────────────────────────────────
+# ─── 18. monitor.sh Chaos Mesh mode ───────────────────────────────
 echo ""
 echo "【18】monitor.sh Chaos Mesh 模式"
 if grep -q "EXPERIMENT_ID.*not set\|metrics-only\|FIS status checks disabled" "$SKILL_DIR/scripts/monitor.sh"; then
@@ -294,7 +313,7 @@ else
     warn "monitor.sh 默认 INTERVAL 可能不是 15s"
 fi
 
-# ─── 19. log-collector SIGTERM 处理 ─────────────────────────────
+# ─── 19. log-collector SIGTERM handling ───────────────────────────
 echo ""
 echo "【19】log-collector SIGTERM 处理"
 if grep -q "sleep.*&" "$SKILL_DIR/scripts/log-collector.sh"; then
@@ -308,18 +327,23 @@ else
     fail "log-collector.sh cleanup 缺少 exit 0"
 fi
 
-# ─── 20. 文档同步检查 ──────────────────────────────────────────
+# ─── 20. EN/ZH doc sync ───────────────────────────────────────────
 echo ""
 echo "【20】中英文文档同步检查"
-if grep -q "v1.4.0" "$SKILL_DIR/README.md" && grep -q "v1.4.0" "$SKILL_DIR/README_zh.md"; then
-    pass "README 中英文均包含 v1.4.0 changelog"
+latest_ver=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$SKILL_DIR/README.md" | sort -V | tail -1)
+if [[ -z "$latest_ver" ]]; then
+    warn "README.md 未找到版本号 — 跳过 changelog 同步检查"
+elif grep -q "$latest_ver" "$SKILL_DIR/README_zh.md"; then
+    pass "README 中英文均包含 $latest_ver changelog"
 else
-    fail "README 中英文 v1.4.0 changelog 不同步"
+    fail "README_zh.md 缺少最新版本 $latest_ver 的 changelog"
 fi
-if grep -q "2026-04-15" "$SKILL_DIR/SKILL_EN.md" && grep -q "2026-04-15" "$SKILL_DIR/SKILL_ZH.md"; then
-    pass "SKILL 中英文 Last sync 均为 2026-04-15"
+en_sync=$(grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$SKILL_DIR/SKILL_EN.md" | head -1)
+zh_sync=$(grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$SKILL_DIR/SKILL_ZH.md" | head -1)
+if [[ -n "$en_sync" && "$en_sync" == "$zh_sync" ]]; then
+    pass "SKILL 中英文 Last sync 均为 $en_sync"
 else
-    fail "SKILL 中英文 Last sync 不同步"
+    fail "SKILL 中英文 Last sync 不同步(EN=$en_sync ZH=$zh_sync)"
 fi
 if grep -q "MANDATORY" "$SKILL_DIR/references/workflow-guide_zh.md"; then
     pass "workflow-guide_zh.md 包含 MANDATORY log-collector"
@@ -337,14 +361,14 @@ else
     fail "fis-actions_zh.md 缺少 Lambda env var 警告"
 fi
 
-# ─── 21. 代码→文档：脚本参数 vs README/workflow-guide 覆盖 ────────
+# ─── 21. Code→docs: script flags covered in README ────────────────
 echo ""
 echo "【21】代码→文档：脚本 CLI 参数在文档中有描述"
 
 # Extract all --flags from experiment-runner.sh argument parser (case block only)
 # Filter out jq flags, kubectl flags, and other non-CLI parameters
 runner_flags=$(sed -n '/while.*\$#.*gt.*0/,/esac/p' "$SKILL_DIR/scripts/experiment-runner.sh" \
-    | grep -oP '(?<=--)[a-z][-a-z]*(?=\))' | grep -v '^help$' | sort -u)
+    | grep -oE '\-\-[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | grep -v '^help$' | sort -u)
 for flag in $runner_flags; do
     # Check scripts/README.md
     if grep -qi "\-\-$flag" "$SKILL_DIR/scripts/README.md"; then
@@ -357,7 +381,7 @@ done
 # Extract env vars from monitor.sh (user-configurable ones at the top of the file, before first function)
 # Only check the first 30 lines where defaults are declared
 # Exclude internal vars (OUTPUT_FILE, CUSTOM_METRICS_FILE) that aren't user-configurable
-monitor_vars=$(head -30 "$SKILL_DIR/scripts/monitor.sh" | grep -oP '^[A-Z_]+(?=="\$\{)' \
+monitor_vars=$(head -40 "$SKILL_DIR/scripts/monitor.sh" | grep -oE '^[A-Z_]+="\$\{' | sed 's/="\$\{$//' \
     | grep -vE '^(OUTPUT_FILE|CUSTOM_METRICS_FILE)$' | sort -u)
 for var in $monitor_vars; do
     if grep -q "$var" "$SKILL_DIR/scripts/README.md"; then
@@ -369,7 +393,7 @@ done
 
 # Extract --flags from log-collector.sh argument parser (case block only)
 lc_flags=$(sed -n '/while.*\$#.*gt.*0/,/esac/p' "$SKILL_DIR/scripts/log-collector.sh" \
-    | grep -oP '(?<=--)[a-z][-a-z]*(?=\))' | sort -u | grep -v '^help$')
+    | grep -oE '\-\-[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | sort -u | grep -v '^help$')
 for flag in $lc_flags; do
     if grep -qi "\-\-$flag\|$flag" "$SKILL_DIR/scripts/README.md"; then
         pass "log-collector --$flag → scripts/README.md ✓"
@@ -378,12 +402,12 @@ for flag in $lc_flags; do
     fi
 done
 
-# ─── 22. 文档→代码：README 声称的参数在代码中存在 ─────────────────
+# ─── 22. Docs→code: README-claimed flags exist in code ────────────
 echo ""
 echo "【22】文档→代码：scripts/README.md 声称的参数在代码中存在"
 
 # Extract --flags from scripts/README.md tables (| `--xxx` | pattern)
-readme_runner_flags=$(grep -oP '(?<=\| `--)[a-z][-a-z]*' "$SKILL_DIR/scripts/README.md" | sort -u)
+readme_runner_flags=$(grep -oE '\| `--[a-z][-a-z]*' "$SKILL_DIR/scripts/README.md" | sed 's/^| `--//' | sort -u)
 for flag in $readme_runner_flags; do
     found=0
     for script in experiment-runner.sh log-collector.sh monitor.sh; do
@@ -405,11 +429,11 @@ for flag in $readme_runner_flags; do
     if [[ $found -eq 1 ]]; then
         pass "README --$flag → 代码中存在"
     else
-        fail "README --$flag → 代码中不存在（幽灵参数）"
+        fail "README --$flag → 代码中不存在(幽灵参数)"
     fi
 done
 
-# ─── 23. 中英文术语对齐 ──────────────────────────────────────────
+# ─── 23. EN/ZH technical term alignment ───────────────────────────
 echo ""
 echo "【23】中英文关键术语对齐"
 
@@ -443,7 +467,7 @@ for en_file in "${!doc_pairs[@]}"; do
     done
 done
 
-# ─── 24. 数字一致性：从代码提取 → 比对所有文档 ───────────────────
+# ─── 24. Numeric consistency: extract from code → compare docs ────
 echo ""
 echo "【24】数字一致性"
 
@@ -451,30 +475,27 @@ echo "【24】数字一致性"
 actual_scripts=$(find "$SKILL_DIR/scripts" -name "*.sh" -o -name "*.conf" | wc -l)
 echo "  📊 实际脚本数: $actual_scripts"
 
-# Count fault types from YAML
-actual_faults=$(python3 -c "
-import yaml
-with open('$SKILL_DIR/references/fault-catalog.yaml') as f:
-    d = yaml.safe_load(f)
-fis=len(d.get('fis',{})); cm=len(d.get('chaosmesh',{})); sc=len(d.get('fis_scenarios',{}))
-print(f'{fis+cm+sc}|{fis}|{cm}|{sc}')
-" 2>/dev/null || echo "0|0|0|0")
-total_faults=$(echo "$actual_faults" | cut -d'|' -f1)
-fis_count=$(echo "$actual_faults" | cut -d'|' -f2)
+# Count fault types from YAML (grep-based; no pyyaml dependency)
+total_faults=$(grep -c "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" || true)
+fis_count=$(grep -A1 "^  - type:" "$SKILL_DIR/references/fault-catalog.yaml" | grep -c "backend: fis$" || true)
 echo "  📊 实际 fault 数: $total_faults (FIS=$fis_count)"
 
 # Check all files that mention fault counts
+if [[ "$total_faults" -eq 0 ]]; then
+    warn "fault-catalog.yaml 统计为 0 — 跳过文档数量比对(结构可能已变化)"
+else
 for doc in README.md README_zh.md SKILL_EN.md SKILL_ZH.md references/fault-catalog.yaml; do
     if grep -q "$total_faults" "$SKILL_DIR/$doc" 2>/dev/null; then
         pass "$(basename "$doc") fault 数量 = $total_faults ✓"
     else
-        if grep -qP "\d+ [Ff]ault|\d+ 个故障|\d+ 种故障|\d+ faults" "$SKILL_DIR/$doc" 2>/dev/null; then
-            wrong_num=$(grep -oP "\d+(?= [Ff]ault| 个故障| 种故障| faults)" "$SKILL_DIR/$doc" | head -1)
-            fail "$(basename "$doc") fault 数量 = $wrong_num（实际 $total_faults）"
+        if grep -qE "[0-9]+ [Ff]ault|[0-9]+ 个故障|[0-9]+ 种故障|[0-9]+ faults" "$SKILL_DIR/$doc" 2>/dev/null; then
+            wrong_num=$(grep -oE "[0-9]+ ([Ff]aults?|个故障|种故障)" "$SKILL_DIR/$doc" | grep -oE '^[0-9]+' | head -1)
+            fail "$(basename "$doc") fault 数量 = $wrong_num(实际 $total_faults)"
         fi
         # No mention = OK (not all files need to state the count)
     fi
 done
+fi
 
 # Count example files
 en_examples=$(ls "$SKILL_DIR/examples/"*.md 2>/dev/null | grep -v "_zh" | wc -l)

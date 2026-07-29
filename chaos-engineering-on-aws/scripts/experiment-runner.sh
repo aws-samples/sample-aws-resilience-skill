@@ -90,6 +90,13 @@ done
 
 [[ -z "$MODE" ]] && { echo "ERROR: --mode is required (fis|chaosmesh)" >&2; exit 1; }
 
+# --one-shot silently degrades to waiting for AllRecovered (i.e. until timeout
+# for fixed-count pod-kill) without --pod-label, so fail fast instead.
+if [[ "$ONE_SHOT" == "true" && -z "$POD_LABEL" ]]; then
+    echo "ERROR: --one-shot requires --pod-label (e.g. --pod-label app=petsite)" >&2
+    exit 1
+fi
+
 mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR/checkpoints" "$OUTPUT_DIR/monitoring"
 STATE_FILE="$OUTPUT_DIR/checkpoints/step5-experiment.json"
 LOG_FILE="$OUTPUT_DIR/experiment-runner.log"
@@ -105,16 +112,43 @@ log() {
 # ---------------------------------------------------------------------------
 STATE_JSON="$OUTPUT_DIR/state.json"
 
+# flock(1) is unavailable on macOS; fall back to a mkdir-based spinlock.
+HAVE_FLOCK=false
+command -v flock >/dev/null 2>&1 && HAVE_FLOCK=true
+
+# jq filter: numeric-looking values are stored as numbers, others as strings
+JQ_SET_FIELD='(.experiments[]? | select(.id == $id)) |= . + {($f): ($v | tonumber? // $v)}'
+
+_state_jq_update() {
+    local exp_id="$1" field="$2" value="$3"
+    jq --arg id "$exp_id" --arg f "$field" --arg v "$value" \
+        "$JQ_SET_FIELD" \
+        "$STATE_JSON" > "$STATE_JSON.tmp" \
+        && mv "$STATE_JSON.tmp" "$STATE_JSON"
+}
+
 update_state() {
     local exp_id="$1" field="$2" value="$3"
     [[ ! -f "$STATE_JSON" ]] && return 0
-    (
-        flock -w 5 200 || { log "WARN: state lock timeout"; exit 1; }
-        jq --arg id "$exp_id" --arg f "$field" --arg v "$value" \
-            '(.experiments[]? | select(.id == $id)) |= . + {($f): $v}' \
-            "$STATE_JSON" > "$STATE_JSON.tmp" \
-            && mv "$STATE_JSON.tmp" "$STATE_JSON"
-    ) 200>"$STATE_JSON.lock"
+    if $HAVE_FLOCK; then
+        (
+            flock -w 5 200 || { log "WARN: state lock timeout"; exit 1; }
+            _state_jq_update "$exp_id" "$field" "$value"
+        ) 200>"$STATE_JSON.lock"
+    else
+        # mkdir is atomic — poor man's lock with ~5s timeout
+        local tries=0
+        until mkdir "$STATE_JSON.lockdir" 2>/dev/null; do
+            ((tries++))
+            if (( tries >= 50 )); then
+                log "WARN: state lock timeout (mkdir fallback)"
+                return 1
+            fi
+            sleep 0.1
+        done
+        _state_jq_update "$exp_id" "$field" "$value"
+        rmdir "$STATE_JSON.lockdir" 2>/dev/null || true
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -246,7 +280,7 @@ run_fis() {
                 }
                 exit 1
                 ;;
-                        stopped|cancelled)
+            stopped|cancelled)
                 log "Experiment $status: $reason"
                 jq -n \
                     --arg id "$EXPERIMENT_ID" \
@@ -274,17 +308,29 @@ run_chaosmesh() {
     [[ -z "$MANIFEST" ]] && { echo "ERROR: --manifest is required for chaosmesh mode" >&2; exit 1; }
     [[ ! -f "$MANIFEST" ]] && { echo "ERROR: Manifest not found: $MANIFEST" >&2; exit 1; }
 
-    # Extract experiment name and namespace from manifest
-    local exp_name
-    exp_name=$(grep -m1 'name:' "$MANIFEST" | awk '{print $2}' | tr -d '"' || echo "unknown")
     local exp_ns="${NAMESPACE:-default}"
 
     log "Applying Chaos Mesh manifest: $MANIFEST"
-    kubectl apply -f "$MANIFEST" 2>&1 | tee -a "$LOG_FILE"
+    # `-o name` returns "<kind>.<group>/<name>" — more reliable than grepping
+    # the YAML (metadata.name is not always the first `name:` in the file).
+    local apply_out
+    if ! apply_out=$(kubectl apply -f "$MANIFEST" -o name 2>&1); then
+        log "ERROR: kubectl apply failed: $apply_out"
+        jq -n --arg err "$apply_out" \
+            '{status:"ERROR", message:"kubectl apply failed", detail:$err}' > "$STATE_FILE"
+        [[ -n "$STATE_EXP_ID" ]] && {
+            update_state "$STATE_EXP_ID" "status" "failed"
+            update_state "$STATE_EXP_ID" "result" "FAILED"
+        }
+        exit 1
+    fi
+    echo "$apply_out" >> "$LOG_FILE"
 
-    # Detect CRD kind from manifest
-    local kind
-    kind=$(grep -m1 'kind:' "$MANIFEST" | awk '{print $2}' | tr -d '"' || echo "")
+    # apply_out example: "podchaos.chaos-mesh.org/pod-kill-test"
+    local kind exp_name
+    kind="${apply_out%%/*}"      # full resource name incl. group works with kubectl get
+    exp_name="${apply_out##*/}"
+    log "Applied: kind=$kind name=$exp_name ns=$exp_ns"
 
     local start_epoch
     start_epoch=$(date +%s)

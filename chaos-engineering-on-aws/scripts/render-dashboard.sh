@@ -20,10 +20,11 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
-# Read state (snapshot to avoid partial reads)
+# Read state (snapshot to avoid partial reads; mktemp avoids predictable names)
 if [[ -f "$STATE_FILE" ]]; then
-    TMPF="/tmp/.render-state-$$.json"
-    STATE=$(cp "$STATE_FILE" "$TMPF" 2>/dev/null && cat "$TMPF" && rm -f "$TMPF" || echo '{}')
+    TMPF=$(mktemp "${TMPDIR:-/tmp}/render-state.XXXXXX")
+    STATE=$(cp "$STATE_FILE" "$TMPF" 2>/dev/null && cat "$TMPF" || echo '{}')
+    rm -f "$TMPF"
 else
     STATE='{}'
 fi

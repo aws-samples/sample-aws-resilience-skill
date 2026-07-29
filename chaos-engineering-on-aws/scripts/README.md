@@ -59,6 +59,7 @@ nohup bash scripts/monitor.sh &
 | `NAMESPACE` | Yes | — | CloudWatch metric namespace |
 | `REGION` | Yes | — | AWS region |
 | `INTERVAL` | No | `15` | Collection interval in seconds |
+| `LOOKBACK` | No | `300` | CloudWatch query lookback window in seconds (covers metric publish latency; consumers dedup by timestamp) |
 | `DURATION` | No | `0` | Max duration in seconds (0=unlimited) |
 
 **Requires**: `output/monitoring/metric-queries.json` (generated in Step 3). If missing, writes a warning to JSONL and continues without metrics.

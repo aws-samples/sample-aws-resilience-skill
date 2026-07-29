@@ -11,6 +11,9 @@
 #   --region <region>           AWS region (required)
 #   --create-fis-role           Create FIS experiment IAM role
 #   --create-stop-alarm         Create a basic stop condition CloudWatch alarm
+#   --alb-name <name>           ALB dimension for the stop alarm, format: app/<name>/<id>
+#                               (required with --create-stop-alarm; without a
+#                               LoadBalancer dimension the alarm never fires)
 #   --alarm-topic-arn <arn>     SNS topic ARN for alarm notifications
 #   --tag-resources <ids>       Tag resources for Scenario Library (comma-separated)
 #   --check-chaos-mesh          Check Chaos Mesh installation in EKS cluster
@@ -38,6 +41,7 @@ set -euo pipefail
 REGION=""
 CREATE_FIS_ROLE=false
 CREATE_STOP_ALARM=false
+ALB_NAME=""
 ALARM_TOPIC_ARN=""
 TAG_RESOURCES=""
 CHECK_CHAOS_MESH=false
@@ -68,6 +72,7 @@ while [[ $# -gt 0 ]]; do
     --region)            REGION="$2"; shift 2 ;;
     --create-fis-role)   CREATE_FIS_ROLE=true; shift ;;
     --create-stop-alarm) CREATE_STOP_ALARM=true; shift ;;
+    --alb-name)          ALB_NAME="$2"; shift 2 ;;
     --alarm-topic-arn)   ALARM_TOPIC_ARN="$2"; shift 2 ;;
     --tag-resources)     TAG_RESOURCES="$2"; shift 2 ;;
     --check-chaos-mesh)  CHECK_CHAOS_MESH=true; shift ;;
@@ -97,7 +102,7 @@ if $CREATE_FIS_ROLE; then
   info "=== Creating FIS Experiment Role ==="
 
   # Check if role already exists
-  if aws iam get-role --role-name "$FIS_ROLE_NAME" --region "$REGION" &>/dev/null; then
+  if aws iam get-role --role-name "$FIS_ROLE_NAME" &>/dev/null; then
     warn "Role '$FIS_ROLE_NAME' already exists. Skipping creation."
   else
     TRUST_POLICY=$(cat <<'TRUST_EOF'
@@ -123,13 +128,23 @@ TRUST_EOF
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "EC2Actions",
+      "Sid": "EC2DestructiveActions",
       "Effect": "Allow",
       "Action": [
         "ec2:TerminateInstances",
         "ec2:StopInstances",
         "ec2:StartInstances",
-        "ec2:RebootInstances",
+        "ec2:RebootInstances"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": "IceQualified" }
+      }
+    },
+    {
+      "Sid": "EC2DescribeActions",
+      "Effect": "Allow",
+      "Action": [
         "ec2:DescribeInstances",
         "ec2:DescribeInstanceStatus"
       ],
@@ -155,10 +170,20 @@ TRUST_EOF
       "Resource": "*"
     },
     {
-      "Sid": "EBSActions",
+      "Sid": "EBSPauseActions",
       "Effect": "Allow",
       "Action": [
-        "ec2:PauseVolumeIO",
+        "ec2:PauseVolumeIO"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": "IceQualified" }
+      }
+    },
+    {
+      "Sid": "EBSDescribeActions",
+      "Effect": "Allow",
+      "Action": [
         "ec2:DescribeVolumes"
       ],
       "Resource": "*"
@@ -231,23 +256,25 @@ POLICY_EOF
       dry "Would create IAM Role: $FIS_ROLE_NAME"
       dry "Trust policy: fis.amazonaws.com with account condition $ACCOUNT_ID"
       dry "Would attach inline policy with EC2, EKS, RDS, Lambda, Network, EBS, ElastiCache, CloudWatch permissions"
+      dry "Destructive EC2/EBS actions are scoped to resources tagged AzImpairmentPower=IceQualified"
     else
       info "Creating IAM Role: $FIS_ROLE_NAME"
+      # IAM is a global service — no --region needed
       aws iam create-role \
         --role-name "$FIS_ROLE_NAME" \
         --assume-role-policy-document "$TRUST_POLICY" \
-        --tags Key=Project,Value=ChaosEngineering Key=ManagedBy,Value=setup-prerequisites \
-        --region "$REGION"
+        --tags Key=Project,Value=ChaosEngineering Key=ManagedBy,Value=setup-prerequisites
 
       info "Attaching inline policy..."
       aws iam put-role-policy \
         --role-name "$FIS_ROLE_NAME" \
         --policy-name FISExperimentPolicy \
-        --policy-document "$FIS_POLICY" \
-        --region "$REGION"
+        --policy-document "$FIS_POLICY"
 
       info "FIS Role created: arn:aws:iam::${ACCOUNT_ID}:role/${FIS_ROLE_NAME}"
-      info "⚠️  Review and narrow down permissions based on your specific experiments."
+      info "⚠️  Destructive EC2/EBS actions require target resources to be tagged"
+      info "    AzImpairmentPower=IceQualified (use --tag-resources). Review and"
+      info "    narrow down other permissions based on your specific experiments."
     fi
   fi
 fi
@@ -256,6 +283,17 @@ fi
 if $CREATE_STOP_ALARM; then
   info "=== Creating Stop Condition CloudWatch Alarm ==="
   ALARM_NAME="chaos-experiment-stop-condition"
+
+  # Without a LoadBalancer dimension this metric matches no data, and with
+  # treat-missing-data=notBreaching the alarm would NEVER fire — a silently
+  # broken safety guardrail is worse than none, so refuse to create it.
+  if [[ -z "$ALB_NAME" ]]; then
+    error "--create-stop-alarm requires --alb-name (format: app/<alb-name>/<id>)."
+    error "Find it with: aws elbv2 describe-load-balancers --region $REGION \\"
+    error "  --query 'LoadBalancers[].{name:LoadBalancerName,arn:LoadBalancerArn}'"
+    error "The dimension value is the ARN part after ':loadbalancer/'."
+    exit 1
+  fi
 
   if aws cloudwatch describe-alarms --alarm-names "$ALARM_NAME" --region "$REGION" \
       --query "MetricAlarms[0].AlarmName" --output text 2>/dev/null | grep -q "$ALARM_NAME"; then
@@ -269,17 +307,19 @@ if $CREATE_STOP_ALARM; then
     if $DRY_RUN; then
       dry "Would create CloudWatch Alarm: $ALARM_NAME"
       dry "Metric: AWS/ApplicationELB HTTPCode_Target_5XX_Count > 100 for 1 min"
+      dry "Dimension: LoadBalancer=$ALB_NAME"
       if [[ -n "$ALARM_TOPIC_ARN" ]]; then
         dry "Notification: $ALARM_TOPIC_ARN"
       fi
     else
-      info "Creating alarm: $ALARM_NAME"
+      info "Creating alarm: $ALARM_NAME (LoadBalancer=$ALB_NAME)"
       # shellcheck disable=SC2086
       aws cloudwatch put-metric-alarm \
         --alarm-name "$ALARM_NAME" \
         --alarm-description "Stop chaos experiment when 5xx errors exceed threshold" \
         --metric-name HTTPCode_Target_5XX_Count \
         --namespace AWS/ApplicationELB \
+        --dimensions "Name=LoadBalancer,Value=$ALB_NAME" \
         --statistic Sum \
         --period 60 \
         --threshold 100 \
@@ -291,7 +331,7 @@ if $CREATE_STOP_ALARM; then
         $ALARM_ACTIONS
 
       info "Alarm created: $ALARM_NAME"
-      info "⚠️  Update the metric namespace, metric name, and dimensions for your specific ALB."
+      info "⚠️  Adjust threshold (default: >100 5xx/min) to your traffic profile."
     fi
   fi
 fi
@@ -326,6 +366,10 @@ if $CHECK_CHAOS_MESH || $INSTALL_CHAOS_MESH; then
         exit 1
       }
     fi
+  else
+    # No cluster specified — make the implicit target explicit to the user
+    CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo "none")
+    warn "No --cluster-name given. Using current kubectl context: $CURRENT_CTX"
   fi
 
   if $CHECK_CHAOS_MESH; then

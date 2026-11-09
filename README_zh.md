@@ -182,7 +182,7 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 
 - 具有只读权限的 AWS 账户（评估用）或实验权限（混沌工程用）
 - 已配置凭证的 AWS CLI
-- 可选：MCP 服务器以增强自动化（参见各 Skill 目录下的 `MCP_SETUP_GUIDE.md`）
+- 可选：MCP 服务器以增强自动化——AWS 托管的 [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html)（取代 `awslabs.aws-api-mcp-server`），容器工作负载再加托管的 EKS / ECS MCP Server，均通过 `mcp-proxy-for-aws` 连接。只读类 Skill 的只读保证来自 IAM profile，而不是代理的 `--read-only` 参数（该参数会隐藏 AWS API 工具）。参见各 Skill 目录下的 `MCP_SETUP_GUIDE.md`
 
 ## 项目结构
 

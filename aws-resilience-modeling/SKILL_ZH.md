@@ -14,16 +14,15 @@
 
 ## MCP 服务器要求
 
-> **安全约束**：所有 MCP 服务器均以**只读模式**运行（仅 Describe/Get/List）。**禁止**通过 Bash 执行 `aws` CLI 命令访问 AWS 资源 — 仅允许 `aws sts get-caller-identity` 和 `aws configure list`。
+> **安全约束**：评估为**只读**（仅 Describe/Get/List）。只读由 MCP 服务器所用 **profile 的 IAM 权限**保证——请使用只读 profile。不要以 `--read-only` 启动 AWS MCP 代理：它会隐藏 `aws___call_aws` / `aws___run_script`，导致完全无法调用 AWS API。**禁止**通过 Bash 执行 `aws` CLI 命令访问 AWS 资源 — 仅允许 `aws sts get-caller-identity` 和 `aws configure list`。
 
 **必需（核心）**：
 
 | MCP Server | 用途 |
 |-----------|------|
-| **aws-api-mcp-server** | 通用 AWS API 访问（EC2、RDS、ELB、S3、Lambda 等）— 只读 |
-| **cloudwatch-mcp-server** | 指标、告警、日志分析 — 只读 |
+| **aws-mcp** — AWS MCP Server（AWS 托管，预览；取代 `aws-api-mcp-server`） | 全部 AWS API 访问（EC2、RDS、ELB、S3、Lambda、DynamoDB、ElastiCache、IAM、CloudWatch、CloudTrail 等）以及 AWS 文档检索 |
 
-**按需（根据架构选配）**：eks、ecs、dynamodb、lambda-tool、elasticache、iam、cloudtrail MCP 服务器。
+**按需（根据架构选配）**：`eks-mcp` / `ecs-mcp`（AWS 托管的 EKS / ECS MCP Server，预览）、`cloudwatch-mcp`（日志异常与告警建议工具）、`aws-pricing-mcp`（成本估算）。单服务 Server（dynamodb、lambda-tool、elasticache、cloudtrail、iam）已不再需要。
 
 如果 MCP 未配置，Skill 将自动切换到分析 IaC 代码、架构文档或交互式问答。
 详细配置指南参见 [MCP_SETUP_GUIDE_zh.md](references/MCP_SETUP_GUIDE_zh.md)。

@@ -36,9 +36,10 @@ See [eks-auth-setup.md](references/eks-auth-setup.md) for detailed setup instruc
 
 ### Optional MCP Server
 
-| Server | Package | Purpose |
-|--------|---------|---------|
-| eks-mcp-server | `awslabs.eks-mcp-server` | K8s resource queries (alternative to kubectl) |
+| Server | How to connect | Purpose |
+|--------|----------------|---------|
+| `eks-mcp` — Amazon EKS MCP Server (AWS-managed, preview) | `uvx mcp-proxy-for-aws@<pinned> https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | K8s resource queries (alternative to kubectl); read-only tools only. Local alternative: `awslabs.eks-mcp-server` |
+| `aws-mcp` — AWS MCP Server (AWS-managed, preview) | `uvx mcp-proxy-for-aws@<pinned> https://aws-mcp.<region>.api.aws/mcp` | EKS describe / add-on / access-entry API calls. Use a read-only IAM profile; never the proxy's `--read-only` (it hides `aws___call_aws`) |
 
 When MCP is unavailable, fall back to `kubectl` + `aws` CLI direct calls.
 

@@ -14,16 +14,15 @@ Based on four industry-leading methodologies:
 
 ## MCP Server Requirements
 
-> **Security Constraint**: All MCP servers run in **read-only mode** (Describe/Get/List only). **Do NOT** use Bash to execute `aws` CLI commands to access AWS resources — only `aws sts get-caller-identity` and `aws configure list` are permitted.
+> **Security Constraint**: The assessment is **read-only** (Describe/Get/List only). Read-only is enforced by the **IAM permissions of the profile** the MCP servers connect with — use a read-only profile. Do NOT start the AWS MCP proxy with `--read-only`: it hides `aws___call_aws` / `aws___run_script` and removes all AWS API access. **Do NOT** use Bash to execute `aws` CLI commands to access AWS resources — only `aws sts get-caller-identity` and `aws configure list` are permitted.
 
 **Required (Core)**:
 
 | MCP Server | Purpose |
 |-----------|---------|
-| **aws-api-mcp-server** | General AWS API access (EC2, RDS, ELB, S3, Lambda, etc.) — read-only |
-| **cloudwatch-mcp-server** | Metrics, alarms, log analysis — read-only |
+| **aws-mcp** — AWS MCP Server (AWS-managed, preview; replaces `aws-api-mcp-server`) | All AWS API access (EC2, RDS, ELB, S3, Lambda, DynamoDB, ElastiCache, IAM, CloudWatch, CloudTrail, etc.) and AWS documentation lookup |
 
-**Optional (Architecture-dependent)**: eks, ecs, dynamodb, lambda-tool, elasticache, iam, cloudtrail MCP servers.
+**Optional (Architecture-dependent)**: `eks-mcp` / `ecs-mcp` (AWS-managed EKS / ECS MCP Servers, preview), `cloudwatch-mcp` (log-anomaly and alarm-recommendation tools), `aws-pricing-mcp` (cost estimates). Single-service servers (dynamodb, lambda-tool, elasticache, cloudtrail, iam) are no longer needed.
 
 If MCP is not configured, the Skill will automatically fall back to analyzing IaC code, architecture documentation, or interactive Q&A.
 See [MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md) for detailed configuration.

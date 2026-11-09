@@ -59,7 +59,7 @@ Claude: [auto-loads aws-resilience-modeling skill]
 Before starting the analysis, prepare the following information:
 
 ### MCP Server Configuration
-For detailed MCP server setup instructions (required for automated AWS environment scanning), see [references/MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md).
+For detailed MCP server setup instructions (required for automated AWS environment scanning), see [references/MCP_SETUP_GUIDE.md](references/MCP_SETUP_GUIDE.md). The required server is now the AWS-managed **AWS MCP Server** (`aws-mcp`, replaces `awslabs.aws-api-mcp-server`), connected with a **read-only IAM profile**; do not start its proxy with `--read-only`, which hides the AWS API tools.
 
 ### 1. Environment Information
 - AWS account ID and region

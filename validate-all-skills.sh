@@ -111,12 +111,17 @@ echo "【4】内部链接检查（文件存在性）"
 for skill in "${SKILLS[@]}"; do
   for f in "$skill"/SKILL_EN.md "$skill"/SKILL_ZH.md "$skill"/README.md "$skill"/README_zh.md; do
     [[ ! -f "$f" ]] && continue
-    grep -oP '\[.*?\]\(((?!http|#)[^)#]+)\)' "$f" 2>/dev/null | grep -oP '\(([^)]+)\)' | tr -d '()' | while read link; do
-      target="$skill/$link"
+    # Parse real Markdown links only ([text](target)), skip URLs and pure anchors,
+    # and strip "#anchor" before checking the file. Process substitution (not a
+    # pipe) so FAIL is counted in this shell.
+    while read -r link; do
+      path="${link%%#*}"
+      [[ -z "$path" ]] && continue
+      target="$skill/$path"
       if [[ ! -f "$target" && ! -d "$target" ]]; then
-        echo "  ❌ 断链: $f → $link" && ((FAIL++)) || true
+        echo "  ❌ 断链: $f → $link"; ((FAIL++)) || true
       fi
-    done
+    done < <(grep -oP '\[[^\]]*\]\(\K[^)\s]+(?=\))' "$f" 2>/dev/null | grep -vE '^(https?:|mailto:|#)')
   done
 done
 echo "  (无❌输出 = 全部通过)"

@@ -496,10 +496,11 @@ Automatic remediation: FIS Role missing → generate creation command; Alarm mis
 
 **Scripts**: See [scripts/README.md](../scripts/README.md) for all parameters.
 
-> **MCP Write Access Check**: Before first experiment execution, verify MCP can perform write operations.
+> **MCP Write Access Check**: Before first experiment execution, verify the AWS MCP Server can perform write operations.
 > Try a harmless write (e.g., `fis:TagResource` on an existing template).
-> If MCP connection drops → configure `ALLOW_WRITE_OPERATIONS=true` in aws-api-mcp-server env and restart.
-> Or switch to AWS CLI fallback for all FIS operations.
+> Write access is decided by IAM (your credentials) and by the proxy: if the `aws-mcp` entry was started with
+> `--read-only`, write-capable tools are hidden — remove the flag and restart the MCP client. `AccessDenied` →
+> fix the IAM policy (or an SCP denying `aws:ViaAWSMCPService`). Otherwise switch to the AWS CLI fallback for all FIS operations.
 
 ### Phase 0: Baseline Collection (T-5min)
 Collect steady-state baseline, save as `output/baseline-{timestamp}.json`.

@@ -18,16 +18,16 @@
 
 ## MCP Server 配置
 
-完整配置指南和示例：[MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
+完整配置指南和示例：[MCP_SETUP_GUIDE_zh.md](MCP_SETUP_GUIDE_zh.md)
 
-| Server | 包名 | 必需 | 备注 |
-|--------|------|------|------|
-| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | 是 | ⚠️ 必须设置 `ALLOW_WRITE_OPERATIONS=true` |
-| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | 是 | |
-| eks-mcp-server | `awslabs.eks-mcp-server` | EKS 时 | |
-| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | 有 Chaos Mesh 时 | |
+| Server | 连接方式 | 必需 | 备注 |
+|--------|----------|------|------|
+| `aws-mcp` — AWS MCP Server（AWS 托管，预览） | `uvx mcp-proxy-for-aws@<锁定版本> https://aws-mcp.<region>.api.aws/mcp` | 是 | 所有 AWS API 调用（FIS、CloudWatch、EC2、RDS 等）。使用你的 IAM 权限；**不要**加 `--read-only`（FIS 需要写操作）。取代 `awslabs.aws-api-mcp-server` |
+| `eks-mcp` — Amazon EKS MCP Server（AWS 托管，预览） | 同一代理，`https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | EKS 时 | 只读工具即可（`AmazonEKSMCPReadOnlyAccess`） |
+| `awslabs.cloudwatch-mcp-server` | `uvx awslabs.cloudwatch-mcp-server@latest` | 否 | 仅在需要它的告警/日志分析工具时使用；普通 CloudWatch 调用走 `aws-mcp` |
+| `chaosmesh-mcp` | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP)（社区项目，非 AWS） | 有 Chaos Mesh 时 | |
 
-无 MCP 时自动降级为 AWS CLI（`aws fis`、`aws cloudwatch`、`kubectl`）。
+无 MCP 时自动降级为 AWS CLI（`aws fis`、`aws cloudwatch`、`kubectl`）；后台脚本始终使用 CLI。
 
 ## 六步流程
 

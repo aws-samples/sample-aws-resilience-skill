@@ -77,21 +77,43 @@ ln -s $(pwd)/sample-aws-resilience-skill/eks-resilience-checker ~/.claude/skills
 
 | Server | Purpose |
 |--------|---------|
-| `awslabs.eks-mcp-server` | K8s resource queries (alternative to kubectl) |
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html) (AWS-managed, preview) | K8s resource queries (alternative to kubectl). Read-only tools are enough: `eks-mcp:InvokeMcp` + `eks-mcp:CallReadOnlyTool`, or `AmazonEKSMCPReadOnlyAccess` |
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) (AWS-managed, preview) | EKS / add-on / access-entry API calls (replaces `awslabs.aws-api-mcp-server`). Read-only comes from the IAM profile; do not use the proxy's `--read-only`, which hides `aws___call_aws` |
 
 When MCP is unavailable, the skill falls back to `kubectl` + `aws` CLI.
 
 ```json
 {
   "mcpServers": {
-    "awslabs.eks-mcp-server": {
+    "eks-mcp": {
       "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.ap-northeast-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "default",
+        "--region", "ap-northeast-1"
+      ]
+    },
+    "aws-mcp": {
+      "command": "uvx",
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.ap-northeast-1.api.aws/mcp",
+        "--profile", "default",
+        "--metadata", "AWS_REGION=ap-northeast-1"
+      ]
     }
   }
 }
 ```
+
+> Pin `mcp-proxy-for-aws` (1.8.0 is the latest on 2026-11-09). If the managed EKS MCP Server is not
+> available in your Region, the open-source `awslabs.eks-mcp-server` (`uvx awslabs.eks-mcp-server@latest`)
+> runs locally and is read-only unless started with `--allow-write`. Full setup:
+> [aws-resilience-modeling MCP guide](../aws-resilience-modeling/references/MCP_SETUP_GUIDE.md).
 
 ## Manual / Standalone Script Usage
 

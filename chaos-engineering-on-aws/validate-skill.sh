@@ -152,7 +152,7 @@ for readme in README.md README_zh.md; do
     # Extract relative paths from Markdown links
     links=$(grep -oE '\]\([^)]+\)' "$SKILL_DIR/$readme" | sed 's/^](//; s/)$//' | grep -v '^http' | sort -u)
     for link in $links; do
-        target="$SKILL_DIR/$link"
+        target="$SKILL_DIR/${link%%#*}"
         if [[ -e "$target" ]]; then
             pass "$readme → $link 存在"
         else

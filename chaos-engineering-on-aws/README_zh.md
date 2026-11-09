@@ -33,29 +33,31 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 
 ## MCP Server 配置
 
+> `awslabs.aws-api-mcp-server` 已被 AWS 托管的 **AWS MCP Server** 取代（[迁移指南](https://github.com/awslabs/mcp/blob/main/src/aws-api-mcp-server/MIGRATION.md)）。请删除旧条目，以及本 README 旧版要求设置的 `ALLOW_WRITE_OPERATIONS` 变量：该 Server 中从来没有这个变量。
+
 ### 必需
 
-| Server | 包名 | 用途 |
-|--------|------|------|
-| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | FIS 实验创建/执行/停止、资源验证 |
-| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | 指标读取、告警、停止条件 |
+| Server | 连接方式 | 用途 |
+|--------|----------|------|
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html)（AWS 托管，预览） | `uvx mcp-proxy-for-aws@<锁定版本> https://aws-mcp.<region>.api.aws/mcp --metadata AWS_REGION=<region>` | 所有 AWS API 调用：FIS 创建/执行/停止、CloudWatch 指标与告警、资源验证；AWS 文档检索。使用你的 IAM 权限运行（不加 `--read-only`：FIS 需要写操作） |
 
 ### 可选
 
-| Server | 包名 | 适用场景 |
-|--------|------|---------|
-| eks-mcp-server | `awslabs.eks-mcp-server` | EKS 架构 |
-| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | 集群已安装 Chaos Mesh |
+| Server | 连接方式 | 适用场景 |
+|--------|----------|----------|
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html)（AWS 托管，预览） | 同一代理，`https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | EKS 架构（开源的 `awslabs.eks-mcp-server` 可作为本地替代） |
+| `awslabs.cloudwatch-mcp-server` | `uvx awslabs.cloudwatch-mcp-server@latest` | 仅在需要它的告警建议/日志分析工具时 |
+| `chaosmesh-mcp` | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP)（社区项目，非 AWS） | 集群已安装 Chaos Mesh |
 
 ### 配置
 
-> 完整配置指南和示例：[MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
+> 完整配置指南与示例（Kiro、Claude Code、Cursor/VS Code）、IAM 与验证方法：[MCP_SETUP_GUIDE_zh.md](MCP_SETUP_GUIDE_zh.md)
 
-无 MCP 时自动降级为 AWS CLI（`aws fis`、`aws cloudwatch`、`kubectl`）。
+无 MCP 时自动降级为 AWS CLI（`aws fis`、`aws cloudwatch`、`kubectl`）；后台脚本始终使用 CLI。
 
 ### Chaos Mesh MCP：EKS 认证
 
-两种方式：**静态 ServiceAccount Token**（生产推荐）或**管理员 kubeconfig**（快速测试）。详见 [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)。
+两种方式：**静态 ServiceAccount Token**（生产推荐）或**管理员 kubeconfig**（快速测试）。详见 [MCP_SETUP_GUIDE_zh.md § chaosmesh-mcp](MCP_SETUP_GUIDE_zh.md#4-chaosmesh-mcp可选社区项目) 及该项目的 [EKS Authentication Methods](https://github.com/RadiumGu/Chaosmesh-MCP#eks-authentication-methods)。
 
 ## 六步流程
 
@@ -256,6 +258,15 @@ chaos-engineering-on-aws/
 ```
 
 ## 近期变更
+
+### v1.6.1 — 2026-11-09
+
+**MCP 配置（三个 skill 一起更新：chaos-engineering-on-aws、aws-resilience-modeling、eks-resilience-checker）**
+- 必需 Server 改为 AWS 托管的 **AWS MCP Server**（`aws-mcp`，经锁定版本的 `mcp-proxy-for-aws` 连接），取代已被替代的 `awslabs.aws-api-mcp-server`；EKS 使用 AWS 托管的 **Amazon EKS MCP Server**（`eks-mcp`）；`cloudwatch-mcp-server` 改为可选。
+- 删除 `ALLOW_WRITE_OPERATIONS=true`：`aws-api-mcp-server` 中从来没有这个变量（真正的开关是 `READ_OPERATIONS_ONLY`，默认 `false`）。
+- 只读类 skill 通过 IAM profile 保证只读；代理的 `--read-only` 参数会隐藏 `aws___call_aws` / `aws___run_script`，这类 skill 不能使用。
+- 重写 `MCP_SETUP_GUIDE.md` / `_zh.md`（Kiro、Claude Code、Cursor/VS Code、IAM、多账号、故障排查）；FIS 角色示例改用 `AWSFaultInjectionSimulator*Access` 托管策略；只读策略中无效的 `elbv2:` 前缀改为 `elasticloadbalancing:`。
+- 修复 `validate-all-skills.sh` 的链接检查：此前会误解析带锚点的链接，且因管道子 shell 从不计入失败数。
 
 ### v1.6.0 — 2026-11-09
 

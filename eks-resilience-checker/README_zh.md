@@ -77,21 +77,42 @@ ln -s $(pwd)/sample-aws-resilience-skill/eks-resilience-checker ~/.claude/skills
 
 | Server | 用途 |
 |--------|------|
-| `awslabs.eks-mcp-server` | K8s 资源查询（替代 kubectl） |
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html)（AWS 托管，预览） | K8s 资源查询（替代 kubectl）。只读工具即可：`eks-mcp:InvokeMcp` + `eks-mcp:CallReadOnlyTool`，或 `AmazonEKSMCPReadOnlyAccess` |
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html)（AWS 托管，预览） | EKS / 插件 / access entry 等 API 调用（取代 `awslabs.aws-api-mcp-server`）。只读由 IAM profile 保证；不要使用代理的 `--read-only`，它会隐藏 `aws___call_aws` |
 
 当 MCP 不可用时，回退到 `kubectl` + `aws` CLI 直接调用。
 
 ```json
 {
   "mcpServers": {
-    "awslabs.eks-mcp-server": {
+    "eks-mcp": {
       "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest"],
-      "env": { "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.ap-northeast-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "default",
+        "--region", "ap-northeast-1"
+      ]
+    },
+    "aws-mcp": {
+      "command": "uvx",
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.ap-northeast-1.api.aws/mcp",
+        "--profile", "default",
+        "--metadata", "AWS_REGION=ap-northeast-1"
+      ]
     }
   }
 }
 ```
+
+> 请锁定 `mcp-proxy-for-aws` 版本（2026-11-09 的最新版为 1.8.0）。若你的 Region 暂未提供托管 EKS MCP Server，
+> 可在本地运行开源的 `awslabs.eks-mcp-server`（`uvx awslabs.eks-mcp-server@latest`），不加 `--allow-write` 时为只读。
+> 完整配置见 [aws-resilience-modeling MCP 指南](../aws-resilience-modeling/references/MCP_SETUP_GUIDE_zh.md)。
 
 ## 手动 / 独立脚本运行方式
 

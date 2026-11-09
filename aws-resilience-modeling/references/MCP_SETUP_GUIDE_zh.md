@@ -1,330 +1,208 @@
-# AWS MCP 服务器设置指南
+# AWS MCP Server 配置指南
 
-本指南介绍如何为 AWS 韧性评估 Skill 配置 MCP 服务器，支持 **Claude Code** 和 **Kiro**。
+本指南说明如何为 AWS 韧性评估 Skill 配置 MCP 服务器，适用于 **Kiro**、**Claude Code** 和 Cursor / VS Code。
 
-> ⚠️ `awslabs.core-mcp-server` 已废弃（DEPRECATED）。请直接配置独立 MCP Server。
-> 迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+> **变更说明（2026-11）**：`awslabs.aws-api-mcp-server` 已被 AWS 托管的
+> [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) 取代
+> （[迁移指南](https://github.com/awslabs/mcp/blob/main/src/aws-api-mcp-server/MIGRATION.md)），
+> `awslabs.iam-mcp-server` 也已弃用并由其替代。请删除旧条目：新旧 Server 同时运行会造成工具冲突。
+
+| Server | 状态 | 是否必需 | 用途 |
+|--------|------|----------|------|
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) | AWS 托管，**预览** | 是 | 评估中所有 Describe/Get/List 调用（EC2、RDS、ELB、S3、Lambda、DynamoDB、ElastiCache、IAM、CloudWatch、CloudTrail 等），以及 AWS 文档检索 |
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html) | AWS 托管，**预览** | EKS 架构时 | 集群与 Kubernetes 资源检查 |
+| `ecs-mcp` — [Amazon ECS MCP Server](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-mcp-introduction.html) | AWS 托管，**预览** | ECS / Fargate 架构时 | 集群、服务与任务检查 |
+| `cloudwatch-mcp` — `awslabs.cloudwatch-mcp-server` | 开源，本地运行 | 否 | 它的日志异常与告警建议工具（监控就绪度、SLI/SLO 分析） |
+| `aws-pricing-mcp` — `awslabs.aws-pricing-mcp-server` | 开源，本地运行 | 否 | 改进方案的成本估算 |
+
+本指南以前列出的单服务 Server（`dynamodb`、`lambda-tool`、`elasticache`、`cloudtrail`、`iam`）已不再需要：
+AWS MCP Server 可以调用相同的 API。
 
 ---
 
-## 必需的 MCP Server
+## 只读：靠 IAM 保证，而不是 `--read-only`
 
-### 1. aws-api-mcp-server
+评估不得修改任何东西。使用 AWS MCP Server 时，这一点由**连接所用 profile 的 IAM 权限**保证，
+因为 Server 用你的凭证调用 AWS。
 
-**用途**：通用 AWS API 访问 — EC2、RDS、ELB、S3、Lambda 等资源的 Describe/List 操作，覆盖韧性评估中的资源发现和配置检查。
+- 用只有读权限的 profile 连接（下文的[最小只读策略](#最小-iam-权限策略只读访问)，或 `ReadOnlyAccess`）。
+- 本 Skill **不要**给代理加 `--read-only`。该参数会隐藏所有未标注 `readOnlyHint=true` 的工具，而
+  `aws___call_aws` / `aws___run_script` 的行为取决于 IAM，无法带上这个标注——结果是 agent 失去全部 AWS API 访问能力
+  （AWS 已在 [agent-toolkit-for-aws#45](https://github.com/aws/agent-toolkit-for-aws/issues/45) 中确认）。
+- 可选：在身份策略或 SCP 中用全局条件键 `aws:ViaAWSMCPService` / `aws:CalledViaAWSMCP`，只对经 MCP 发起的
+  非读操作加一道拒绝护栏。
+- 每次调用都会记录到 CloudTrail，可单独归因到 MCP Server。
 
-**安装**：需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)
+---
 
-#### Claude Code
+## 1. AWS MCP Server（必需）
 
-```bash
-claude mcp add awslabs-aws-api-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.aws-api-mcp-server@latest
-```
+**前置条件**：Python 3.10+ 与 [uv](https://docs.astral.sh/uv/getting-started/installation/)（提供 `uvx`），
+以及 AWS 凭证（`aws login`、`aws configure sso` 或 profile）。
 
-#### Kiro
+客户端只运行一个轻量的本地代理 [`mcp-proxy-for-aws`](https://pypi.org/project/mcp-proxy-for-aws/)，
+用你的凭证做 SigV4 签名后转发到 AWS 托管的端点。
 
-编辑 `.kiro/settings/mcp.json`：
+- **端点 Region**：`us-east-1`、`us-west-2`、`ap-southeast-1`、`ap-southeast-2`、`ap-northeast-1`、
+  `eu-central-1`、`eu-west-1`、`eu-west-2`，地址为 `https://aws-mcp.<region>.api.aws/mcp`。
+- **操作 Region**（AWS 调用的默认 Region）：`--metadata AWS_REGION=<region>`；不传时默认 `us-east-1`。
+- **锁定代理版本**。本指南使用 `1.8.0`（2026-11-09 的最新版）。
+
+### Kiro
+
+`.kiro/settings/mcp.json`（工作区）或 `~/.kiro/settings/mcp.json`（用户级）：
 
 ```json
 {
   "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
+    "aws-mcp": {
       "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      },
-      "disabled": false,
-      "autoApprove": []
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--profile", "resilience-readonly",
+        "--metadata", "AWS_REGION=us-east-1"
+      ]
     }
   }
 }
 ```
 
----
-
-### 2. cloudwatch-mcp-server
-
-**用途**：CloudWatch 指标读取、告警查询、日志分析 — 韧性评估中的监控就绪度检查和 SLI/SLO 分析。
-
-#### Claude Code
+### Claude Code
 
 ```bash
-claude mcp add awslabs-cloudwatch-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.cloudwatch-mcp-server@latest
+claude mcp add aws-mcp -- uvx mcp-proxy-for-aws@1.8.0 \
+  https://aws-mcp.us-east-1.api.aws/mcp \
+  --profile resilience-readonly --metadata AWS_REGION=us-east-1
 ```
 
-#### Kiro
+### Cursor / VS Code
 
-同上格式，替换包名为 `awslabs.cloudwatch-mcp-server@latest`。
+与 Kiro 相同的 JSON，写入 `.cursor/mcp.json` 或 `.vscode/mcp.json`。
 
 ---
 
-## 推荐的 MCP Server（按需配置）
+## 2. 容器类 Server（按需）
 
-根据你的 AWS 架构，按需添加以下服务器：
+两者均由 AWS 托管（预览），通过同一个代理连接。请确认你的 Region 已提供。
 
-### 3. eks-mcp-server
+### Amazon EKS MCP Server
 
-**条件**：目标系统为 EKS 架构时配置
-**用途**：EKS 集群管理、K8s 资源操作、Pod 日志查看
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-eks-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.eks-mcp-server@latest
+```json
+{
+  "mcpServers": {
+    "eks-mcp": {
+      "command": "uvx",
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.us-east-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "resilience-readonly",
+        "--region", "us-east-1"
+      ]
+    }
+  }
+}
 ```
 
-#### Kiro
+IAM：`eks-mcp:InvokeMcp` + `eks-mcp:CallReadOnlyTool`，或托管策略 `AmazonEKSMCPReadOnlyAccess`。
+评估场景不要授予 `eks-mcp:CallPrivilegedTool`。该主体还需要在每个集群中有 Kubernetes 身份（EKS access entry）。
+无法使用托管 Server 时，开源的 `awslabs.eks-mcp-server`（`uvx awslabs.eks-mcp-server@latest`）可在本地运行，
+不加 `--allow-write` 启动时为只读。
 
-同必需服务器的 JSON 格式，替换包名为 `awslabs.eks-mcp-server@latest`。
+### Amazon ECS MCP Server
+
+```json
+{
+  "mcpServers": {
+    "ecs-mcp": {
+      "command": "uvx",
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://ecs-mcp.us-east-1.api.aws/mcp",
+        "--service", "ecs-mcp",
+        "--profile", "resilience-readonly",
+        "--region", "us-east-1"
+      ]
+    }
+  }
+}
+```
+
+IAM：`ecs-mcp:UseMcp` + `ecs-mcp:InvokeReadOnlyTools`（见
+[ECS MCP 入门指南](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-mcp-getting-started.html)）。
 
 ---
 
-### 4. ecs-mcp-server
+## 3. 可选的本地 Server
 
-**条件**：目标系统为 ECS/Fargate 架构时配置
-**用途**：ECS 集群、服务、任务管理
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-ecs-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.ecs-mcp-server@latest
+```json
+{
+  "mcpServers": {
+    "cloudwatch-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "env": { "AWS_PROFILE": "resilience-readonly", "AWS_REGION": "us-east-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+    },
+    "aws-pricing-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "env": { "AWS_PROFILE": "resilience-readonly", "AWS_REGION": "us-east-1", "FASTMCP_LOG_LEVEL": "ERROR" }
+    }
+  }
+}
 ```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.ecs-mcp-server@latest`。
-
----
-
-### 5. dynamodb-mcp-server
-
-**条件**：目标系统使用 DynamoDB 时配置
-**用途**：DynamoDB 表操作和查询
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-dynamodb-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.dynamodb-mcp-server@latest
-```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.dynamodb-mcp-server@latest`。
-
----
-
-### 6. lambda-tool-mcp-server
-
-**条件**：目标系统使用 Lambda 时配置
-**用途**：Lambda 函数操作
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-lambda-tool-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.lambda-tool-mcp-server@latest
-```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.lambda-tool-mcp-server@latest`。
-
----
-
-### 7. elasticache-mcp-server
-
-**条件**：目标系统使用 ElastiCache 时配置
-**用途**：ElastiCache 集群管理
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-elasticache-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.elasticache-mcp-server@latest
-```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.elasticache-mcp-server@latest`。
-
----
-
-### 8. iam-mcp-server
-
-**条件**：需要 IAM 策略和角色审计时配置
-**用途**：IAM List/Get 操作（只读）
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-iam-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.iam-mcp-server@latest
-```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.iam-mcp-server@latest`。
-
----
-
-### 9. cloudtrail-mcp-server
-
-**条件**：需要审计日志查询时配置
-**用途**：CloudTrail 事件查询
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-cloudtrail-mcp-server \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.cloudtrail-mcp-server@latest
-```
-
-#### Kiro
-
-同必需服务器的 JSON 格式，替换包名为 `awslabs.cloudtrail-mcp-server@latest`。
 
 ---
 
 ## 完整配置示例
 
-以下是韧性评估的推荐完整 MCP 配置（覆盖常见场景）：
-
 ```json
 {
   "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
+    "aws-mcp": {
       "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--profile", "resilience-readonly",
+        "--metadata", "AWS_REGION=us-east-1"
+      ]
     },
-    "awslabs.cloudwatch-mcp-server": {
+    "eks-mcp": {
+      "command": "uvx",
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.us-east-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "resilience-readonly",
+        "--region", "us-east-1"
+      ]
+    },
+    "cloudwatch-mcp": {
       "command": "uvx",
       "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.eks-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.ecs-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.ecs-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.dynamodb-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.dynamodb-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.iam-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.iam-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.cloudtrail-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.cloudtrail-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      "env": { "AWS_PROFILE": "resilience-readonly", "AWS_REGION": "us-east-1", "FASTMCP_LOG_LEVEL": "ERROR" }
     }
   }
 }
 ```
 
-> 按需删除不需要的服务器。最小配置只需 `aws-api-mcp-server` + `cloudwatch-mcp-server`。
-
----
-
-## 只读安全说明
-
-韧性评估只需要**只读访问**。各 MCP Server 的只读特性：
-
-| MCP Server | 只读行为 |
-|-----------|---------|
-| aws-api-mcp-server | 默认只读（仅 Describe/Get/List 操作） |
-| cloudwatch-mcp-server | 默认只读（仅 Describe/Get/List 操作） |
-| cloudtrail-mcp-server | 默认只读（仅查询事件） |
-| iam-mcp-server | 默认只读（仅 List/Get 操作） |
-| eks-mcp-server | 默认只读（仅 Describe/List 操作） |
-| ecs-mcp-server | 默认只读（仅 Describe/List 操作） |
-| dynamodb-mcp-server | 默认只读（仅 Describe/List/Query 操作） |
+> 删除不需要的 Server。最小配置只需 `aws-mcp`。
 
 ---
 
 ## 配置 AWS 凭证
 
 ```bash
-# 方式 1：使用 AWS CLI 配置
-aws configure
-
-# 方式 2：使用 AWS SSO
-aws configure sso
-
-# 验证凭证
-aws sts get-caller-identity
+aws login                                       # 浏览器登录，凭证自动轮换
+aws configure sso --profile resilience-readonly # IAM Identity Center，使用只读权限集
+aws sts get-caller-identity --profile resilience-readonly
 ```
 
 ### 最小 IAM 权限策略（只读访问）
@@ -358,7 +236,7 @@ aws sts get-caller-identity
         "eks:Describe*",
         "ecs:List*",
         "ecs:Describe*",
-        "elbv2:Describe*",
+        "elasticloadbalancing:Describe*",
         "apigateway:GET",
         "iam:List*",
         "iam:Get*",
@@ -377,130 +255,92 @@ aws sts get-caller-identity
 }
 ```
 
+配置容器类 Server 时，再加上 `eks-mcp:InvokeMcp`、`eks-mcp:CallReadOnlyTool` 和/或 `ecs-mcp:UseMcp`、
+`ecs-mcp:InvokeReadOnlyTools`。
+
+> `logs:StartQuery` / `logs:StopQuery` 只是启动和停止 CloudWatch Logs Insights 查询，不会修改资源。
+
 ---
 
 ## 验证配置
 
-| 工具 | 验证方式 |
+| 工具 | 验证方法 |
 |------|---------|
-| Kiro | Kiro 功能面板 -> MCP Server 视图，确认状态为 "running" |
-| Claude Code | 运行 `claude mcp list` 或在对话中输入 `/mcp` |
+| Kiro | `/mcp` 或 `/tools`（Kiro CLI），或 IDE 中的 MCP Server 视图 |
+| Claude Code | `claude mcp list`，或在对话中输入 `/mcp` |
 
-```bash
-# 验证 AWS 凭证
-aws sts get-caller-identity
-
-# 验证 CloudWatch 权限
-aws cloudwatch describe-alarms --max-items 1
-
-# 验证 EKS（如配置）
-aws eks list-clusters
-
-# 验证 ECS（如配置）
-aws ecs list-clusters
-```
+应能看到 `aws-mcp` 提供的 `aws___call_aws`、`aws___run_script`、`aws___search_documentation` 等工具。
+如果没有，检查代理是否**误加了** `--read-only`。
 
 ---
 
 ## 故障排查
 
-### MCP 服务器未连接
+| 现象 | 原因 | 处理 |
+|------|------|------|
+| 没有 `aws___call_aws` 工具 | 代理以 `--read-only` 启动 | 去掉该参数；只读改由 IAM 保证 |
+| `ExpiredTokenException` | 会话凭证已过期 | `aws login` / `aws sso login --profile …`，然后重启 MCP 客户端 |
+| 调用返回 `AccessDenied` | profile 缺少该权限，或 SCP 拒绝了 `aws:ViaAWSMCPService` | 补充读权限；旧的 `aws-mcp:*` IAM 动作已不再生效 |
+| Server 无法启动 | 缺少 `uv` 或无法下载代理 | `uv --version`；`timeout 15s uvx mcp-proxy-for-aws@1.8.0 --help` |
 
-```bash
-# 验证 uv 已安装
-uv --version
+### 无 MCP 时的优雅降级
 
-# 手动测试 MCP 服务器启动（15 秒超时）
-timeout 15s uvx awslabs.aws-api-mcp-server@latest 2>&1 || echo "Command completed or timed out"
-
-# 验证 AWS 凭证
-aws sts get-caller-identity
-```
-
-### 无 MCP 降级
-
-如果 MCP Server 未配置或不可用，Skill 自动降级为以下备用方式（**不会直接扫描 AWS 资源**）：
+没有可用的 MCP Server 时，Skill 退回到以下方式（**不直接扫描 AWS 资源**）：
 - 分析 IaC 代码（Terraform/CloudFormation）
 - 分析架构文档
 - 交互式问答
 
-> **注意**：降级模式下**不允许**通过 Bash 直接执行 `aws` CLI 命令扫描或操作 AWS 资源。所有 AWS 资源访问必须通过 MCP 服务器。
+> **注意**：降级模式下**不允许**通过 Bash 直接执行 `aws` CLI 命令扫描或操作 AWS 资源。所有 AWS 资源访问都必须经过 MCP Server。
 
 ---
 
-## 高级配置
+## 多个 AWS 账号
 
-### 多 AWS 账户
-
-为不同账户创建独立的 MCP 服务器实例：
+一个 `aws-mcp` 条目即可服务多个账号：传入多个 profile，第一个为默认，agent 可按次切换。
 
 ```json
-{
-  "mcpServers": {
-    "aws-api-production": {
-      "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_PROFILE": "production",
-        "AWS_REGION": "us-east-1",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "aws-api-staging": {
-      "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_PROFILE": "staging",
-        "AWS_REGION": "us-west-2",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    }
-  }
-}
+"args": [
+  "mcp-proxy-for-aws@1.8.0",
+  "https://aws-mcp.us-east-1.api.aws/mcp",
+  "--profile", "prod-readonly", "staging-readonly",
+  "--metadata", "AWS_REGION=us-east-1"
+]
 ```
 
 ---
 
-## 从 core-mcp-server 迁移
+## 从旧 Server 迁移
 
-如果之前使用 `awslabs.core-mcp-server`，以下是角色到独立服务器的映射：
-
-| 原 core-mcp-server 角色 | 替代的独立 MCP Server |
-|------------------------|---------------------|
-| `aws-foundation` | aws-api-mcp-server |
-| `monitoring-observability` | cloudwatch-mcp-server, cloudtrail-mcp-server |
-| `solutions-architect` | aws-pricing-mcp-server |
-| `security-identity` | iam-mcp-server |
-| `container-orchestration` | eks-mcp-server, ecs-mcp-server |
-| `serverless-architecture` | lambda-tool-mcp-server |
-| `nosql-db-specialist` | dynamodb-mcp-server |
-| `caching-performance` | elasticache-mcp-server |
-
-完整迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+| 原 Server | 替代方案 |
+|-----------|----------|
+| `awslabs.aws-api-mcp-server` | `aws-mcp`（AWS MCP Server） |
+| `aws-knowledge-mcp-server` | `aws-mcp`（已内置文档工具） |
+| `awslabs.iam-mcp-server`（已弃用） | `aws-mcp` |
+| `awslabs.dynamodb-mcp-server`、`lambda-tool-mcp-server`、`elasticache-mcp-server`、`cloudtrail-mcp-server` | `aws-mcp` 已覆盖评估所用的 Describe/List API |
+| `awslabs.eks-mcp-server` / `awslabs.ecs-mcp-server` | AWS 托管的 `eks-mcp` / `ecs-mcp`（本地版仍可作为替代） |
+| `awslabs.core-mcp-server`（已弃用） | 上述各 Server |
 
 ---
 
-## 配置文件速查表
+## 配置文件速查
 
 | 项目 | Claude Code | Kiro |
 |------|-------------|------|
-| 工作区配置路径 | `.claude/settings.local.json` | `.kiro/settings/mcp.json` |
-| 用户级配置路径 | `~/.config/claude/settings.json` | `~/.kiro/settings/mcp.json` |
-| 查看 MCP 状态 | `claude mcp list` 或 `/mcp` | 功能面板 -> MCP Server 视图 |
+| 工作区配置路径 | `.mcp.json`（项目级） | `.kiro/settings/mcp.json` |
+| 用户级配置 | `claude mcp add --scope user …` | `~/.kiro/settings/mcp.json` |
+| 查看 MCP 状态 | `claude mcp list` 或 `/mcp` | `/mcp`、`/tools` 或 MCP Server 视图 |
 
 ---
 
 ## 参考资源
 
-- [AWS MCP Servers（官方仓库）](https://github.com/awslabs/mcp)
-- [core-mcp-server 迁移指南](https://github.com/awslabs/mcp/blob/main/docs/migration-core.md)
-- [CloudWatch MCP Server](https://github.com/awslabs/mcp/tree/main/src/cloudwatch-mcp-server)
-- [AWS API MCP Server](https://github.com/awslabs/mcp/tree/main/src/aws-api-mcp-server)
-- [EKS MCP Server](https://github.com/awslabs/mcp/tree/main/src/eks-mcp-server)
+- [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) 及其[配置指南](https://docs.aws.amazon.com/aws-mcp/latest/userguide/getting-started-aws-mcp-server.html)
+- [从 AWS API MCP 迁移到 AWS MCP](https://github.com/awslabs/mcp/blob/main/src/aws-api-mcp-server/MIGRATION.md)
+- [mcp-proxy-for-aws](https://github.com/aws/mcp-proxy-for-aws)
+- [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html) / [Amazon ECS MCP Server](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-mcp-introduction.html)
+- [AWS MCP Servers（开源仓库）](https://github.com/awslabs/mcp)
 - [Model Context Protocol 文档](https://modelcontextprotocol.io/)
-- [AWS CLI 配置文档](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
-- [uv 安装指南](https://docs.astral.sh/uv/getting-started/installation/)
 
 ---
 
-**更新日期：** 2026-03-24
+**更新时间：2026-11-09**

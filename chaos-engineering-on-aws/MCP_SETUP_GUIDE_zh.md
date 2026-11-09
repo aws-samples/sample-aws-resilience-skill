@@ -1,66 +1,138 @@
 # MCP Server 配置指南
 
-本 Skill 依赖 AWS 官方 MCP Server 与 AWS 服务交互。以下是各 MCP Server 的配置方法。
+本 Skill 通过 **AWS MCP Server**（由 AWS 托管的远程 MCP Server）访问 AWS。
+Kubernetes 侧的 Server 为可选项。没有任何 MCP Server 时，Skill 退回到直接使用 AWS CLI 和
+`kubectl`（见 [无 MCP 降级](#无-mcp-降级)）。
 
-> ⚠️ `awslabs.core-mcp-server` 已废弃，请直接配置独立 MCP Server。
-> 迁移指南：https://github.com/awslabs/mcp/blob/main/docs/migration-core.md
+> **变更说明（2026-11）**：`awslabs.aws-api-mcp-server` 已被
+> [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) 取代
+> （[迁移指南](https://github.com/awslabs/mcp/blob/main/src/aws-api-mcp-server/MIGRATION.md)）。
+> 本指南以前要求设置的 `ALLOW_WRITE_OPERATIONS=true` 在 `aws-api-mcp-server` 中**从来不存在**
+> （真正的开关是 `READ_OPERATIONS_ONLY`，默认 `false`），设置它没有任何效果。请把旧 Server 条目和这个变量
+> 一起从配置中删除；新旧 Server 同时运行会造成工具冲突。
+
+| Server | 状态 | 是否必需 | 用途 |
+|--------|------|----------|------|
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) | AWS 托管，**预览** | 是 | 所有 AWS API 调用（FIS、CloudWatch、EC2、RDS、EKS、IAM 等），以及 AWS 文档检索 |
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html) | AWS 托管，**预览** | 目标运行在 EKS 上时 | 集群与 Kubernetes 资源查询、Pod 日志、事件 |
+| `awslabs.cloudwatch-mcp-server` | 开源，本地运行 | 否 | 只在需要它的告警建议、日志分析工具时使用。普通 CloudWatch API 调用已经走 `aws-mcp` |
+| `chaosmesh-mcp` — [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | 社区项目（非 AWS） | 已安装 Chaos Mesh 时 | 创建 Chaos Mesh CRD、查询状态 |
 
 ---
 
-## 必需的 MCP Server
+## 1. AWS MCP Server（必需）
 
-### 1. aws-api-mcp-server
+**前置条件**：Python 3.10+ 与 [uv](https://docs.astral.sh/uv/getting-started/installation/)（提供
+`uvx`），以及本机上的 AWS 凭证（`aws login`、`aws configure sso` 或 profile）。
 
-**用途**：FIS 实验创建/执行/停止、EC2/RDS/EKS 资源验证、IAM 权限检查
+客户端只运行一个轻量的本地代理 [`mcp-proxy-for-aws`](https://pypi.org/project/mcp-proxy-for-aws/)，
+它用你的凭证做 SigV4 签名，再把请求转发到 AWS 托管的端点。
 
-**安装**：需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- **端点 Region**（MCP Server 运行的位置）：`us-east-1`、`us-west-2`、`ap-southeast-1`、
+  `ap-southeast-2`、`ap-northeast-1`、`eu-central-1`、`eu-west-1`、`eu-west-2`，地址为
+  `https://aws-mcp.<region>.api.aws/mcp`。
+- **操作 Region**（AWS 调用的默认 Region）：`--metadata AWS_REGION=<region>`。
+  两者可以不同；不传 metadata 时，操作默认落在 `us-east-1`。
+- **锁定代理版本**（AWS 建议的供应链控制措施）。本指南使用 2026-11-09 的最新版 `1.8.0`；
+  升级时请有意识地修改版本号。
 
-#### Claude Code
+### Kiro
 
-```bash
-claude mcp add awslabs-aws-api-mcp-server \
-  -e AWS_REGION=ap-northeast-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.aws-api-mcp-server@latest
-```
-
-#### Kiro
-
-编辑 `.kiro/settings/mcp.json`：
+`.kiro/settings/mcp.json`（工作区）或 `~/.kiro/settings/mcp.json`（用户级）：
 
 ```json
 {
   "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
+    "aws-mcp": {
       "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "ap-northeast-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      },
-      "disabled": false,
-      "autoApprove": []
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.ap-northeast-1.api.aws/mcp",
+        "--profile", "default",
+        "--metadata", "AWS_REGION=ap-northeast-1"
+      ]
     }
   }
 }
 ```
 
-#### Cursor / VS Code
+### Claude Code
 
-编辑 `.cursor/mcp.json` 或 `.vscode/mcp.json`：
+```bash
+claude mcp add aws-mcp -- uvx mcp-proxy-for-aws@1.8.0 \
+  https://aws-mcp.ap-northeast-1.api.aws/mcp \
+  --profile default --metadata AWS_REGION=ap-northeast-1
+```
+
+### Cursor / VS Code
+
+与 Kiro 相同的 JSON，写入 `.cursor/mcp.json` 或 `.vscode/mcp.json`。
+
+### 权限
+
+AWS MCP Server **用你的凭证**调用 AWS：所需的 IAM 权限与在 CLI 中执行同样的 API 调用完全相同。
+混沌实验需要写权限（`fis:CreateExperimentTemplate`、`fis:StartExperiment`、`fis:StopExperiment`、
+`cloudwatch:PutMetricAlarm`，以及对 FIS 角色的 `iam:PassRole`），因此本 Skill **不要**给代理加
+`--read-only`。
+
+- 旧的 `aws-mcp:InvokeMcp` / `aws-mcp:Call*` IAM 动作已不再生效，请删除。
+- 如需区别对待 agent 流量与人工流量，可在身份策略或 SCP 中使用全局条件键
+  `aws:ViaAWSMCPService` / `aws:CalledViaAWSMCP`（例如在生产账号中禁止经 MCP 调用 `fis:StartExperiment`）。
+- 每次调用都会记录到 CloudTrail，Server 也会发布 CloudWatch 指标，便于单独审计 agent 活动。
+
+---
+
+## 2. Amazon EKS MCP Server（EKS 目标）
+
+由 AWS 托管，通过同一个代理连接。请确认你的 Region 已提供该服务；该服务处于预览阶段，可能变化。
 
 ```json
 {
   "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
+    "eks-mcp": {
       "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "ap-northeast-1",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.ap-northeast-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "default",
+        "--region", "ap-northeast-1"
+      ]
+    }
+  }
+}
+```
+
+```bash
+claude mcp add eks-mcp -- uvx mcp-proxy-for-aws@1.8.0 \
+  https://eks-mcp.ap-northeast-1.api.aws/mcp \
+  --service eks-mcp --profile default --region ap-northeast-1
+```
+
+**IAM**：`eks-mcp:InvokeMcp`（初始化、列出工具）、`eks-mcp:CallReadOnlyTool`（只读工具）、
+`eks-mcp:CallPrivilegedTool`（写工具），或直接使用托管策略 `AmazonEKSMCPReadOnlyAccess`。
+本 Skill 只需要只读工具：故障注入本身通过 FIS 或 Chaos Mesh 完成。
+该 IAM 主体还需要在集群中有 Kubernetes 身份（EKS access entry）。
+
+> 无法使用托管 Server 时，开源、本地运行的 `awslabs.eks-mcp-server` 依然可用
+> （`uvx awslabs.eks-mcp-server@latest`；不加 `--allow-write` 启动时为只读）。
+
+---
+
+## 3. cloudwatch-mcp-server（可选）
+
+只在需要它的高层工具（告警建议、日志组分析）时配置。指标查询和用于停止条件的 `put-metric-alarm`
+已经可以通过 `aws-mcp` 完成，`scripts/monitor.sh` 也是用 AWS CLI 读取指标。
+
+```json
+{
+  "mcpServers": {
+    "cloudwatch-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "env": { "AWS_PROFILE": "default", "AWS_REGION": "ap-northeast-1", "FASTMCP_LOG_LEVEL": "ERROR" }
     }
   }
 }
@@ -68,77 +140,26 @@ claude mcp add awslabs-aws-api-mcp-server \
 
 ---
 
-### 2. cloudwatch-mcp-server
+## 4. chaosmesh-mcp（可选，社区项目）
 
-**用途**：CloudWatch 指标读取、告警创建/查询（Stop Conditions）、日志查询
+**条件**：EKS 集群已安装 Chaos Mesh。**仓库**：
+[RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP)——社区项目，不是 AWS 服务；
+面向客户使用时请明确说明。
 
-#### Claude Code
+EKS 认证（详见该项目的
+[EKS Authentication Methods](https://github.com/RadiumGu/Chaosmesh-MCP#eks-authentication-methods)）：
 
-```bash
-claude mcp add awslabs-cloudwatch-mcp-server \
-  -e AWS_REGION=ap-northeast-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.cloudwatch-mcp-server@latest
-```
-
-#### Kiro / Cursor / VS Code
-
-同上格式，替换包名为 `awslabs.cloudwatch-mcp-server@latest`。
-
----
-
-## 推荐的 MCP Server（按需配置）
-
-### 3. eks-mcp-server
-
-**条件**：目标系统为 EKS 架构时配置
-**用途**：EKS 集群管理、K8s 资源操作、Pod 日志查看
-
-#### Claude Code
-
-```bash
-claude mcp add awslabs-eks-mcp-server \
-  -e AWS_REGION=ap-northeast-1 \
-  -e AWS_PROFILE=default \
-  -e FASTMCP_LOG_LEVEL=ERROR \
-  -- uvx awslabs.eks-mcp-server@latest
-```
-
----
-
-### 4. chaosmesh-mcp
-
-**条件**：EKS 集群已安装 Chaos Mesh 时配置
-**用途**：K8s 应用层故障注入（30 个 tool，覆盖全部 CRD 类型）
-**仓库**：https://github.com/RadiumGu/Chaosmesh-MCP
-
-#### Claude Code
-
-```bash
-# 克隆仓库
-git clone https://github.com/RadiumGu/Chaosmesh-MCP.git
-cd Chaosmesh-MCP
-
-# 添加 MCP Server
-claude mcp add chaosmesh-mcp \
-  -e KUBECONFIG=~/.kube/config \
-  -- python3 server.py
-```
-
-#### Kiro
+- **静态 ServiceAccount Token（推荐）**：运行一次它的 `setup-eks-permissions.sh`，会创建仅限
+  Chaos Mesh 的最小权限 RBAC 和一个自包含的 kubeconfig。运行时不需要 AWS 凭证；Token 会过期（默认 1 年）。
+- **管理员 kubeconfig**：由 `aws eks update-kubeconfig` 生成的 kubeconfig（通过 exec 调用
+  `aws eks get-token`）；适合快速测试，权限等同于管理员。
 
 ```json
 {
   "mcpServers": {
     "chaosmesh-mcp": {
       "command": "python3",
-      "args": ["/path/to/Chaosmesh-MCP/server.py"],
-      "env": {
-        "KUBECONFIG": "~/.kube/config"
-      },
-      "disabled": false,
-      "autoApprove": []
+      "args": ["/path/to/Chaosmesh-MCP/server.py", "--kubeconfig", "/path/to/chaos-mesh-mcp-kubeconfig"]
     }
   }
 }
@@ -148,44 +169,33 @@ claude mcp add chaosmesh-mcp \
 
 ## 完整配置示例
 
-以下是本 Skill 推荐的完整 MCP 配置（覆盖所有场景）：
-
 ```json
 {
   "mcpServers": {
-    "awslabs.aws-api-mcp-server": {
+    "aws-mcp": {
       "command": "uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "ap-northeast-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://aws-mcp.ap-northeast-1.api.aws/mcp",
+        "--profile", "default",
+        "--metadata", "AWS_REGION=ap-northeast-1"
+      ]
     },
-    "awslabs.cloudwatch-mcp-server": {
+    "eks-mcp": {
       "command": "uvx",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "ap-northeast-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "awslabs.eks-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "ap-northeast-1",
-        "AWS_PROFILE": "default",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      "timeout": 100000,
+      "args": [
+        "mcp-proxy-for-aws@1.8.0",
+        "https://eks-mcp.ap-northeast-1.api.aws/mcp",
+        "--service", "eks-mcp",
+        "--profile", "default",
+        "--region", "ap-northeast-1"
+      ]
     },
     "chaosmesh-mcp": {
       "command": "python3",
-      "args": ["/path/to/Chaosmesh-MCP/server.py"],
-      "env": {
-        "KUBECONFIG": "~/.kube/config"
-      }
+      "args": ["/path/to/Chaosmesh-MCP/server.py", "--kubeconfig", "/path/to/chaos-mesh-mcp-kubeconfig"]
     }
   }
 }
@@ -193,32 +203,27 @@ claude mcp add chaosmesh-mcp \
 
 ---
 
-## AWS 凭证配置
+## AWS 凭证
 
-MCP Server 使用标准 AWS 凭证链。推荐配置方式：
+代理和 CLI 降级路径都使用标准凭证链：
 
 ```bash
-# 方式 1：AWS Profile（推荐）
-aws configure --profile default
-# 在 MCP 配置中设置 AWS_PROFILE=default
-
-# 方式 2：环境变量
-export AWS_ACCESS_KEY_ID=xxx
-export AWS_SECRET_ACCESS_KEY=xxx
-export AWS_SESSION_TOKEN=xxx  # 如使用临时凭证
-
-# 方式 3：IAM Role（EC2/EKS 环境）
-# 无需额外配置，自动使用实例角色
+aws login                         # 推荐：浏览器登录，凭证自动轮换
+aws configure sso                 # IAM Identity Center
+aws configure --profile default   # 长期或临时密钥
+aws sts get-caller-identity       # 验证
 ```
+
+同一会话访问多个账号：`--profile prod-readonly staging`（第一个为默认，agent 可按次切换）。
+出现 `ExpiredTokenException` 表示会话已过期：刷新凭证后重启 MCP 客户端。
 
 ---
 
 ## FIS IAM Role
 
-FIS 实验执行需要专用 IAM Role。如果还没有，Skill 的步骤 4 会自动生成创建命令。手动创建参考：
+FIS 需要独立的执行角色。缺失时，Skill 的步骤 4 会生成创建命令。快速上手参考（生产环境请使用最小权限）：
 
 ```bash
-# 创建 FIS 执行角色
 aws iam create-role \
   --role-name FISExperimentRole \
   --assume-role-policy-document '{
@@ -230,70 +235,46 @@ aws iam create-role \
     }]
   }'
 
-# 附加权限（按实验类型选择）
-# EC2 实验
+# FIS 的 AWS 托管策略，按实验需要附加
 aws iam attach-role-policy --role-name FISExperimentRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
-
-# RDS 实验
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSFaultInjectionSimulatorEC2Access
 aws iam attach-role-policy --role-name FISExperimentRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonRDSFullAccess
-
-# EKS 实验
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSFaultInjectionSimulatorRDSAccess
 aws iam attach-role-policy --role-name FISExperimentRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
-
-# 网络实验
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSFaultInjectionSimulatorEKSAccess
 aws iam attach-role-policy --role-name FISExperimentRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonVPCFullAccess
-
-# CloudWatch（读取告警状态用于 Stop Conditions）
-aws iam attach-role-policy --role-name FISExperimentRole \
-  --policy-arn arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSFaultInjectionSimulatorNetworkAccess
 ```
 
-> ⚠️ 生产环境建议使用最小权限策略，而非 FullAccess。上述仅为快速开始参考。
+> `references/fis-templates/` 下可直接部署的模板自带收窄过的角色策略，优先使用它们而不是宽泛的托管策略。
 
 ---
 
 ## 验证配置
 
-配置完成后验证：
-
 ```bash
-# 验证 aws-api-mcp-server
-# 在 Claude Code 中运行
-> /mcp
-# 应看到 awslabs-aws-api-mcp-server 状态：connected
+# MCP Server 已加载（Kiro CLI：/mcp 或 /tools；Claude Code：/mcp 或 `claude mcp list`）
+# aws-mcp 应提供 aws___call_aws、aws___run_script、aws___search_documentation 等工具
 
-# 验证 AWS 凭证
 aws sts get-caller-identity
-
-# 验证 FIS 权限
-aws fis list-experiment-templates
-
-# 验证 CloudWatch 权限
+aws fis list-experiment-templates --max-results 1
 aws cloudwatch describe-alarms --max-items 1
-
-# 验证 EKS（如已配置）
-aws eks list-clusters
-
-# 验证 Chaos Mesh（如已配置）
-kubectl get crd | grep chaos-mesh
+aws eks list-clusters                 # 如为 EKS
+kubectl get crd | grep chaos-mesh     # 如已安装 Chaos Mesh
 ```
 
 ---
 
 ## 无 MCP 降级
 
-如果 MCP Server 未配置或不可用，Skill 自动降级为 AWS CLI 直接调用：
+没有可用的 MCP Server 时，Skill 直接使用 AWS CLI 和 `kubectl`；后台脚本
+（`experiment-runner.sh`、`monitor.sh`、`log-collector.sh`、`discover-dependencies.sh`）始终使用 CLI。
 
-| 操作 | MCP 方式 | CLI 降级 |
-|------|---------|---------|
-| FIS 实验 | aws-api-mcp-server | `aws fis create-experiment-template` / `start-experiment` |
-| 指标读取 | cloudwatch-mcp-server | `aws cloudwatch get-metric-data` |
-| 告警管理 | cloudwatch-mcp-server | `aws cloudwatch put-metric-alarm` |
-| K8s 操作 | eks-mcp-server | `kubectl` |
-| Chaos Mesh | chaosmesh-mcp | `kubectl apply -f` |
+| 操作 | 有 MCP | CLI 降级 |
+|------|--------|----------|
+| FIS 实验 | `aws-mcp` | `aws fis create-experiment-template` / `start-experiment` |
+| 指标与告警 | `aws-mcp` | `aws cloudwatch get-metric-data` / `put-metric-alarm` |
+| Kubernetes 查询 | `eks-mcp` | `kubectl` |
+| Chaos Mesh | `chaosmesh-mcp` | `kubectl apply -f` |
 
-降级后功能完整，但准确性略低（LLM 需自行构造 JSON/YAML）。
+功能保持完整；只是 agent 需要自己构造 JSON/YAML，而不是使用带类型约束的工具。

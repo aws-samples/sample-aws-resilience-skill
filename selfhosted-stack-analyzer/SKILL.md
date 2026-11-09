@@ -13,7 +13,7 @@ description: >-
   of self-managed databases/message-queues on Kubernetes. Also invoked for
   自建组件拓扑, 自建中间件薄弱点, EKS 自建数据库分析, 拓扑图绘制, TiDB/TiKV 韧性,
   Redis 集群薄弱点, Kafka 韧性分析, 有状态服务 SPOF 分析, 分两阶段采集分析.
-allowed-tools: Bash(kubectl *), Bash(aws *), Bash(jq *), Bash(bash *), Bash(cat *), Bash(tar *), Bash(mkdir *), Bash(helm *), Read, Write, Grep, Glob, awslabs.eks-mcp-server, awslabs.aws-api-mcp-server, awslabs.cloudwatch-mcp-server
+allowed-tools: Bash(kubectl *), Bash(aws *), Bash(jq *), Bash(bash *), Bash(cat *), Bash(tar *), Bash(mkdir *), Bash(helm *), Read, Write, Grep, Glob, mcp__eks-mcp, mcp__aws-mcp, mcp__cloudwatch-mcp
 model: sonnet
 ---
 

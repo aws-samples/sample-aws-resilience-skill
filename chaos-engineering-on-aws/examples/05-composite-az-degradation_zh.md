@@ -135,6 +135,63 @@ wait $RUNNER_PID
 echo "Runner 退出码: $?"
 ```
 
+## 停止条件告警
+
+```bash
+aws cloudwatch put-metric-alarm \
+  --alarm-name "chaos-stop-high-5xx" \
+  --namespace "AWS/ApplicationELB" \
+  --metric-name "HTTPCode_Target_5XX_Count" \
+  --statistic Sum \
+  --period 60 \
+  --threshold 100 \
+  --comparison-operator GreaterThanThreshold \
+  --evaluation-periods 2 \
+  --treat-missing-data notBreaching \
+  --dimensions Name=LoadBalancer,Value=app/my-alb/1234567890 \
+  --region ap-northeast-1
+```
+
+## FIS IAM 角色权限
+
+FIS 角色需要覆盖模板中所有 action 的权限：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:DescribeInstances",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
+        "rds:FailoverDBCluster",
+        "rds:DescribeDBClusters"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## 预期结果
+
+### PASSED ✅ 场景
+- AZ-a 的 EC2 实例被停止 → 流量转移到 AZ-c
+- EBS IO 暂停 → 没有级联故障（数据层被隔离）
+- RDS 故障转移在 30 秒内完成
+- 全程成功率保持 ≥ 95%
+- 故障结束后 120 秒内完全恢复
+
+### FAILED ❌ 场景
+- 成功率跌破 95% → 应用不具备 AZ 级韧性
+- RDS 故障转移超过 30 秒 → 数据库 HA 需要调优
+- 恢复时间超过 120 秒 → 自动扩缩容或健康检查太慢
+- 故障级联到 AZ-c → 存在单点故障
+
 ## 自定义实验时长
 
 快速验证时缩短 duration：

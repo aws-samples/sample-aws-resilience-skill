@@ -166,8 +166,8 @@ The FIS role needs permissions for all actions in the template:
         "ec2:StopInstances",
         "ec2:StartInstances",
         "ec2:DescribeInstances",
-        "ebs:PauseVolumeIO",
-        "ebs:DescribeVolumes",
+        "ec2:PauseVolumeIO",
+        "ec2:DescribeVolumes",
         "rds:FailoverDBCluster",
         "rds:DescribeDBClusters"
       ],

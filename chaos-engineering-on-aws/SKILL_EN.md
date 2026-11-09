@@ -1,6 +1,6 @@
 # Chaos Engineering on AWS
 
-> Last sync: 2026-04-15
+> Last sync: 2026-11-09
 
 ## Role Definition
 
@@ -31,7 +31,7 @@ Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavaila
 
 ## Six-Step Workflow
 
-> **On startup**: Always check `output/state.json` first. If previous progress exists, offer to resume. See workflow-guide.md § Recovery After Interruption.
+> **On startup**: Always check `output/state.json` first. If previous progress exists, offer to resume. See [workflow-guide.md § Recovery After Interruption](references/workflow-guide.md#recovery-after-interruption).
 
 > **Three-layer status**: (1) `state.json` v2 — machine-readable state with `flock` concurrent writes, (2) `dashboard.md` — auto-generated each monitor cycle, (3) `render-dashboard.sh` — terminal ASCII dashboard. See [scripts/README.md](scripts/README.md) for schema.
 
@@ -41,7 +41,7 @@ Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavaila
 | Step | Name | Key Action | Output |
 |------|------|------------|--------|
 | 1 | Define Targets | Filter experimentable risks by score, confirm scope, detect Chaos Mesh | `output/checkpoints/step1-scope.json` |
-| 2 | Select Resources | Validate ARNs, calculate blast radius, label roles | `output/checkpoints/step2-assessment.json` |
+| 2 | Select Resources | Validate ARNs, action–resource compatibility gate, discover dependent workloads, blast radius, label roles | `output/checkpoints/step2-assessment.json` + `step2-dependencies.json` + `output/monitoring/app-map.json` |
 | 3 | Design Experiment | Hypothesis + tool selection + config generation | `output/checkpoints/step3-experiment.json` + `output/templates/` |
 | 4 | Pre-flight | Checklist: IAM, alarms, blast radius, team readiness | `output/checkpoints/step4-validation.json` |
 | 5 | Execute | Background scripts: runner + monitor + log-collector | `output/checkpoints/step5-experiment.json` + metrics/logs + `dashboard.md` |
@@ -49,13 +49,15 @@ Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavaila
 
 ### Key Decision Points (read before each step)
 
-**Step 3 — Tool Selection**: Consult [references/fault-catalog.yaml](references/fault-catalog.yaml) (42 fault types). Selection logic:
-- AZ/Region compound faults → FIS Scenario Library → [references/scenario-library.md](references/scenario-library.md)
+**Step 2 — Gates**: (a) [Compatibility gate](references/workflow-guide.md#21-resourceaction-compatibility-gate-mandatory-blocks-step-3): `aws fis get-action` target type vs. the real resource (`Engine`, `DBClusterIdentifier`, `InstanceLifecycle`, …) — mismatch blocks Step 3. (b) [Impact Target discovery](references/workflow-guide.md#22-impact-target-discovery-dependent-workloads): [scripts/discover-dependencies.sh](scripts/discover-dependencies.sh) scans every EKS cluster in the Region for workloads referencing the target endpoints; unverified hits need user confirmation; exit 2 = nothing could be scanned, not "no dependency".
+
+**Step 3 — Tool Selection**: Consult [references/fault-catalog.yaml](references/fault-catalog.yaml) (54 fault types). Selection logic:
+- AZ/Region compound faults → FIS Scenario Library → [references/scenario-library.md](references/scenario-library.md) (official sub-actions/tags; AZ Power Interruption: prune sub-actions to the services the user names, never the stop condition)
 - AWS infrastructure → FIS single action → [references/fis-actions.md](references/fis-actions.md)
 - K8s Pod/container → Chaos Mesh (preferred over FIS pod actions) → [references/chaosmesh-crds.md](references/chaosmesh-crds.md)
 - Composite multi-action → FIS `startAfter` + parameterized templates → [references/templates/](references/templates/)
 - Mixed-backend (FIS + CM) → orchestration guide in [references/workflow-guide.md § 3.7](references/workflow-guide.md#37-mixed-backend-experiments-fis--chaos-mesh)
-- Ready-to-deploy FIS templates (DB connection exhaustion, Redis failure, SQS impairment, CloudFront impairment, Aurora global failover) → [references/fis-templates/](references/fis-templates/) + full 19-scenario index → [references/fis-template-library-index.md](references/fis-template-library-index.md)
+- No native FIS action (MSK broker reboot, ElastiCache primary reboot/failover, DB connection/lock/IO exhaustion, Redis connection failure, SQS/CloudFront impairment, Aurora global failover) → `fis_ssm` entries in the catalog → 8 ready-to-deploy templates in [references/fis-templates/](references/fis-templates/) + full 27-scenario index → [references/fis-template-library-index.md](references/fis-template-library-index.md)
 - SSM Automation orchestrated experiments (dynamic resource injection, SG manipulation, resource policy denial) → [references/workflow-guide.md § SSM Automation](references/workflow-guide.md#advanced-ssm-automation-orchestrated-experiments)
 
 **Step 3 — Required output**: Must generate `output/monitoring/metric-queries.json` for Step 5 monitoring.
@@ -63,7 +65,7 @@ Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavaila
 **Step 5 — Execution**: Do NOT poll in agent loop. Use background scripts:
 - [scripts/experiment-runner.sh](scripts/experiment-runner.sh) — injection + polling + timeout. For pod-kill: use `--one-shot --pod-label "app=X" --deployment "deploy-name"` to complete on AllInjected + Pods Ready (instead of waiting for timeout)
 - [scripts/monitor.sh](scripts/monitor.sh) — CloudWatch metric collection. Two modes: **FIS mode** (set `EXPERIMENT_ID`, auto-stops when FIS completes) or **Chaos Mesh mode** (omit `EXPERIMENT_ID`, set `DURATION` for timed stop). Default `INTERVAL=15` seconds
-- [scripts/log-collector.sh](scripts/log-collector.sh) — ⚠️ **MANDATORY** for all experiments (FIS and CM). Pod log collection + 5-category classification. Responds to SIGTERM immediately (writes summary before exit)
+- [scripts/log-collector.sh](scripts/log-collector.sh) — ⚠️ **MANDATORY** for all experiments (FIS and CM). Pass `--app-map output/monitoring/app-map.json` to cover every Impact Target across namespaces/clusters (fallback: `--namespace`). Pod log collection + 5-category classification. Responds to SIGTERM immediately (writes summary before exit)
 
 Script parameters: [scripts/README.md](scripts/README.md)
 

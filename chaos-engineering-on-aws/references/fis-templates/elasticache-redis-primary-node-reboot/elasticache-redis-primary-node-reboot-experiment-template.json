@@ -1,0 +1,30 @@
+{
+  "description": "Reboot the primary node of each ElastiCache (Redis OSS) replication group tagged FIS-Ready=True, which clears its data, to test application resilience",
+  "targets": {},
+  "actions": {
+    "triggerPrimaryNodeReboot": {
+      "actionId": "aws:ssm:start-automation-execution",
+      "description": "Reboot the primary node of each tagged replication group and wait until the group is available again",
+      "parameters": {
+        "maxDuration": "PT30M",
+        "documentArn": "arn:aws:ssm:<YOUR REGION>:<YOUR AWS ACCOUNT>:document/ElastiCache-Redis-Primary-Node-Reboot",
+        "documentParameters": "{\"tagKey\": \"FIS-Ready\", \"tagValue\": \"True\", \"AutomationAssumeRole\": \"arn:aws:iam::<YOUR AWS ACCOUNT>:role/<YOUR SSM AUTOMATION ROLE NAME>\"}"
+      },
+      "targets": {}
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "none"
+    }
+  ],
+  "roleArn": "arn:aws:iam::<YOUR AWS ACCOUNT>:role/<YOUR ROLE NAME>",
+  "tags": {
+    "Name": "ElastiCacheRedisPrimaryNodeRebootTest",
+    "Purpose": "resilience-testing"
+  },
+  "experimentOptions": {
+    "accountTargeting": "single-account",
+    "emptyTargetResolutionMode": "fail"
+  }
+}

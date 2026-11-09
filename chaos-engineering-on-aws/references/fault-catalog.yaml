@@ -1,14 +1,15 @@
 # Unified Fault Type Catalog
-# Three-tier structure: Chaos Mesh (Pod/container) → FIS (single action) → FIS Scenarios (composite)
+# Four-tier structure: Chaos Mesh (Pod/container) → FIS (single action) → FIS SSM (template library) → FIS Scenarios (composite)
 #
 # Usage: LLM reads this file in Step 3 to select the appropriate fault injection tool.
 #   - AZ/region-level compound faults → fis_scenarios (composite: true)
 #   - AWS infrastructure-level faults → fis (single action)
+#   - AWS faults with no native FIS action → fis_ssm (SSM document from fis-template-library)
 #   - K8s Pod/container-level faults → chaosmesh
 #
 # Adding new fault types: append to the appropriate section below. No need to modify SKILL.md.
 #
-# === Quick Index (42 faults) ===
+# === Quick Index (54 faults) ===
 # Chaos Mesh (14):
 #   Compute:  pod_kill, pod_failure, container_kill
 #   Network:  network_delay, network_loss, network_partition, network_bandwidth
@@ -16,17 +17,26 @@
 #   Resource: cpu_stress, memory_stress
 #   IO/DNS:   io_latency, io_fault, dns_error
 #
-# FIS Single Action (23):
+# FIS Single Action (24):
 #   EC2:        ec2_terminate, ec2_stop, ec2_reboot, ec2_spot_interruption, ec2_network_disrupt
 #   EKS:        eks_terminate_nodes
 #   RDS:        rds_failover, rds_reboot
 #   Lambda:     lambda_delay, lambda_error
 #   Network:    network_disrupt, network_cross_region_route
 #   Storage:    ebs_pause_io, dynamodb_pause_replication, s3_pause_replication
-#   API:        api_internal_error, api_throttle
+#   API:        api_internal_error, api_throttle, api_unavailable_error
 #   ECS:        ecs_stop_task, ecs_drain_container_instance, ecs_task_cpu_stress,
 #               ecs_task_io_stress, ecs_task_network_blackhole
 #   Cache:      elasticache_az_power
+#
+# FIS SSM (template library) (12):
+#   Streaming:  msk_broker_reboot
+#   Cache:      elasticache_primary_reboot, elasticache_primary_failover, redis_connection_failure
+#   Database:   db_connection_exhaustion, db_blocking_locks, db_io_exhaustion, aurora_global_failover
+#   Messaging:  sqs_queue_impairment
+#   CDN:        cloudfront_impairment
+#   AI agent:   agentcore_tool_faults
+#   Compute:    windows_iis_stop
 #
 # FIS Scenario (4):
 #   az_power_interruption, az_app_slowdown, cross_az_traffic_slowdown, cross_region_connectivity
@@ -364,17 +374,24 @@ fis:
   - type: ec2_network_disrupt
     backend: fis
     category: network
-    fis_action_id: "aws:ec2:disrupt-network-connectivity"
-    description: "EC2 network disruption via NACL modification"
+    fis_action_id: "aws:network:disrupt-connectivity"
+    target_resource_type: "aws:ec2:subnet"
+    description: "Isolate EC2 workloads by denying traffic on the subnets they run in (FIS clones the subnet's NACL, adds deny rules, restores the original association at the end). There is no per-instance EC2 network action; the target is the subnet."
     default_params:
-      duration: "PT5M"
-      scope: "all"
+      duration: "PT5M"           # PT1M .. PT12H
+      scope: "all"               # all | availability-zone | dynamodb | prefix-list | s3 | s3express | vpc
+      # prefixListIdentifier: "<name|id|arn>"   # only with scope=prefix-list; customer-managed list, max 10 entries
     safe_first_run_params:
       duration: "PT2M"
       scope: "all"
-      # Note: set target selectionMode=COUNT with count=1 in experiment template
+      # Note: target one dedicated subnet (selectionMode=COUNT(1)); every ENI in the subnet is affected
+    important_notes:
+      - "scope=all denies all traffic entering and leaving the subnet but still allows intra-subnet traffic"
+      - "When scope is not all, the network ACL can hold at most 20 entries"
+      - "scope=availability-zone denies intra-VPC traffic to/from subnets in other AZs; at most 30 subnets per VPC"
     prerequisites:
-      - "FIS IAM Role with ec2:CreateNetworkAcl*, ec2:DeleteNetworkAcl*"
+      - "FIS IAM Role with ec2:CreateNetworkAcl (creates the NACL tagged managedByFIS=true), ec2:CreateNetworkAclEntry and ec2:DeleteNetworkAcl (NACL must be tagged managedByFIS=true), ec2:CreateTags, ec2:DescribeManagedPrefixLists, ec2:DescribeNetworkAcls, ec2:DescribeSubnets, ec2:DescribeVpcs, ec2:GetManagedPrefixListEntries, ec2:ReplaceNetworkAclAssociation"
+      - "Target subnets tagged or listed in the experiment template (resource type aws:ec2:subnet)"
     recommended_for: [ec2-traditional]
 
   # -- EKS --
@@ -434,35 +451,50 @@ fis:
       delayMilliseconds: "500"
       invocationPercentage: "10"
     prerequisites:
-      - "FIS IAM Role with lambda:GetFunction, lambda:UpdateFunctionConfiguration permissions"
-      - "Lambda function ARN"
+      - "S3 bucket in the Region you start the experiment from (one bucket per Region; can be shared across experiments and accounts) with a config folder, e.g. FisConfigs/"
+      - "Lambda execution role: read access to the config location — s3:ListBucket on arn:aws:s3:::<BUCKET> with Condition StringLike s3:prefix [\"FisConfigs/*\"], and s3:GetObject on arn:aws:s3:::<BUCKET>/FisConfigs/*"
+      - "FIS experiment role: write access to the config location — s3:PutObject, s3:DeleteObject on arn:aws:s3:::<BUCKET>/FisConfigs/*; plus lambda:GetFunction and tag:GetResources on *"
+      - "Lambda function ARN (target resource type aws:lambda:function)"
       - "⚠️ Target Lambda MUST have FIS Extension Layer installed"
-      - "⚠️ Target Lambda MUST have env var: AWS_FIS_CONFIGURATION_LOCATION"
+      - "⚠️ Target Lambda MUST have env var AWS_FIS_CONFIGURATION_LOCATION = S3 ARN of the config folder, e.g. arn:aws:s3:::my-config-distribution-bucket/FisConfigs/ (S3 ARN format — not an s3:// URI, not an experiment ARN)"
+      - "⚠️ Target Lambda MUST have env var AWS_LAMBDA_EXEC_WRAPPER = /opt/aws-fis/bootstrap"
+      - "Not supported for functions that use response streaming"
     setup_commands: |
-      # Step 1: Add FIS Extension Layer to Lambda
-      # Find the correct ARN for your region at:
-      # https://docs.aws.amazon.com/fis/latest/userguide/fis-actions-reference.html#lambda-actions
-      LAYER_ARN="arn:aws:lambda:<REGION>:420165488524:layer:AWS-FIS-Extension-Arn:<VERSION>"
+      # Source: https://docs.aws.amazon.com/fis/latest/userguide/use-lambda-actions.html
+      # How it works: FIS reads AWS_FIS_CONFIGURATION_LOCATION from the function, writes the active
+      # fault configuration to that S3 folder while the experiment runs, and the extension polls and
+      # reads it. The variable is set once; it does not change per experiment.
+      #
+      # Step 1: One-time — S3 bucket + folder in the experiment's Region, and two IAM policies:
+      #   Lambda execution role (read):
+      #     {"Sid":"AllowListingConfigLocation","Effect":"Allow","Action":["s3:ListBucket"],
+      #      "Resource":["arn:aws:s3:::<BUCKET>"],"Condition":{"StringLike":{"s3:prefix":["FisConfigs/*"]}}}
+      #     {"Sid":"AllowReadingObjectFromConfigLocation","Effect":"Allow","Action":"s3:GetObject",
+      #      "Resource":["arn:aws:s3:::<BUCKET>/FisConfigs/*"]}
+      #   FIS experiment role (write):
+      #     {"Sid":"AllowFisToWriteAndDeleteFaultConfigurations","Effect":"Allow",
+      #      "Action":["s3:PutObject","s3:DeleteObject"],"Resource":"arn:aws:s3:::<BUCKET>/FisConfigs/*"}
+      #     {"Sid":"AllowFisToInspectLambdaFunctions","Effect":"Allow","Action":["lambda:GetFunction"],"Resource":"*"}
+      #     {"Sid":"AllowFisToDoTagLookups","Effect":"Allow","Action":["tag:GetResources"],"Resource":"*"}
+      #
+      # Step 2: Per function — attach the FIS extension layer and set both variables.
+      # Find the layer ARN for your Region/architecture under "Available versions of the AWS FIS
+      # extension for Lambda" in the FIS user guide.
+      # ⚠️ --layers and --environment REPLACE the whole list/map: read the current values first
+      #    and pass every existing layer ARN and variable back together with the new ones.
+      aws lambda get-function-configuration --function-name <FUNCTION_NAME> \
+        --query '{Layers:Layers[].Arn, EnvVars:Environment.Variables}' --region <REGION>
       aws lambda update-function-configuration \
         --function-name <FUNCTION_NAME> \
-        --layers "$LAYER_ARN" \
-        --environment "Variables={AWS_FIS_CONFIGURATION_LOCATION=arn:aws:fis:<REGION>:<ACCOUNT>:experiment/<EXP_ID>,EXISTING_VAR=value}" \
+        --layers <EXISTING_LAYER_ARNS...> <FIS_EXTENSION_LAYER_ARN> \
+        --environment "Variables={AWS_FIS_CONFIGURATION_LOCATION=arn:aws:s3:::<BUCKET>/FisConfigs/,AWS_LAMBDA_EXEC_WRAPPER=/opt/aws-fis/bootstrap,<EXISTING_VARS>}" \
         --region <REGION>
-      # Step 2: Verify
+      # Step 3: Verify (both variables present, FIS layer listed alongside the original layers)
       aws lambda get-function-configuration --function-name <FUNCTION_NAME> \
         --query '{Layers:Layers[].Arn, EnvVars:Environment.Variables}' --region <REGION>
       #
-      # ⚠️ AWS_FIS_CONFIGURATION_LOCATION format:
-      #   ✅ Correct: arn:aws:fis:<REGION>:<ACCOUNT>:experiment/<EXP_ID>
-      #   ❌ Wrong:   s3://bucket-name/path  (FIS rejects with "invalid value" error)
-      #
-      # Chicken-and-egg: You need the experiment ID before starting, but the ID is
-      # assigned at start time. Workflow:
-      #   1. Create FIS template (get template ID)
-      #   2. Start experiment (get experiment ID)
-      #   3. Update Lambda env var with experiment ARN
-      #   4. FIS will inject on next Lambda invocation
-      # Alternatively, use a wildcard config if supported by your FIS version.
+      # Timing: faults can take up to 60 s to reach all invocations (extension slow-poll interval,
+      # AWS_FIS_SLOW_POLL_INTERVAL_SECONDS, default 60) and up to ~20 s to stop after the action ends.
     recommended_for: [serverless]
 
   - type: lambda_error
@@ -477,12 +509,16 @@ fis:
       duration: "PT2M"
       invocationPercentage: "10"
     prerequisites:
-      - "FIS IAM Role with lambda:GetFunction, lambda:UpdateFunctionConfiguration permissions"
-      - "Lambda function ARN"
+      - "S3 bucket + config folder in the experiment's Region (same as lambda_delay)"
+      - "Lambda execution role: s3:ListBucket (s3:prefix FisConfigs/*) + s3:GetObject on <BUCKET>/FisConfigs/*"
+      - "FIS experiment role: s3:PutObject, s3:DeleteObject on <BUCKET>/FisConfigs/*; lambda:GetFunction, tag:GetResources"
+      - "Lambda function ARN (target resource type aws:lambda:function)"
       - "⚠️ Target Lambda MUST have FIS Extension Layer installed"
-      - "⚠️ Target Lambda MUST have env var: AWS_FIS_CONFIGURATION_LOCATION"
+      - "⚠️ Target Lambda MUST have env var AWS_FIS_CONFIGURATION_LOCATION = S3 ARN of the config folder, e.g. arn:aws:s3:::my-config-distribution-bucket/FisConfigs/"
+      - "⚠️ Target Lambda MUST have env var AWS_LAMBDA_EXEC_WRAPPER = /opt/aws-fis/bootstrap"
     setup_commands: |
       # Same as lambda_delay — see lambda_delay.setup_commands
+      # (https://docs.aws.amazon.com/fis/latest/userguide/use-lambda-actions.html)
     recommended_for: [serverless]
 
   # -- Network --
@@ -553,15 +589,24 @@ fis:
   - type: elasticache_az_power
     backend: fis
     category: cache
-    fis_action_id: "aws:elasticache:interrupt-cluster-az-power"
-    description: "ElastiCache AZ power interruption"
+    fis_action_id: "aws:elasticache:replicationgroup-interrupt-az-power"
+    target_resource_type: "aws:elasticache:replicationgroup"
+    description: "Interrupt power to the nodes of target replication groups in one AZ; a primary in that AZ is replaced by the replica with the least replication lag, and replica replacements in the AZ are blocked for the duration"
     default_params:
-      duration: "PT5M"
+      duration: "PT10M"          # PT1M .. PT12H; fis-template-library default
+      # target parameter: availabilityZoneIdentifier: "<AZ name or AZ ID>"
     safe_first_run_params:
-      duration: "PT2M"
+      duration: "PT5M"
+      # Power loss started 42-74 s after the action began in library tests; keep duration well above that
+    important_notes:
+      - "Only one AZ per replication group can be impacted at a time"
+      - "Supports Redis and Valkey engines; does NOT support ElastiCache Serverless"
+      - "Target with resourceTags/filters; resourceArns targeting is rejected (fis-template-library elasticache-az-power-interruption)"
+      - "A stop ends the interruption but does not undo the failover; in library tests the node in the AZ answered PING again ~9-10 min after the end although the group showed available within 2 min"
     prerequisites:
-      - "FIS IAM Role with elasticache:InterruptClusterAzPower"
-      - "Multi-AZ ElastiCache cluster"
+      - "FIS IAM Role with elasticache:InterruptClusterAzPower, elasticache:DescribeReplicationGroups, tag:GetResources"
+      - "Replication group with Multi-AZ enabled (AutomaticFailover=enabled)"
+    template_source: "https://github.com/aws-samples/fis-template-library/tree/main/elasticache-az-power-interruption"
     recommended_for: [multi-az]
 
   # -- S3 --
@@ -768,6 +813,309 @@ fis:
       - "EC2 launch type"
     recommended_for: [ecs-microservices]
 
+# ── FIS SSM: Template-Library-Backed Faults ─────────────────────────────────
+# Faults with NO native FIS action. FIS runs an SSM document via
+# aws:ssm:start-automation-execution (or aws:ssm:send-command); the document calls the
+# service API or builds the fault itself. Source: aws-samples/fis-template-library @ ee74d58.
+# Embedded templates live in references/fis-templates/<dir>/ (byte-identical functional files).
+# All library templates ship with stopConditions [{source: none}].
+fis_ssm:
+  - type: msk_broker_reboot
+    backend: fis-ssm
+    category: streaming
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Reboot one broker of a provisioned MSK cluster via the MSK RebootBroker API and poll DescribeClusterOperation until REBOOT_COMPLETE"
+    template_source: "references/fis-templates/msk-broker-reboot/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      brokerSelection: "random"   # actually selects the LOWEST broker ID; or pass a broker ID
+      maxDuration: "PT21M"        # FIS action
+    prerequisites:
+      - "Provisioned (not Serverless) MSK cluster, ACTIVE, tagged FIS-Ready=True — tag only ONE cluster per Region (no cluster parameter; first ACTIVE tagged cluster from ListClustersV2 is rebooted)"
+      - "Replication factor >= 3 across >= 2 AZs, min.insync.replicas >= 2"
+      - "SSM document named msk-broker-reboot-automation"
+      - "SSM role: kafka:ListClustersV2/ListNodes/DescribeClusterV2/DescribeCluster/DescribeClusterOperation on *; kafka:RebootBroker only with aws:ResourceTag/FIS-Ready=True"
+      - "FIS role: ssm:Start/Get/StopAutomationExecution on the document; iam:PassRole on the SSM role (iam:PassedToService=ssm.amazonaws.com)"
+    important_notes:
+      - "Clients can stall up to their request timeout: library tests saw <=150 ms in 3 of 5 reboots and 36 s / 62 s in 2 (62 s = librdkafka default socket.timeout.ms 60 s)"
+      - "Cluster ACTIVE again 135-196 s after the reboot started (3 x kafka.m7g.large, Kafka 3.9 KRaft)"
+      - "A stop after RebootBroker ends monitoring, not the reboot; nothing to restore"
+      - "While REBOOTING_BROKER, MSK refuses update operations (config changes, scaling) from anyone"
+    recommended_for: [msk, streaming]
+
+  - type: elasticache_primary_reboot
+    backend: fis-ssm
+    category: cache
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Reboot the primary node of every tagged ElastiCache (Redis OSS) replication group via RebootCacheCluster and wait until the groups are available again — DESTROYS THE DATA"
+    template_source: "references/fis-templates/elasticache-redis-primary-node-reboot/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      maxDuration: "PT30M"
+    prerequisites:
+      - "Replication groups tagged FIS-Ready=True (<= 20 tagged groups, otherwise the run refuses)"
+      - "Redis OSS engine (Valkey refused), cluster mode disabled, MultiAZ=enabled, AutomaticFailover=enabled, 1 primary + >= 1 replica, not in a Global Datastore, all available — any failing group aborts the run before any reboot"
+      - "SSM document named ElastiCache-Redis-Primary-Node-Reboot"
+      - "SSM role: elasticache:Describe*/ListTagsForResource on *; elasticache:RebootCacheCluster only on cluster:* with aws:ResourceTag/FIS-Ready=True; ssm:GetAutomationExecution"
+      - "Losing all data in the targeted groups is acceptable"
+    important_notes:
+      - "⚠️ A primary reboot does NOT fail over; the primary restarts empty and the replicas clear their copy — all data in the group is lost"
+      - "Every tagged group in the Region is rebooted in the same run"
+      - "Library tests: 5-6 s of failed writes on the primary endpoint; group available again 95-213 s after the call"
+      - "A stop after the call ends the wait, not the reboot or the data loss; nothing to restore"
+    recommended_for: [cache]
+
+  - type: elasticache_primary_failover
+    backend: fis-ssm
+    category: cache
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Promote a replica of the first tagged Redis replication group via ElastiCache TestFailover (node group 0001)"
+    template_source: "references/fis-templates/elasticache-redis-primary-node-failover/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      maxDuration: "PT30M"
+    prerequisites:
+      - "Replication group tagged FIS-Ready=True, Multi-AZ, AutomaticFailover=enabled, >= 1 replica"
+      - "SSM role MUST be given elasticache:TestFailover (missing upstream at ee74d58)"
+      - "SSM role named ElastiCache-SSM-Automation-Role (hard-coded assumeRole) or edit the document"
+    important_notes:
+      - "⚠️ Upstream files at ee74d58 do not run as shipped: SSM role lacks elasticache:TestFailover (error swallowed, reported as 'No cluster found'); template passes region/AutomationAssumeRole parameters the document does not declare; {{ aws:region }} placeholder in documentArn"
+      - "Only the first matching group and only shard 0001 are failed over"
+      - "The automation returns as soon as TestFailover is accepted; it does not wait for completion"
+      - "A stop cannot undo a started failover; the former primary stays a replica"
+    recommended_for: [cache]
+
+  - type: redis_connection_failure
+    backend: fis-ssm
+    category: cache
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Remove port 6379 ingress rules from the security groups of tagged Redis nodes for a duration, then restore them"
+    template_source: "references/fis-templates/redis-connection-failure/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      duration: "PT5M"
+      maxDuration: "PT30M"
+    safe_first_run_params:
+      duration: "PT2M"
+    prerequisites:
+      - "Redis (not Valkey) nodes tagged FIS-Ready=True, standard aws partition"
+      - "Target clusters use security groups of their own"
+      - "Save each target SG's rules before every run (describe-security-groups)"
+      - "SSM role: elasticache:DescribeCacheClusters, ListTagsForResource; ec2:DescribeSecurityGroups, AuthorizeSecurityGroupIngress, RevokeSecurityGroupIngress; sts:GetCallerIdentity (all on *, no tag condition)"
+    important_notes:
+      - "Only rules with FromPort=ToPort=6379 are removed; range or all-traffic rules keep the node reachable"
+      - "At most 100 tagged nodes are acted on (SSM step-output limit)"
+      - "Already-open tracked connections can keep working; restart pooled clients to test them"
+      - "The run ends Success even when nothing matched or the restore failed — verify SG rules after every run"
+      - "Stop during waitForDuration restores rules; stop during restoreRedisConnections (no cancel handler) may leave rules removed"
+    recommended_for: [cache]
+
+  - type: db_connection_exhaustion
+    backend: fis-ssm
+    category: data
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Exhaust a database's connection limit from an ephemeral EC2 load generator (temporary SG, ramped connections with SELECT 1 keepalive), then clean up"
+    template_source: "references/fis-templates/database-connection-exhaustion/"
+    default_params:
+      DatabaseEngine: "postgres"  # postgres | mysql | sqlserver
+      MaxConnections: "1000"
+      ExperimentDuration: "PT30M"
+      RampTime: "PT15M"
+      RampSteps: "15"
+      InstanceType: "t3.small"
+      maxDuration: "PT180M"       # FIS action
+    safe_first_run_params:
+      MaxConnections: "100"       # document default; start well below max_connections
+      ExperimentDuration: "PT10M"
+      RampTime: "PT1M"
+      RampSteps: "10"
+    prerequisites:
+      - "Aurora PostgreSQL/MySQL, RDS PostgreSQL/MySQL/SQL Server; password in Secrets Manager"
+      - "VPC/subnet that reaches the DB, SSM, Secrets Manager and package repos; DB security group ID"
+      - "Hard-coded names: FIS role ConnectionLimitExhaustion-FIS-Role, SSM role ConnectionLimitExhaustion-SSM-Automation-Role, document ConnectionLimitExhaustion-Automation, instance profile/role SSM-Managed-Instance-Profile"
+      - "Instance profile role: AmazonSSMManagedInstanceCore + secretsmanager:GetSecretValue on the DB secret (the SSM role no longer has Secrets Manager access; the secret is read on the instance)"
+    important_notes:
+      - "Adds a temporary ingress rule to the DB security group and creates SG FIS-ConnectionLimit-LoadGen-<execution-id>"
+      - "onFailure/onCancel of every step route to cleanup: instance terminated, ingress rule revoked, SG deleted"
+      - "Load generator uses IMDSv2 (HttpTokens required)"
+      - "SSM role's '...ByTag' EC2 statements have no tag condition at ee74d58"
+    recommended_for: [all]
+
+  - type: db_blocking_locks
+    backend: fis-ssm
+    category: data
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Hold a row-level lock with one Blocker session and ramp Waiter sessions against it from an ephemeral EC2 load generator"
+    template_source: "https://github.com/aws-samples/fis-template-library/tree/main/database-blocking-locks"
+    default_params:
+      DatabaseEngine: "postgres"
+      WaiterCount: "50"
+      ExperimentDuration: "PT10M"
+      RampTime: "PT1M"
+      RampSteps: "10"
+      TargetTableName: "fis_blocking_locks_target"   # default = Synthetic_Mode
+      InstanceType: "t3.small"
+      maxDuration: "PT180M"
+    safe_first_run_params:
+      TargetTableName: "fis_blocking_locks_target"   # keep Synthetic_Mode
+      ExperimentDuration: "PT5M"
+    prerequisites:
+      - "Aurora PostgreSQL/MySQL, RDS PostgreSQL/MySQL/SQL Server; password in Secrets Manager"
+      - "DatabaseName must be a user-created database where DatabaseUser can CREATE/INSERT/UPDATE/DROP TABLE (system databases are not suitable; template default is postgres)"
+      - "Hard-coded names: DatabaseBlockingLocks-FIS-Role, DatabaseBlockingLocks-SSM-Automation-Role, document DatabaseBlockingLocks-Automation; instance profile SSM-Managed-Instance-Profile with Secrets Manager read"
+      - "Real_Mode only: target table exists, has >= 1 row and a primary key; DB user has SELECT on it and on the engine's metadata views"
+    important_notes:
+      - "Synthetic_Mode creates and drops fis_blocking_locks_target (writes to the database)"
+      - "⚠️ Any other TargetTableName enables Real_Mode: locks the first row of a real table — real application impact for up to ExperimentDuration"
+      - "Narrow fault by design; plain SELECTs are unaffected on PostgreSQL/MySQL (MVCC)"
+      - "Performance Insights-based alarms need a non-burstable instance class"
+    recommended_for: [all]
+
+  - type: db_io_exhaustion
+    backend: fis-ssm
+    category: data
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Saturate database I/O with concurrent read/write/mixed workers from an ephemeral EC2 load generator; fails the run if too few workers did I/O"
+    template_source: "https://github.com/aws-samples/fis-template-library/tree/main/database-io-exhaustion"
+    default_params:
+      DatabaseEngine: "postgres"
+      WorkerThreads: "50"
+      ExperimentDuration: "PT10M"   # keep well under PT115M
+      IOPattern: "mixed"            # read | write | mixed
+      SeedRowCount: "500"
+      MinActiveWorkerPercentage: "50"
+      InstanceType: "t3.medium"
+      maxDuration: "PT180M"
+    safe_first_run_params:
+      WorkerThreads: "10"
+      ExperimentDuration: "PT5M"
+    prerequisites:
+      - "Validated: Aurora PostgreSQL, RDS PostgreSQL, RDS Oracle; experimental: Aurora MySQL, RDS MySQL, RDS SQL Server"
+      - "Database security group tagged FIS-Ready=True (SSM role may change ingress only on such SGs)"
+      - "DB user can CREATE and DROP tables; password in Secrets Manager"
+      - "Hard-coded names: DatabaseIOExhaustion-FIS-Role, DatabaseIOExhaustion-SSM-Automation-Role, document DatabaseIOExhaustion-Automation, instance role SSM-Managed-Instance-Profile-Role in profile SSM-Managed-Instance-Profile (Secrets Manager/KMS read belongs here)"
+      - "Subnet with outbound 443 to SSM, Secrets Manager, dnf repos and PyPI (plus packages.microsoft.com / download.oracle.com for SQL Server / Oracle)"
+    important_notes:
+      - "Each worker creates and drops its own fis_io_<suffix>_<thread> table (writes to the database)"
+      - "Step timeout fixed at 7200 s; longer ExperimentDuration makes the run fail (cleanup still runs)"
+    recommended_for: [all]
+
+  - type: sqs_queue_impairment
+    backend: fis-ssm
+    category: messaging
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Progressive SQS impairment: a scoped deny statement (Sid FISTemporaryDeny) on tagged queues for 2, 5, 7 and 15 minutes with recovery windows of 3, 3 and 2 minutes"
+    template_source: "references/fis-templates/sqs-queue-impairment/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      duration: ["PT2M", "PT5M", "PT7M", "PT15M"]   # one automation action per round
+      targetPrincipalArn: ""                        # empty = deny Principal "*"
+      maxDuration: "PT1H"                           # per round
+    safe_first_run_params:
+      duration: ["PT2M"]                            # keep only the first round
+      targetPrincipalArn: "<application role ARN>"  # impair only your app
+    prerequisites:
+      - "Queues tagged FIS-Ready=True"
+      - "SSM role: sqs:ListQueues, ListQueueTags on account queues; sqs:GetQueueAttributes, SetQueueAttributes only with aws:ResourceTag/FIS-Ready=True"
+      - "FIS trust policy with aws:SourceAccount / aws:SourceArn condition"
+    important_notes:
+      - "Deny covers data-plane actions only (SendMessage, ReceiveMessage, DeleteMessage, ChangeMessageVisibility, PurgeQueue) on the queue ARN, so cleanup via SetQueueAttributes can never be blocked"
+      - "Stop during a round removes the deny (onCancel -> removeDenyAllPolicyFromQueues); a failed cleanup fails the step"
+      - "Do not use the source queue's own metrics as a stop condition; use a customer-impact metric or DLQ depth"
+    recommended_for: [all, serverless]
+
+  - type: cloudfront_impairment
+    backend: fis-ssm
+    category: cdn
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Deny s3:GetObject on the primary S3 origin of each origin group of tagged CloudFront distributions, invalidate /*, wait, then remove the deny and invalidate again"
+    template_source: "references/fis-templates/cloudfront-impairment/"
+    default_params:
+      tagKey: "FIS-Ready"
+      tagValue: "True"
+      duration: "PT10M"
+      maxDuration: "PT1H"
+    safe_first_run_params:
+      duration: "PT3M"
+    prerequisites:
+      - "Distributions tagged FIS-Ready=True WITH origin groups (distributions without origin groups are not impaired)"
+      - "SSM role: cloudfront List/GetDistributionConfig/ListTagsForResource/CreateInvalidation; s3 Get/Put/DeleteBucketPolicy on arn:aws:s3:::* (no tag condition)"
+    important_notes:
+      - "Deny uses Principal '*': every GetObject caller of the bucket is affected, not only CloudFront"
+      - "Two full-cache invalidations per run; expect origin load spikes"
+      - "Stop during apply/invalidate/wait removes the deny statement"
+    recommended_for: [cdn, serverless]
+
+  - type: aurora_global_failover
+    backend: fis-ssm
+    category: data
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Aurora Global Database switchover (default) or failover with data loss to the first secondary cluster via FailoverGlobalCluster"
+    template_source: "references/fis-templates/aurora-global-failover/"
+    default_params:
+      globalClusterIdentifier: "<GLOBAL-CLUSTER-ID>"
+      failoverType: "switchover"   # switchover | failover (AllowDataLoss=True)
+      maxDuration: "PT10M"
+    prerequisites:
+      - "Aurora Global Database with >= 1 secondary cluster"
+      - "SSM role: rds:DescribeGlobalClusters, rds:FailoverGlobalCluster on *"
+      - "FIS role PassRole pattern role/*SSM* — SSM role name must contain SSM; document name aurora-global-region-failover-automation"
+    important_notes:
+      - "⚠️ Changes the primary Region; the experiment does not switch back and a stop cannot undo an accepted switchover/failover"
+      - "failover mode can lose the last seconds of writes (bounded by AuroraGlobalDBRPOLag)"
+      - "Document worst case (10 s + 600 s polling) exceeds maxDuration PT10M"
+      - "README asks for a FIS-Ready=True tag but nothing enforces it"
+    recommended_for: [multi-region]
+
+  - type: agentcore_tool_faults
+    backend: fis-ssm
+    category: ai-agent
+    fis_action_id: "aws:ssm:start-automation-execution"
+    description: "Inject tool-call faults (timeout, network_error, execution_error, validation_error, truncate_fields, remove_fields, corrupt_values) into a Strands agent on AgentCore Runtime by writing /chaos/{runtime_id}/ SSM parameters read by the in-agent chaos module"
+    template_source: "https://github.com/aws-samples/fis-template-library/tree/main/agentcore-strands-agent-faults"
+    default_params:
+      RuntimeId: "<chaos runtime id>"
+      FaultRate: "0.5"
+      DurationSeconds: "900"
+      maxDuration: "PT20M"          # must exceed DurationSeconds + 15 s
+    safe_first_run_params:
+      FaultRate: "0.1"
+      DurationSeconds: "300"
+    prerequisites:
+      - "Dedicated chaos AgentCore Runtime built with strands_agentcore_chaos.py and plugins=chaos_plugins() (never in production)"
+      - "SSM role: ssm:PutParameter, ssm:DeleteParameters on /chaos/*; runtime execution role: ssm:GetParametersByPath on /chaos/*"
+      - "SSM document deployed as ChaosExperiment"
+    important_notes:
+      - "⚠️ Replace the demo tool names (get_move, get_pokemon) in FaultInjections — unmatched names inject nothing and the run still succeeds"
+      - "Stop/failure path writes active=false, waits for the 10 s cache TTL, then deletes the parameters"
+    recommended_for: [ai-agent]
+
+  - type: windows_iis_stop
+    backend: fis-ssm
+    category: compute
+    fis_action_id: "aws:ssm:send-command"
+    description: "Stop an IIS application pool on tagged Windows EC2 instances for a duration, then restart it (SSM document StopIISAppPool)"
+    template_source: "https://github.com/aws-samples/fis-template-library/tree/main/ec2-windows-stop-iis"
+    default_params:
+      DurationSeconds: "285"
+      IISAppPoolName: "DefaultAppPool"
+      duration: "PT5M"              # FIS action
+    safe_first_run_params:
+      DurationSeconds: "120"
+      duration: "PT3M"
+      # Note: change target selectionMode from ALL to COUNT(1)
+    prerequisites:
+      - "Windows EC2 instances tagged FIS-Ready=True with SSM Agent and an instance role allowing SSM"
+      - "IIS WebAdministration module installed"
+    important_notes:
+      - "Template selects ALL tagged instances although the hypothesis covers one"
+    recommended_for: [ec2-traditional]
+
 # ── FIS Scenario Library: Composite Scenarios ───────────────────────────────
 # Three creation paths:
 # (1) Console → FIS → Scenario Library, then export with `aws fis get-experiment-template`
@@ -781,18 +1129,29 @@ fis_scenarios:
     category: az-level
     composite: true
     scenario_id: "az-availability-scenario"
-    description: "AZ Power Interruption — simultaneously affects EC2/RDS/EBS/ElastiCache in one AZ"
+    description: "AZ Power Interruption — in one AZ: stops EC2 (incl. ASG instances), injects insufficient-capacity errors on launches, pauses EBS IO, disrupts subnet connectivity, fails over RDS writers, interrupts ElastiCache power"
     safe_first_run_params:
       duration: "PT5M"
       # Warning: high blast radius — run in Staging first
       # Verify remaining AZs have capacity to absorb full traffic before starting
-    sub_actions:
-      - aws:ec2:stop-instances
-      - aws:rds:failover-db-cluster
+    sub_actions:   # official Scenario Content (Pause-*/Stop-*/Failover-* actions, PT30M except network PT2M)
       - aws:ebs:pause-volume-io
-      - aws:elasticache:interrupt-cluster-az-power
-    required_tags:
-      AzImpairmentPower: "IceQualified"
+      - aws:ec2:api-insufficient-instance-capacity-error
+      - aws:ec2:asg-insufficient-instance-capacity-error
+      - aws:ec2:stop-instances
+      - aws:elasticache:replicationgroup-interrupt-az-power
+      - aws:network:disrupt-connectivity
+      - aws:rds:failover-db-cluster
+    required_tags:   # tag key AzImpairmentPower; value selects which sub-action hits the resource
+      - {key: AzImpairmentPower, value: StopInstances, resource_type: "aws:ec2:instance"}
+      - {key: AzImpairmentPower, value: IceAsg, resource_type: "aws:ec2:autoscaling-group (and its aws:ec2:instance members)"}
+      - {key: AzImpairmentPower, value: DisruptSubnet, resource_type: "aws:ec2:subnet"}
+      - {key: AzImpairmentPower, value: DisruptRds, resource_type: "aws:rds:cluster"}
+      - {key: AzImpairmentPower, value: DisruptElasticache, resource_type: "aws:elasticache:replicationgroup"}
+      - {key: AzImpairmentPower, value: ApiPauseVolume, resource_type: "aws:ec2:ebs-volume"}
+    other_targets:
+      - "aws:iam:role (ALL) — the roles whose EC2 launch API calls receive insufficient-capacity errors"
+    stop_conditions_note: "Official Scenario Content ships WITHOUT a usable stop condition: stopConditions is [{source: aws:cloudwatch:alarm, value: \"\"}], an empty alarm placeholder — supply an alarm ARN (or source none) before creating the template"
     template_source: "docs"  # ⚠️ Console-only experience: create via Console then export, or copy Content tab and add missing params via API
     doc_url: "https://docs.aws.amazon.com/fis/latest/userguide/az-availability-scenario.html"
     prerequisites:
@@ -807,42 +1166,53 @@ fis_scenarios:
     category: az-level
     composite: true
     scenario_id: "az-application-slowdown-scenario"
-    description: "AZ Application Slowdown — application-layer degradation (latency/packet loss) in one AZ"
+    description: "AZ Application Slowdown — added network latency on EC2 instances, ECS tasks and EKS pods in one AZ"
     safe_first_run_params:
       duration: "PT5M"
       # Recommended first run: target a single non-primary AZ, verify latency alarms trigger correctly
-    sub_actions:
-      - aws:ec2:disrupt-network-connectivity
-      - aws:lambda:invocation-add-delay
+    sub_actions:   # official Scenario Content: 200 ms delay, flowsPercent 100, PT30M, sources = target AZ
+      - aws:eks:pod-network-latency
+      - aws:ssm:send-command   # document AWSFIS-Run-Network-Latency-Sources (EC2)
+      - aws:ecs:task-network-latency
     required_tags:
-      AzImpairmentPower: "IceQualified"
+      - {key: AZApplicationSlowdown, value: LatencyForEC2, resource_type: "aws:ec2:instance"}
+      - {key: AZApplicationSlowdown, value: LatencyForECS, resource_type: "aws:ecs:task"}
+    required_pod_labels:
+      - {selector: "AZApplicationSlowdown=LatencyForEKS", resource_type: "aws:eks:pod", selectorType: labelSelector}
+    stop_conditions_note: "Official Scenario Content ships WITHOUT stop conditions (stopConditions [{source: none}])"
     template_source: "docs"
     doc_url: "https://docs.aws.amazon.com/fis/latest/userguide/az-application-slowdown-scenario.html"
     prerequisites:
-      - "Target subnets tagged appropriately"
-      - "FIS Role with NACL and Lambda permissions"
+      - "EC2 instances / ECS tasks tagged, EKS pods labelled as above, in the target AZ"
+      - "EC2: SSM Agent; ECS: FIS fault-injection setup for aws:ecs:task actions; EKS: kubernetesServiceAccount fis-service-account"
       - "Application-level (not just TCP) health checks"
-    recommended_for: [multi-az, serverless]
+    recommended_for: [multi-az]
 
   - type: cross_az_traffic_slowdown
     backend: fis-scenario
     category: cross-az
     composite: true
     scenario_id: "cross-az-traffic-slowdown-scenario"
-    description: "Cross-AZ Traffic Slowdown — degraded inter-AZ network, intra-AZ normal"
+    description: "Cross-AZ Traffic Slowdown — packet loss from EC2/ECS/EKS workloads in one AZ to the other AZs; intra-AZ traffic normal"
     safe_first_run_params:
       duration: "PT5M"
       # Recommended first run: target a single subnet pair, ensure cross-AZ latency alarms are in place
-    sub_actions:
-      - aws:network:disrupt-connectivity
+    sub_actions:   # official Scenario Content: 15% packet loss to the other AZs, flowsPercent 100, PT30M
+      - aws:eks:pod-network-packet-loss
+      - aws:ssm:send-command   # document AWSFIS-Run-Network-Packet-Loss-Sources (EC2)
+      - aws:ecs:task-network-packet-loss
     required_tags:
-      AzImpairmentPower: "IceQualified"
+      - {key: CrossAZTrafficSlowdown, value: PacketLossForEC2, resource_type: "aws:ec2:instance"}
+      - {key: CrossAZTrafficSlowdown, value: PacketLossForECS, resource_type: "aws:ecs:task"}
+    required_pod_labels:
+      - {selector: "CrossAZTrafficSlowdown=PacketLossForEKS", resource_type: "aws:eks:pod", selectorType: labelSelector}
+    stop_conditions_note: "Official Scenario Content ships WITHOUT stop conditions (stopConditions [{source: none}])"
     template_source: "docs"
     doc_url: "https://docs.aws.amazon.com/fis/latest/userguide/cross-az-traffic-slowdown-scenario.html"
     prerequisites:
-      - "Subnets in target AZ tagged"
-      - "FIS Role with NACL permissions"
-      - "Cross-AZ latency monitoring in place"
+      - "EC2 instances / ECS tasks tagged, EKS pods labelled as above, in the source AZ"
+      - "EC2: SSM Agent; ECS: FIS fault-injection setup for aws:ecs:task actions; EKS: kubernetesServiceAccount fis-service-account"
+      - "Cross-AZ latency/error monitoring in place"
     recommended_for: [multi-az]
 
   - type: cross_region_connectivity
@@ -855,15 +1225,26 @@ fis_scenarios:
       duration: "PT3M"
       # CRITICAL: highest blast radius of all scenarios
       # Must run in non-production first; ensure Route 53 failover or Global Accelerator is active
-    sub_actions:
+    sub_actions:   # official Scenario Content: all PT3H, region parameter = Region to isolate
       - aws:network:route-table-disrupt-cross-region-connectivity
       - aws:network:transit-gateway-disrupt-cross-region-connectivity
-    required_tags: {}
+      - aws:network:disrupt-vpc-endpoint
+      - aws:s3:bucket-pause-replication
+      - aws:dynamodb:global-table-pause-replication
+      - aws:memorydb:multi-region-cluster-pause-replication
+    required_tags:
+      - {key: DisruptPrivateLink, value: Allowed, resource_type: "aws:ec2:vpc-endpoint"}
+      - {key: S3Impact, value: Allowed, resource_type: "aws:s3:bucket"}
+      - {key: DisruptDynamoDb, value: Allowed, resource_type: "aws:dynamodb:global-table"}
+      - {key: DisruptMemoryDb, value: Allowed, resource_type: "aws:memorydb:multi-region-cluster"}
+      - {key: "<your key> (placeholder TgwTag=TgwValue)", value: "<your value>", resource_type: "aws:ec2:transit-gateway"}
+      - {key: "<your key> (placeholder SubnetKey=SubnetValue)", value: "<your value>", resource_type: "aws:ec2:subnet"}
+    stop_conditions_note: "Official Scenario Content ships WITHOUT stop conditions (stopConditions [{source: none}])"
     template_source: "docs"
     doc_url: "https://docs.aws.amazon.com/fis/latest/userguide/cross-region-scenario.html"
     prerequisites:
       - "Multi-region architecture (VPC Peering, TGW, or Direct Connect)"
-      - "FIS Role with route table and TGW permissions"
+      - "FIS Role covering all six sub_actions (route tables, transit gateway, VPC endpoints, S3 replication, DynamoDB global tables, MemoryDB multi-Region clusters)"
       - "Cross-region health checks and failover configured"
       - "DNS failover (Route 53) or Global Accelerator in place"
     recommended_for: [multi-region]

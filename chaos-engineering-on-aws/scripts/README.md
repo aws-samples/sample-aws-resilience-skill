@@ -66,6 +66,52 @@ nohup bash scripts/monitor.sh &
 
 **Output**: `output/monitoring/step5-metrics.jsonl`
 
+## discover-dependencies.sh
+
+Step 2 Impact Target discovery: finds the EKS workloads that reference the AWS resources
+an experiment will hit. Read-only (AWS `Describe*`/`List*`/`Get*` plus `kubectl get`).
+
+```bash
+bash scripts/discover-dependencies.sh --region us-east-1 \
+    --resource rds-cluster:orders-aurora --resource elasticache:sessions-rg --output-dir output/
+```
+
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--region` | Yes | — | AWS Region of the resources and EKS clusters |
+| `--resource` | Yes (repeatable) | — | `TYPE:ID` — `rds-cluster`, `rds-instance`, `elasticache` (replication group), `msk` (cluster ARN), `opensearch` (domain), `ec2` (instance ID) |
+| `--match` | No (repeatable) | — | `LABEL=STRING` extra literal to look for, e.g. a CNAME in front of the resource |
+| `--clusters` | No | `all` | `all` EKS clusters in the Region, or `name1,name2` |
+| `--scan-secret-keys` | No | off | Also match Secret **key names** (needs RBAC list on secrets). Values are never printed or stored: the listing uses a go-template that emits names only |
+| `--request-timeout` | No | `15` | kubectl request timeout in seconds |
+| `--output-dir` | No | `./output` | Output directory |
+| `--fixtures` | No | — | Offline mode for tests: `resources.json` + `clusters/<name>/*.json` |
+
+Sources scanned per cluster: container + init-container env values; ConfigMaps via
+`configMapKeyRef`, `envFrom`, `configMap` volumes and projected volumes; ExternalName
+Services and workloads that call them (`svc.ns[.svc.cluster.local]` = verified, bare name
+in the same namespace = unverified); Secret key names (opt-in, unverified).
+
+Matching is anchored per pattern type (full hostname, identifier followed by `.`, IP
+with digit boundaries); substring-only hits are reported as `near_misses`, never as
+dependencies. Credentials inside URLs and `password=`-style values are masked.
+
+**IAM / RBAC**: `eks:ListClusters`, `eks:DescribeCluster`, the resource's describe call
+(`rds:DescribeDBClusters`/`DescribeDBInstances`, `elasticache:DescribeReplicationGroups`,
+`kafka:GetBootstrapBrokers`/`DescribeClusterV2`, `es:DescribeDomain`,
+`ec2:DescribeInstances`), and in each cluster `list` on pods, replicasets, configmaps,
+services (+ secrets with `--scan-secret-keys`).
+
+**Exit codes**: 0 scan done (zero findings is a valid result), 1 usage error,
+2 no cluster could be scanned (the empty list means "not read", not "no dependency").
+
+**Output**:
+- `output/checkpoints/step2-dependencies.json` — resources and patterns, cluster access, `dependencies[]` (with `sources[]` evidence and `status` verified/unverified), `near_misses[]`, `unreferenced_configmaps[]`
+- `output/monitoring/app-map.json` — one entry per workload (`cluster`, `kubeconfig`, `namespace`, `kind`, `workload`, `resources`, `status`) for `log-collector.sh --app-map`
+- `output/kubeconfigs/<cluster>.kubeconfig` — isolated kubeconfig per cluster
+
+Tests (offline, bash + jq): `bash scripts/tests/test-discover-dependencies.sh`
+
 ## log-collector.sh
 
 Collects and classifies pod application logs.
@@ -76,9 +122,10 @@ bash scripts/log-collector.sh [options]
 
 | Flag | Required | Default | Description |
 |------|----------|---------|-------------|
-| `--namespace` | Yes | — | Kubernetes namespace |
-| `--services` | Yes | — | Comma-separated service names |
-| `--duration` | No | `600` | Collection duration (seconds) |
+| `--namespace` | Yes, unless `--app-map` | — | Kubernetes namespace |
+| `--services` | No | all deployments in the namespace | Comma-separated deployment names (with `--namespace`) |
+| `--app-map` | No | — | `app-map.json` from `discover-dependencies.sh`; collects every entry with `status` `verified` or `confirmed`, each through its own namespace and kubeconfig (Deployment, StatefulSet, DaemonSet, Job or bare Pod) |
+| `--duration` | No | `300` | Collection duration (seconds) |
 | `--output-dir` | No | `output/` | Output directory |
 | `--mode` | No | `live` | `live` (during experiment) or `post` (after experiment) |
 | `--since` | `post` mode | — | Start time for post-experiment collection |
@@ -86,7 +133,7 @@ bash scripts/log-collector.sh [options]
 **5-category error classification**: timeout, connection, 5xx, oom, other
 
 **Output**:
-- `output/monitoring/step5-logs.jsonl` — raw logs
+- `output/monitoring/step5-logs.jsonl` — raw logs, one JSON object per line: `timestamp`, `pod`, `service`, `namespace`, `level`, `category`, `message` (+ `cluster` when collected through `--app-map`)
 - `output/monitoring/step5-log-summary.json` — classified summary
 
 ## setup-prerequisites.sh

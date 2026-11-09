@@ -269,7 +269,7 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 │   ├── sample-app/                    # 测试用 K8s 部署文件
 │   └── expected-output/               # 参考评估输出
 │
-├── .kiro/skills/                      # Kiro Skill 注册（自动同步）
+├── validate-all-skills.sh             # 全部 Skill 的静态校验（可在任意目录运行）
 ├── README.md                          # 本文件（英文）
 └── README_zh.md                       # 中文版
 ```

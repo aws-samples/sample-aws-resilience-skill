@@ -120,8 +120,7 @@ Inline policy for remaining permissions:
       "Action": [
         "elasticache:InterruptClusterAzPower",
         "elasticache:DescribeReplicationGroups",
-        "ebs:PauseVolumeIO",
-        "ebs:DescribeVolumes",
+        "ec2:PauseVolumeIO",
         "ec2:DescribeVolumes",
         "autoscaling:DescribeAutoScalingGroups",
         "tag:GetResources"

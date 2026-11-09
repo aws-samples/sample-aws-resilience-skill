@@ -72,12 +72,13 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 
 > 📋 完整结构化目录：[references/fault-catalog.yaml](references/fault-catalog.yaml)
 
-### 故障目录概览：42 个故障动作
+### 故障目录概览：54 个故障动作
 
 | 后端 | 数量 | 覆盖范围 |
 |------|------|---------|
 | **AWS FIS** | 24 | EC2、RDS、Lambda、EBS、DynamoDB、S3、API Gateway、ECS、Network |
 | **Chaos Mesh** | 14 | Pod 生命周期、网络、HTTP、CPU/内存压力、IO、DNS |
+| **FIS + SSM 自动化** | 12 | 没有原生 FIS action 的故障，来自 FIS 模板库：MSK broker 重启、ElastiCache 主节点重启/故障转移、Redis 连接故障、数据库连接/锁/IO 耗尽、SQS/CloudFront 不可用、Aurora 全局故障转移 |
 | **FIS Scenario** | 4 | AZ 断电、AZ 应用减速、跨 AZ 流量、跨 Region 连通性 |
 
 ```
@@ -126,7 +127,9 @@ K8s Pod / 容器层  →  Chaos Mesh（推荐）
 - **组合实验**：FIS 原生多 Action 模板 + `startAfter` 编排（并行、串行、定时延迟）
 - **混合后端编排**：FIS + Chaos Mesh 同时注入，定义明确的熔断顺序
 - **参数化模板**：`{{placeholder}}` 格式的可复用模板，适用于标准化场景
-- **FIS 模板库集成**：来自 [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) 的 19 场景索引 + 5 个内嵌可直接部署模板
+- **FIS 模板库集成**：来自 [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) 的 27 场景索引（同步到 ee74d58）+ 8 个内嵌可直接部署模板
+- **资源与 action 兼容性检查**：生成任何模板前，先核对 FIS action 的目标类型与真实资源是否匹配
+- **影响目标发现**：`discover-dependencies.sh` 在本 Region 所有 EKS 集群中找出引用被测资源的工作负载，`log-collector.sh --app-map` 再精确采集这些工作负载的日志
 - **3 种进阶注入模式**：SSM 自动化编排（动态资源注入）、安全组操作、资源策略拒绝（渐进式）
 - **三层状态管理**：`state.json` v2 状态机 + `dashboard.md` Markdown 看板 + 终端 ASCII 看板
 - **会话中断恢复**：Agent 会话中断后可通过 `state.json` 检查点自动恢复
@@ -215,17 +218,20 @@ chaos-engineering-on-aws/
 ├── MCP_SETUP_GUIDE.md / _zh.md # MCP Server 配置指南
 ├── references/                 # 渐进式加载参考文档（Agent 按需加载）
 │   ├── workflow-guide.md / _zh.md  # 6 步流程详细指令
-│   ├── fault-catalog.yaml      # 统一故障类型注册表：42 个动作（24 FIS + 14 CM + 4 Scenario）
+│   ├── fault-catalog.yaml      # 统一故障类型注册表：54 个动作（24 FIS + 14 CM + 12 FIS-SSM + 4 Scenario）
 │   ├── scenario-library.md / _zh.md  # FIS Scenario Library JSON skeleton 与要求
-│   ├── fis-template-library-index.md / _zh.md  # aws-samples/fis-template-library 19 场景索引
-│   ├── fis-templates/              # 5 个内嵌的可直接部署 FIS 模板
+│   ├── fis-template-library-index.md / _zh.md  # aws-samples/fis-template-library 27 场景索引
+│   ├── fis-templates/              # 8 个内嵌的可直接部署 FIS 模板
 │   │   ├── database-connection-exhaustion/  # SSM 自动化：动态 EC2 负载生成器
 │   │   ├── redis-connection-failure/        # SSM 自动化：安全组操作
 │   │   ├── sqs-queue-impairment/           # SSM 自动化：渐进式策略拒绝
 │   │   ├── cloudfront-impairment/          # SSM 自动化：S3 源站拒绝策略
-│   │   └── aurora-global-failover/         # SSM 自动化：跨区域切换
+│   │   ├── aurora-global-failover/         # SSM 自动化：跨区域切换
+│   │   ├── msk-broker-reboot/              # SSM 自动化：MSK broker 重启
+│   │   ├── elasticache-redis-primary-node-reboot/    # SSM 自动化：主节点重启
+│   │   └── elasticache-redis-primary-node-failover/  # SSM 自动化：TestFailover
 │   ├── templates/              # 参数化 FIS 多 Action 模板（{{placeholder}} 格式）
-│   │   ├── az-power-interruption.json       # AZ 断电（4 action，并行）
+│   │   ├── az-power-interruption.json       # AZ 断电（官方 8 个子动作，可裁剪）
 │   │   ├── cascade-db-to-app.json           # DB 级联故障（3 action，串行 + 延迟）
 │   │   └── progressive-network-degradation.json  # 渐进式退化（6 action，3 波次）
 │   ├── prerequisites-checklist.md / _zh.md  # 按架构模式分类的前置条件
@@ -237,17 +243,47 @@ chaos-engineering-on-aws/
 ├── examples/                   # 实验场景示例（01-08，中英文对）
 ├── scripts/
 │   ├── README.md               # 脚本使用指南（参数、退出码、示例）
+│   ├── discover-dependencies.sh  # 步骤 2 影响目标发现（扫描全部 EKS 集群）
 │   ├── experiment-runner.sh    # 实验执行（FIS + Chaos Mesh，--one-shot 支持 pod-kill）
-│   ├── log-collector.sh        # Pod 日志采集 + 5 类错误自动分类
+│   ├── log-collector.sh        # Pod 日志采集 + 5 类错误自动分类（--app-map）
 │   ├── monitor.sh              # CloudWatch 指标采集（FIS 模式 + Chaos Mesh 模式）
 │   ├── update-dashboard.sh     # 自动生成 output/dashboard.md（monitor.sh 每周期调用）
 │   ├── render-dashboard.sh     # 彩色 ASCII 终端看板（配合 `watch -n 5 -c` 使用）
 │   ├── setup-prerequisites.sh  # 可选的前置环境准备
-│   └── custom-metrics-sample.conf  # 自定义指标配置示例
-└── validate-skill.sh          # 静态验证脚本（105 项检查）
+│   ├── custom-metrics-sample.conf  # 自定义指标配置示例
+│   └── tests/                  # 离线测试（bash + jq，aws/kubectl 用桩替代）
+└── validate-skill.sh          # 校验：静态检查、脚本离线测试、中英文结构对齐、FIS ID 对照（280+ 项）
 ```
 
 ## 近期变更
+
+### v1.6.0 — 2026-11-09
+
+**影响目标发现（P0）**
+- `scripts/discover-dependencies.sh` — 新增：通过 AWS API 解析被测资源的全部真实端点（Aurora/RDS 集群与成员实例端点、ElastiCache 各节点端点、MSK broker、OpenSearch、EC2 IP/DNS），并行扫描本 Region 所有 EKS 集群（每个集群一份独立 kubeconfig），找出引用这些端点的工作负载：env 值、经 keyRef/envFrom/volume/projected volume 引用的 ConfigMap、ExternalName Service 及其调用方，以及（可选）Secret 键名，从不读取值。匹配带锚点，近似匹配单独列出，证据中的凭证会打码。输出 `checkpoints/step2-dependencies.json` 与 `monitoring/app-map.json`。移植自 [aws-samples/sample-fis-skills](https://github.com/aws-samples/sample-fis-skills) `app-service-log-analysis` 的依赖发现。
+- `scripts/log-collector.sh` — 新增 `--app-map`：跨命名空间、跨集群采集所有 verified/confirmed 影响目标（Deployment、StatefulSet、DaemonSet、Job、裸 Pod）；每条日志新增 `namespace`（及 `cluster`）字段。
+- `scripts/log-collector.sh` — 修复：不传 `--services` 时，命名空间里最后一个 deployment 会被静默漏掉（kubectl jsonpath 输出没有结尾换行）。
+- `scripts/tests/` — 新增离线测试（bash + jq，aws/kubectl 用桩替代），由 `validate-skill.sh` 调用。
+- `references/workflow-guide.md` — 步骤 2.2 影响目标发现；步骤 5 用 `--app-map` 启动 log-collector；步骤 6 数据完整性检查列出未扫描的集群。
+
+**资源与 action 兼容性检查（P0）**
+- `references/workflow-guide.md` — 步骤 2.1：`aws fis get-action` 的目标类型对照真实资源字段（`Engine`、`DBClusterIdentifier`、`InstanceLifecycle` 等），不匹配则阻断步骤 3，结果记入 `step2-assessment.json`。
+
+**FIS 事实错误修正（P0）** — 对照官方 FIS actions 参考与 4 个 Scenario Library 页面
+- 替换不存在的 action ID：`aws:ec2:disrupt-network-connectivity` → `aws:network:disrupt-connectivity`；`aws:elasticache:interrupt-cluster-az-power` → `aws:elasticache:replicationgroup-interrupt-az-power`；`aws:memorydb:interrupt-cluster-az-power`（MemoryDB 只有 `multi-region-cluster-pause-replication`）；`aws:kinesis:add-put-record-throttle` → `aws:kinesis:stream-provisioned-throughput-exception` / `stream-expired-iterator-exception`；`aws:directconnect:disrupt-connectivity` → `aws:directconnect:virtual-interface-disconnect`。
+- `references/scenario-library.md` / `_zh.md` — 4 个场景按官方 Scenario Content JSON 重写：子动作、各 target 的标签（此前使用的 `IceQualified` 标签值并不存在）、权限；AZ 应用减速与跨 AZ 流量减速是 pod/ECS/SSM 的延迟与丢包场景，不是 NACL + Lambda。新增 AZ 断电按服务裁剪子动作（停止条件永不裁剪）。
+- `references/templates/az-power-interruption.json` — 对齐官方 8 个子动作与 target，每个子动作配独立 target，任意一对都可裁剪；保留告警停止条件。
+- `references/fis-actions.md` / `_zh.md` — 补充 20 个缺失的官方 action。
+- Lambda action：按[官方指南](https://docs.aws.amazon.com/fis/latest/userguide/use-lambda-actions.html)，`AWS_FIS_CONFIGURATION_LOCATION` 是 S3 配置目录的 ARN（如 `arn:aws:s3:::bucket/FisConfigs/`），并需设置 `AWS_LAMBDA_EXEC_WRAPPER=/opt/aws-fis/bootstrap`。v1.4.0 中“必须是实验 ARN”的说法是错误的。
+
+**FIS 模板库同步到 ee74d58（P1）**
+- `references/fis-template-library-index.md` / `_zh.md` — 19 → 27 个场景（新增 agentcore-strands-agent-faults、database-blocking-locks、database-io-exhaustion、ecs-fargate-az-evacuation、ecs-fargate-az-impairment、eks-automode-az-impairment、elasticache-az-power-interruption、msk-broker-reboot），并更新已有条目的事实。
+- `references/fis-templates/` — 5 套内嵌模板按上游逐字节同步，吸收上游修复（SQS 的 deny 收窄范围、清理不会被自己拦住、信任策略加防混淆代理条件；数据库连接耗尽在失败/取消时也会清理、强制 IMDSv2）；新增 3 套内嵌模板：`msk-broker-reboot`、`elasticache-redis-primary-node-reboot`、`elasticache-redis-primary-node-failover`（最后一套的上游缺陷写在其 README 中）。
+- `references/fault-catalog.yaml` — 新增 `fis_ssm` 段（12 个基于 SSM 的故障）；修正 Scenario 子动作与标签；条目 42 → 54。
+
+**中文文档**
+- `references/workflow-guide_zh.md` — 完整重译；此前缺失英文版里的 INSUFFICIENT_DATA 处理、判定决策树、逐节写报告等护栏。
+- `validate-skill.sh` — 新增中英文结构对齐检查（标题、代码块、表格），此类漂移今后会直接导致校验失败。
 
 ### v1.5.0 — 2026-04-16
 
@@ -287,7 +323,7 @@ chaos-engineering-on-aws/
 **安全与文档（P1）**
 - `scripts/monitor.sh` — 修复 `OUTPUT_DIR` 变量未初始化导致 monitor 崩溃
 - `references/fault-catalog.yaml` — `aws:fis:inject-api-throttle-error` 限定仅支持 ec2/kinesis（不含 dynamodb/s3 等）
-- `references/fault-catalog.yaml` — Lambda FIS actions：`AWS_FIS_CONFIGURATION_LOCATION` 格式说明（必须是实验 ARN，非 S3 路径）
+- `references/fault-catalog.yaml` — Lambda FIS actions：`AWS_FIS_CONFIGURATION_LOCATION` 格式说明（必须是实验 ARN，非 S3 路径）—— **已在 v1.6.0 更正：该说法错误，官方格式是 S3 配置目录 ARN**
 - `references/fis-actions.md` — Lambda 环境变量格式常见错误警告
 - `references/workflow-guide.md` — Verdict Decision Tree：4 级数据完整性 → 判定映射（PASSED/FAILED、OBSERVED、BLOCKED）
 - `references/report-templates.md` — 报告 §6.0.5：Data Completeness Check 在 verdict 前必须执行

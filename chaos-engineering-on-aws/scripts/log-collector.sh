@@ -5,6 +5,8 @@
 # Usage:
 #   Live mode:  ./log-collector.sh --namespace {NAMESPACE} --duration 300
 #   Post mode:  ./log-collector.sh --namespace {NAMESPACE} --mode post --since 2026-04-04T02:30:00Z
+#   App map:    ./log-collector.sh --app-map output/monitoring/app-map.json --duration 300
+#               (workloads found by discover-dependencies.sh, across namespaces and clusters)
 
 set -euo pipefail
 
@@ -13,6 +15,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 NAMESPACE=""
 SERVICES=""
+APP_MAP=""
 DURATION=300
 OUTPUT_DIR="./output"
 MODE="live"
@@ -25,9 +28,12 @@ SUMMARY_INTERVAL=30
 usage() {
     cat >&2 <<'EOF'
 Usage: log-collector.sh --namespace NS [OPTIONS]
+       log-collector.sh --app-map FILE [OPTIONS]
 
 Options:
-  --namespace NS            Target namespace (required)
+  --namespace NS            Target namespace (required unless --app-map is given)
+  --app-map FILE            app-map.json from discover-dependencies.sh: collect every entry
+                            whose status is "verified" or "confirmed" (any namespace / cluster)
   --services "svc1,svc2"    Comma-separated services (default: all deployments)
   --duration SECONDS        Collection duration (default: 300)
   --output-dir DIR          Output directory (default: ./output)
@@ -42,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --namespace)   NAMESPACE="$2";   shift 2 ;;
         --services)    SERVICES="$2";    shift 2 ;;
+        --app-map)     APP_MAP="$2";     shift 2 ;;
         --duration)    DURATION="$2";    shift 2 ;;
         --output-dir)  OUTPUT_DIR="$2";  shift 2 ;;
         --mode)        MODE="$2";        shift 2 ;;
@@ -51,9 +58,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$NAMESPACE" ]]; then
-    echo "[log-collector] ERROR: --namespace is required" >&2
+if [[ -z "$NAMESPACE" && -z "$APP_MAP" ]]; then
+    echo "[log-collector] ERROR: --namespace or --app-map is required" >&2
     usage
+fi
+if [[ -n "$APP_MAP" && ! -f "$APP_MAP" ]]; then
+    echo "[log-collector] ERROR: --app-map file not found: $APP_MAP" >&2
+    exit 1
 fi
 
 if [[ "$MODE" != "live" && "$MODE" != "post" ]]; then
@@ -88,15 +99,42 @@ discover_services() {
     fi
 }
 
-SVC_LIST=()
-while IFS= read -r svc; do
-    [[ -n "$svc" ]] && SVC_LIST+=("$svc")
-done < <(discover_services)
+# Parallel arrays (bash 3.2 has no associative arrays): one index per workload.
+SVC_LIST=()   # workload name (the "service" field in step5-logs.jsonl)
+SVC_NS=()     # namespace
+SVC_KIND=()   # deployment | statefulset | daemonset | ...
+SVC_KC=()     # kubeconfig path ("" = current context)
+SVC_CLUSTER=()
+if [[ -n "$APP_MAP" ]]; then
+    # \x1f (unit separator) instead of TAB: TAB is IFS whitespace, so an empty
+    # kubeconfig field between two TABs would collapse and shift the columns.
+    while IFS=$'\x1f' read -r ns kind name kcfg cluster; do
+        [[ -z "$name" ]] && continue
+        SVC_LIST+=("$name"); SVC_NS+=("$ns"); SVC_KIND+=("$kind"); SVC_KC+=("$kcfg"); SVC_CLUSTER+=("$cluster")
+    done < <(jq -r '.[] | select(.status == "verified" or .status == "confirmed")
+                    | [.namespace, (.kind | ascii_downcase), .workload, (.kubeconfig // ""), (.cluster // "")] | join("\u001f")' "$APP_MAP")
+    skipped=$(jq '[.[] | select(.status != "verified" and .status != "confirmed")] | length' "$APP_MAP")
+    [[ "$skipped" -gt 0 ]] && echo "[log-collector] NOTE: $skipped unverified app-map entr(y/ies) skipped — set status to \"confirmed\" after the user confirms them" >&2
+    NAMESPACE=$(printf '%s\n' "${SVC_NS[@]+"${SVC_NS[@]}"}" | sort -u | paste -sd, -)
+else
+    # `|| [[ -n ... ]]`: kubectl jsonpath output has no trailing newline, so a plain
+    # `read` loop silently dropped the LAST deployment of the namespace.
+    while IFS= read -r svc || [[ -n "$svc" ]]; do
+        [[ -n "$svc" ]] || continue
+        SVC_LIST+=("$svc"); SVC_NS+=("$NAMESPACE"); SVC_KIND+=("deployment"); SVC_KC+=(""); SVC_CLUSTER+=("")
+    done < <(discover_services)
+fi
 
 if [[ ${#SVC_LIST[@]} -eq 0 ]]; then
-    echo "[log-collector] ERROR: no services found in namespace $NAMESPACE" >&2
+    echo "[log-collector] ERROR: no services found (namespace=${NAMESPACE:-none} app-map=${APP_MAP:-none})" >&2
     exit 1
 fi
+
+# kubectl against the workload's own cluster
+kc() {
+    local i="$1"; shift
+    if [[ -n "${SVC_KC[$i]}" ]]; then kubectl --kubeconfig "${SVC_KC[$i]}" "$@"; else kubectl "$@"; fi
+}
 
 echo "[log-collector] Started at $(date -u +%FT%TZ), mode=$MODE, duration=${DURATION}s" >&2
 echo "[log-collector] Namespace: $NAMESPACE" >&2
@@ -146,6 +184,8 @@ process_line() {
     local raw_line="$1"
     local pod_name="$2"
     local service="$3"
+    local ns="${4:-$NAMESPACE}"
+    local cluster="${5:-}"
 
     # Extract timestamp if present (kubectl --timestamps prefixes ISO8601)
     local ts=""
@@ -176,7 +216,10 @@ process_line() {
         --arg level "$level" \
         --arg cat "$category" \
         --arg msg "$msg" \
-        '{timestamp:$ts, pod:$pod, service:$svc, level:$level, category:$cat, message:$msg}' \
+        --arg ns "$ns" \
+        --arg cluster "$cluster" \
+        '{timestamp:$ts, pod:$pod, service:$svc, namespace:$ns, level:$level, category:$cat, message:$msg}
+         + (if $cluster != "" then {cluster:$cluster} else {} end)' \
         >> "$LOGS_FILE"
 
     # Write minute-tagged copy for summary timeline.
@@ -370,17 +413,23 @@ TRACKED_PODS=" "   # space-delimited set (portable to bash 3.2, no assoc arrays)
 is_tracked() { [[ "$TRACKED_PODS" == *" $1 "* ]]; }
 
 resolve_pods_for_service() {
-    local svc="$1" pods selector
-    # Try label app=$svc first
-    pods=$(kubectl get pods -l "app=$svc" -n "$NAMESPACE" \
-        -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
-    # Fallback: resolve deployment's actual selector labels
+    local i="$1" pods="" selector
+    local svc="${SVC_LIST[$i]}" ns="${SVC_NS[$i]}" kind="${SVC_KIND[$i]}"
+    if [[ "$kind" == "pod" ]]; then
+        echo "$svc"; return
+    fi
+    # Try label app=$svc first (Deployments only, the historical behaviour)
+    if [[ "$kind" == "deployment" ]]; then
+        pods=$(kc "$i" get pods -l "app=$svc" -n "$ns" \
+            -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+    fi
+    # Fallback: resolve the workload's actual selector labels
     if [[ -z "$pods" ]]; then
-        selector=$(kubectl get deployment "$svc" -n "$NAMESPACE" \
+        selector=$(kc "$i" get "$kind" "$svc" -n "$ns" \
             -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
             jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")' 2>/dev/null || true)
         if [[ -n "$selector" ]]; then
-            pods=$(kubectl get pods -l "$selector" -n "$NAMESPACE" \
+            pods=$(kc "$i" get pods -l "$selector" -n "$ns" \
                 -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
         fi
     fi
@@ -388,30 +437,33 @@ resolve_pods_for_service() {
 }
 
 start_stream() {
-    local pod="$1" svc="$2"
+    local pod="$1" i="$2"
+    local svc="${SVC_LIST[$i]}" ns="${SVC_NS[$i]}" cluster="${SVC_CLUSTER[$i]}"
     (
         # Per-pod stream: pod name is known, no --prefix parsing needed
-        kubectl logs -f --timestamps "$pod" -n "$NAMESPACE" 2>/dev/null \
+        kc "$i" logs -f --timestamps "$pod" -n "$ns" 2>/dev/null \
         | while IFS= read -r line; do
-            process_line "$line" "$pod" "$svc"
+            process_line "$line" "$pod" "$svc" "$ns" "$cluster"
         done
     ) &
     BG_PIDS+=($!)
-    echo "[log-collector] Streaming pod=$pod service=$svc (PID=$!)" >&2
+    echo "[log-collector] Streaming pod=$ns/$pod service=$svc${cluster:+ cluster=$cluster} (PID=$!)" >&2
 }
 
 discover_streams() {
-    local svc pod pods
-    for svc in "${SVC_LIST[@]}"; do
-        pods=$(resolve_pods_for_service "$svc")
+    local i pod pods key
+    for i in "${!SVC_LIST[@]}"; do
+        pods=$(resolve_pods_for_service "$i")
         if [[ -z "$pods" ]]; then
-            echo "[log-collector] WARN: no pods found for service=$svc" >&2
+            echo "[log-collector] WARN: no pods found for service=${SVC_NS[$i]}/${SVC_LIST[$i]}" >&2
             continue
         fi
         for pod in $pods; do
-            is_tracked "$pod" && continue
-            TRACKED_PODS="${TRACKED_PODS}${pod} "
-            start_stream "$pod" "$svc"
+            # Pod names are only unique per (cluster, namespace)
+            key="${SVC_KC[$i]}|${SVC_NS[$i]}|${pod}"
+            is_tracked "$key" && continue
+            TRACKED_PODS="${TRACKED_PODS}${key} "
+            start_stream "$pod" "$i"
         done
     done
 }
@@ -440,11 +492,13 @@ run_live() {
 # return logs from one arbitrary pod, losing data for multi-replica services.
 # ---------------------------------------------------------------------------
 run_post() {
-    for svc in "${SVC_LIST[@]}"; do
-        echo "[log-collector] Collecting post-experiment logs for service=$svc since=$SINCE" >&2
+    local i svc ns cluster
+    for i in "${!SVC_LIST[@]}"; do
+        svc="${SVC_LIST[$i]}"; ns="${SVC_NS[$i]}"; cluster="${SVC_CLUSTER[$i]}"
+        echo "[log-collector] Collecting post-experiment logs for service=$ns/$svc since=$SINCE" >&2
 
         local pods
-        pods=$(resolve_pods_for_service "$svc")
+        pods=$(resolve_pods_for_service "$i")
         if [[ -z "$pods" ]]; then
             echo "[log-collector] WARN: no pods found for service=$svc" >&2
             continue
@@ -452,8 +506,8 @@ run_post() {
 
         local pod log_output
         for pod in $pods; do
-            log_output=$(kubectl logs --since-time="$SINCE" --timestamps \
-                "$pod" -n "$NAMESPACE" 2>/dev/null || true)
+            log_output=$(kc "$i" logs --since-time="$SINCE" --timestamps \
+                "$pod" -n "$ns" 2>/dev/null || true)
 
             if [[ -z "$log_output" ]]; then
                 echo "[log-collector] WARN: no logs for pod=$pod service=$svc" >&2
@@ -462,7 +516,7 @@ run_post() {
 
             while IFS= read -r line; do
                 [[ -z "$line" ]] && continue
-                process_line "$line" "$pod" "$svc"
+                process_line "$line" "$pod" "$svc" "$ns" "$cluster"
             done <<< "$log_output"
         done
     done

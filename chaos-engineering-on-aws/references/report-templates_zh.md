@@ -1,5 +1,17 @@
 # 报告模板
 
+> **数据完整性规则**：填写任何模板前，先按 workflow-guide_zh.md § 6.0.5 的判定决策树检查数据是否齐备。
+> 标 🔴 的字段为必填；数据缺失时，使用下文给出的「数据缺失」替代文字。
+
+## Verdict 判定逻辑参考
+
+| 可用数据 | Verdict |
+|---------------|---------|
+| 完整指标 + 基线 | PASSED ✅ 或 FAILED ❌（依据假设判定） |
+| 有指标但无基线 | OBSERVED (baseline unknown) ⚠ |
+| 无指标数据 | OBSERVED (not validated) ⚠ |
+| 无实验结果文件 | BLOCKED (no data) ❌ — 不生成报告 |
+
 ## 单次实验报告
 
 ```markdown

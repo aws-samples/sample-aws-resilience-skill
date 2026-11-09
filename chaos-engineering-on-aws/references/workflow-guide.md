@@ -53,7 +53,8 @@ File-as-state approach — each step's output serves as a checkpoint:
 output/
 ├── checkpoints/
 │   ├── step1-scope.json          # Target system, resource inventory
-│   ├── step2-assessment.json     # Weak points, experiment recommendations
+│   ├── step2-assessment.json     # Weak points, experiment recommendations, compatibility[]
+│   ├── step2-dependencies.json   # Impact Target discovery evidence (§ 2.2)
 │   ├── step3-experiment.json     # FIS experiment template definition
 │   ├── step4-validation.json     # Pre-flight checks, user confirmation
 │   └── step5-experiment.json     # FIS experiment state, ID, timeline
@@ -62,8 +63,10 @@ output/
 │   ├── step5-logs.jsonl          # Raw application log JSONL
 │   ├── step5-log-summary.json    # Classified log summary
 │   ├── metric-queries.json       # CloudWatch metric query definitions
+│   ├── app-map.json              # Workloads to collect logs from (§ 2.2 → log-collector --app-map)
 │   └── experiment_id.txt         # FIS experiment ID
 ├── templates/                    # Generated FIS / Chaos Mesh templates
+├── kubeconfigs/                  # One isolated kubeconfig per scanned EKS cluster
 ├── step6-report.md           # Final report (Markdown)
 ├── step6-report.html         # Final report (HTML, inline CSS)
 ├── baseline-{timestamp}.json # Steady-state baseline snapshots
@@ -213,8 +216,110 @@ When the user resumes (new conversation, context reset, IDE restart):
 3. Supplement missing related resources (SG, TG, etc.)
 4. Calculate blast radius (based on dependency chains in 2.3)
 5. Label resource roles: `Injection Target` / `Observation Target` / `Impact Target`
+6. Discover the workloads that depend on every Injection Target (§ 2.2) — they are the
+   Impact Targets, and the log sources for Step 5
 
-**Output**: `output/checkpoints/step2-assessment.json`
+### 2.1 Resource–Action Compatibility Gate (MANDATORY, blocks Step 3)
+
+An ARN that exists is not an ARN the chosen action can target. For every candidate
+FIS action (including each sub-action of a Scenario Library scenario that survives
+pruning), check that the action's target resource type matches the real resource
+**before** generating any template:
+
+```bash
+# 1. What does the action actually target?
+aws fis get-action --id "<ACTION_ID>" --region "$REGION" \
+  --query 'action.targets' --output json
+# 2. What is the resource, really? (pick the row for the resource type)
+```
+
+| Resource | Command | Fields that decide compatibility |
+|---|---|---|
+| RDS instance | `aws rds describe-db-instances --db-instance-identifier <ID>` | `Engine`, `DBClusterIdentifier`, `MultiAZ` |
+| Aurora / RDS cluster | `aws rds describe-db-clusters --db-cluster-identifier <ID>` | `Engine`, `EngineMode`, `MultiAZ`, number of readers |
+| EC2 instance | `aws ec2 describe-instances --instance-ids <ID>` | `InstanceLifecycle`, `Placement.AvailabilityZone` |
+| ElastiCache | `aws elasticache describe-replication-groups --replication-group-id <ID>` | `MultiAZ`, `AutomaticFailover`, `ClusterEnabled` |
+| EKS cluster | `aws eks describe-cluster --name <NAME>` | `accessConfig.authenticationMode` (FIS `aws:eks:pod-*` needs `API` or `API_AND_CONFIG_MAP`) |
+| ASG | `aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names <NAME>` | `AvailabilityZones`, instance count per AZ |
+
+Known incompatibilities:
+
+| Action | Target type | Incompatible with | Detect by | Use instead |
+|---|---|---|---|---|
+| `aws:rds:failover-db-cluster` | `aws:rds:cluster` | Standalone RDS (non-Aurora, non-Multi-AZ-cluster) | `DBClusterIdentifier` is null | `aws:rds:reboot-db-instances` with `forceFailover=true` (Multi-AZ instance) |
+| `aws:rds:reboot-db-instances` | `aws:rds:db` | Expecting a cluster-level failover on Aurora | `Engine` starts with `aurora` | `aws:rds:failover-db-cluster` |
+| `aws:elasticache:replicationgroup-interrupt-az-power` | `aws:elasticache:replicationgroup` | Standalone cache node, single-AZ group | no replication group / `MultiAZ` disabled | Fix the topology first; or SSM template `elasticache-redis-primary-node-reboot` |
+| `aws:ec2:stop-instances` | `aws:ec2:instance` | Spot instances | `InstanceLifecycle` = `spot` | `aws:ec2:send-spot-instance-interruptions` |
+| `aws:ec2:send-spot-instance-interruptions` | `aws:ec2:spot-instance` | On-Demand instances | `InstanceLifecycle` absent | `aws:ec2:stop-instances` / `terminate-instances` |
+| `aws:fis:inject-api-*` | `aws:iam:role` | Any service other than `ec2` / `kinesis` | `service` parameter | The service's dedicated action (see `fault-catalog.yaml` `NOT_supported`) |
+| Aurora MySQL fault-injection SQL (`ALTER SYSTEM CRASH`, …) | — | `aurora-postgresql` | `Engine` | `aws:rds:reboot-db-instances` / `failover-db-cluster` |
+
+Also check targeting syntax ([FIS targets](https://docs.aws.amazon.com/fis/latest/userguide/targets.html)):
+one target cannot combine `resourceArns` with `resourceTags`, nor `resourceArns` with
+`filters`. To scope an AZ, either list only that AZ's ARNs, or use `resourceTags` + a
+`Placement.AvailabilityZone`-style filter.
+
+Decision: compatible → continue. Incompatible → explain the mismatch with the field
+value you read, propose the replacement action from the table, and let the user confirm
+or drop the experiment. Never "fix" it by changing the action silently. Record each
+check in `step2-assessment.json` under `compatibility[]` as
+`{action_id, target_type, resource_arn, decisive_field, value, result}`.
+
+### 2.2 Impact Target Discovery (dependent workloads)
+
+The dependency chains in the assessment report say which *services* depend on a
+resource; they rarely say which *pods*. Before the blast radius is confirmed, find every
+EKS workload in the Region that actually points at the Injection Targets:
+
+```bash
+bash scripts/discover-dependencies.sh --region "$REGION" \
+    --resource rds-cluster:<db-cluster-id> \
+    --resource elasticache:<replication-group-id> \
+    --output-dir output/
+# Other types: rds-instance:<id>  msk:<cluster-arn>  opensearch:<domain>  ec2:<instance-id>
+# Extra strings (a CNAME in front of the resource): --match label=db.internal.example.com
+# Secret KEY NAMES too (needs RBAC list on secrets, values are never read out): --scan-secret-keys
+```
+
+What it does:
+- Resolves every real endpoint of each resource through the AWS API (cluster writer,
+  reader and custom endpoints plus member instances; every ElastiCache node endpoint;
+  all MSK bootstrap brokers; OpenSearch domain and VPC endpoints; EC2 private IPs and DNS).
+- Scans **all** EKS clusters in the Region in parallel (other clusters often share the
+  same database), each with its own kubeconfig under `output/kubeconfigs/` — the user's
+  `~/.kube/config` is never touched.
+- Looks in container and init-container env values, ConfigMaps reached through
+  `configMapKeyRef` / `envFrom` / volumes / projected volumes, ExternalName Services (and
+  the workloads that call those Services by name), and optionally Secret key names.
+- Resolves each pod to its owning Deployment / StatefulSet / DaemonSet / Job.
+- Matching is anchored: `orders-db` does not match `orders-db-replica`, `10.0.1.25` does
+  not match `10.0.1.250`. Such near misses are listed separately and never counted.
+- Credentials in URLs and `password=` style values are masked in the evidence.
+
+Exit code 2 means **no cluster could be scanned**: the impact list is empty because
+nothing was read, not because nothing depends on the resource. Report it that way.
+
+Handling the result:
+1. Show the user the summary the script prints (✅ verified / ⚠️ unverified / ✖ near miss,
+   plus clusters that were skipped and why).
+2. `unverified` entries (Secret key names, or a bare Service name) need the user's
+   confirmation. Mark a confirmed one in `output/monitoring/app-map.json`:
+   ```bash
+   jq '(.[] | select(.namespace=="billing" and .workload=="billing-api") | .status) = "confirmed"' \
+      output/monitoring/app-map.json > output/monitoring/app-map.json.tmp \
+      && mv output/monitoring/app-map.json.tmp output/monitoring/app-map.json
+   ```
+   Add workloads the scan cannot see (for example ones that read the endpoint from
+   Secrets Manager at runtime) as extra entries with `"status": "confirmed"`.
+3. Label every confirmed workload `Impact Target` in `step2-assessment.json`, and use
+   the list for the blast-radius statement and the Step 3 hypothesis ("these N workloads
+   recover within RTO").
+4. A ConfigMap that matches but has no consumer (`unreferenced_configmaps`) is worth one
+   question to the user: it may be read through the Kubernetes API, or it may be stale.
+
+**Output**: `output/checkpoints/step2-assessment.json`, plus from § 2.2
+`output/checkpoints/step2-dependencies.json` (full evidence, cited by the report) and
+`output/monitoring/app-map.json` (consumed by `log-collector.sh --app-map` in Step 5).
 
 **User Interaction**: Confirm blast radius is acceptable; ARN failure → update or skip
 
@@ -249,11 +354,11 @@ Starting from the suggested experiments in section 2.5, generate full configurat
 
 ### 3.4 Tool Selection
 
-Consult the **unified fault catalog** ([references/fault-catalog.yaml](references/fault-catalog.yaml)) for the full list of available fault types, default parameters, and prerequisites:
+Consult the **unified fault catalog** ([references/fault-catalog.yaml](fault-catalog.yaml)) for the full list of available fault types, default parameters, and prerequisites:
 
-- **AZ/Region compound faults** → FIS Scenario Library → [references/scenario-library.md](references/scenario-library.md)
-- **AWS infrastructure layer** → AWS FIS single action → [references/fis-actions.md](references/fis-actions.md)
-- **K8s Pod/container layer** → Chaos Mesh → [references/chaosmesh-crds.md](references/chaosmesh-crds.md)
+- **AZ/Region compound faults** → FIS Scenario Library → [references/scenario-library.md](scenario-library.md)
+- **AWS infrastructure layer** → AWS FIS single action → [references/fis-actions.md](fis-actions.md)
+- **K8s Pod/container layer** → Chaos Mesh → [references/chaosmesh-crds.md](chaosmesh-crds.md)
 
 > ⚠️ For Pod-level faults, **prefer Chaos Mesh** over FIS `aws:eks:pod-*` actions (faster, simpler RBAC).
 
@@ -262,7 +367,7 @@ Consult the **unified fault catalog** ([references/fault-catalog.yaml](reference
 > If target is any other service (DynamoDB, Lambda, S3, RDS, EBS, etc.) → use the dedicated FIS Action instead.
 > See `fault-catalog.yaml` `NOT_supported` field for the mapping.
 
-> ⚠️ FIS Scenario Library has **three creation paths**: (1) Console → export; (2) Content tab → API; (3) JSON skeletons from [references/scenario-library.md](references/scenario-library.md) directly via API. See that file for details.
+> ⚠️ FIS Scenario Library has **three creation paths**: (1) Console → export; (2) Content tab → API; (3) JSON skeletons from [references/scenario-library.md](scenario-library.md) directly via API. See that file for details.
 
 ### 3.5 Configuration Generation Strategy
 
@@ -287,7 +392,7 @@ Design steps: select actions from fault-catalog → define in single template's 
 
 For parameterized templates with `{{placeholder}}`, see `references/templates/`.
 
-Example: [Composite AZ Degradation](examples/05-composite-az-degradation.md)
+Example: [Composite AZ Degradation](../examples/05-composite-az-degradation.md)
 
 ### 3.7 Mixed-Backend Experiments (FIS + Chaos Mesh)
 
@@ -437,10 +542,17 @@ nohup bash scripts/experiment-runner.sh --mode chaosmesh \
     --state-exp-id "EXP-001" --output-dir output/ &
 RUNNER_PID=$!
 
-# Monitor (omit EXPERIMENT_ID for Chaos Mesh):
-nohup bash scripts/monitor.sh &
-# Log collector (MANDATORY for all experiments):
-nohup bash scripts/log-collector.sh --namespace {NS} --services "{svcs}" --mode live ... &
+# Monitor — FIS: experiment-runner writes the ID; monitor stops when FIS completes
+sleep 5; EXPERIMENT_ID=$(cat output/monitoring/experiment_id.txt) NAMESPACE="$CW_NAMESPACE" REGION="$REGION" \
+    nohup bash scripts/monitor.sh &
+# Monitor — Chaos Mesh: no EXPERIMENT_ID, so DURATION is REQUIRED (default 0 = runs until killed)
+# NAMESPACE="$CW_NAMESPACE" REGION="$REGION" DURATION=600 nohup bash scripts/monitor.sh &
+# Log collector (MANDATORY for all experiments).
+# Preferred: every Impact Target from Step 2.2, across namespaces and clusters:
+nohup bash scripts/log-collector.sh --app-map output/monitoring/app-map.json \
+    --duration "$DURATION_SECONDS" --mode live --output-dir output/ &
+# Fallback when discovery was not run: one namespace
+# nohup bash scripts/log-collector.sh --namespace {NS} --services "{svcs}" --mode live ... &
 wait $RUNNER_PID
 ```
 
@@ -450,7 +562,7 @@ Exit codes: 0=completed, 1=failed, 2=timeout
 
 > **Monitor Health Check**: After launching, periodically check
 > `output/monitoring/monitor-status.json`. If `last_collect` timestamp
-> is older than 2× INTERVAL (~60s), monitor may be stuck — report to user.
+> is older than 2× INTERVAL (30s at the default `INTERVAL=15`), monitor may be stuck — report to user.
 >
 > **Dashboard**: After launching background scripts, inform the user:
 > "📊 **Dashboard options:**
@@ -461,7 +573,7 @@ Exit codes: 0=completed, 1=failed, 2=timeout
 >     ```
 >  3. **Quick check**: `cat output/dashboard.md`
 >
-> The dashboard updates automatically every monitoring cycle (~30s).
+> The dashboard updates automatically every monitoring cycle (every `INTERVAL`, 15s by default).
 > You can safely close this chat — experiments continue in background."
 
 ### Phase 2: Log Classification
@@ -489,7 +601,7 @@ Re-collect metrics → compare with baseline → confirm full recovery.
 | Interactive | Pause at each step (first run / production) |
 | Semi-auto | Confirm at critical checkpoints (staging) |
 | Dry-run | Walk through without injection |
-| Game Day | Cross-team exercise, see [references/gameday.md](references/gameday.md) |
+| Game Day | Cross-team exercise, see [references/gameday.md](gameday.md) |
 
 **Output**: `output/checkpoints/step5-experiment.json` + monitoring files
 
@@ -529,6 +641,7 @@ Before generating the report, verify that observation data exists:
 |------|----------|-----------|
 | `output/monitoring/step5-metrics.jsonl` | ✅ | ⚠️ Report MUST include warning: "No CloudWatch metrics collected — RTO/performance data unavailable" |
 | `output/monitoring/step5-logs.jsonl` | Recommended | Warning: "No application logs collected" |
+| `output/checkpoints/step2-dependencies.json` | Recommended | Warning: "Impact Targets not discovered — application impact limited to the services named in the assessment". If it exists, list every cluster with `accessible: false` as "not scanned" |
 | `output/baseline-*.json` | ✅ | ⚠️ Report MUST include warning: "No baseline data — cannot compare pre/post performance" |
 | `output/checkpoints/step5-experiment.json` | ✅ | ❌ BLOCK report generation — experiment status unknown |
 
@@ -564,13 +677,13 @@ Include in report:
 2. Steady-state hypothesis vs. actual performance comparison table
 3. SLO/RTO Compliance Table (target vs. actual)
 4. MTTR phased analysis (Detection → Triage → Response → Recovery)
-5. Application Log Analysis (error timeline, patterns, propagation, recovery)
+5. Application Log Analysis (error timeline, patterns, propagation, recovery) — per Impact Target from `step2-dependencies.json`, including those that showed **no** errors (a dependent workload that stayed clean is a finding too)
 6. Resilience score update (compare with 9 dimensions)
 7. Backfill newly discovered risks
 8. Improvement recommendations (P0/P1/P2)
 9. Cleanup Status (FIS templates, CM CRs, temporary alarms)
 
-Report template details: [references/report-templates.md](references/report-templates.md)
+Report template details: [references/report-templates.md](report-templates.md)
 
 ### Report Generation Strategy: Section-by-Section
 

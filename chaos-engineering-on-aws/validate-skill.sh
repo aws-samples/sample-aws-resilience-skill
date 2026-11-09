@@ -283,17 +283,17 @@ done
 # ─── 17. New script flags ─────────────────────────────────────────
 echo ""
 echo "【17】脚本新参数验证"
-if grep -q "\-\-one-shot" "$SKILL_DIR/scripts/experiment-runner.sh"; then
+if grep -q -- "--one-shot" "$SKILL_DIR/scripts/experiment-runner.sh"; then
     pass "experiment-runner.sh 支持 --one-shot"
 else
     fail "experiment-runner.sh 缺少 --one-shot"
 fi
-if grep -q "\-\-deployment" "$SKILL_DIR/scripts/experiment-runner.sh"; then
+if grep -q -- "--deployment" "$SKILL_DIR/scripts/experiment-runner.sh"; then
     pass "experiment-runner.sh 支持 --deployment"
 else
     fail "experiment-runner.sh 缺少 --deployment"
 fi
-if grep -q "\-\-pod-label" "$SKILL_DIR/scripts/experiment-runner.sh"; then
+if grep -q -- "--pod-label" "$SKILL_DIR/scripts/experiment-runner.sh"; then
     pass "experiment-runner.sh 支持 --pod-label"
 else
     fail "experiment-runner.sh 缺少 --pod-label"
@@ -368,10 +368,10 @@ echo "【21】代码→文档：脚本 CLI 参数在文档中有描述"
 # Extract all --flags from experiment-runner.sh argument parser (case block only)
 # Filter out jq flags, kubectl flags, and other non-CLI parameters
 runner_flags=$(sed -n '/while.*\$#.*gt.*0/,/esac/p' "$SKILL_DIR/scripts/experiment-runner.sh" \
-    | grep -oE '\-\-[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | grep -v '^help$' | sort -u)
+    | grep -oE -- '--[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | grep -v '^help$' | sort -u)
 for flag in $runner_flags; do
     # Check scripts/README.md
-    if grep -qi "\-\-$flag" "$SKILL_DIR/scripts/README.md"; then
+    if grep -qi -- "--$flag" "$SKILL_DIR/scripts/README.md"; then
         pass "experiment-runner --$flag → scripts/README.md ✓"
     else
         fail "experiment-runner --$flag → scripts/README.md 未描述"
@@ -381,7 +381,7 @@ done
 # Extract env vars from monitor.sh (user-configurable ones at the top of the file, before first function)
 # Only check the first 30 lines where defaults are declared
 # Exclude internal vars (OUTPUT_FILE, CUSTOM_METRICS_FILE) that aren't user-configurable
-monitor_vars=$(head -40 "$SKILL_DIR/scripts/monitor.sh" | grep -oE '^[A-Z_]+="\$\{' | sed 's/="\$\{$//' \
+monitor_vars=$(head -40 "$SKILL_DIR/scripts/monitor.sh" | grep -oE '^[A-Z_]+="\$\{' | sed 's/="\${$//' \
     | grep -vE '^(OUTPUT_FILE|CUSTOM_METRICS_FILE)$' | sort -u)
 for var in $monitor_vars; do
     if grep -q "$var" "$SKILL_DIR/scripts/README.md"; then
@@ -393,12 +393,23 @@ done
 
 # Extract --flags from log-collector.sh argument parser (case block only)
 lc_flags=$(sed -n '/while.*\$#.*gt.*0/,/esac/p' "$SKILL_DIR/scripts/log-collector.sh" \
-    | grep -oE '\-\-[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | sort -u | grep -v '^help$')
+    | grep -oE -- '--[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | sort -u | grep -v '^help$')
 for flag in $lc_flags; do
-    if grep -qi "\-\-$flag\|$flag" "$SKILL_DIR/scripts/README.md"; then
+    if grep -qi -e "--$flag" -e "$flag" "$SKILL_DIR/scripts/README.md"; then
         pass "log-collector --$flag → scripts/README.md ✓"
     else
         fail "log-collector --$flag → scripts/README.md 未描述"
+    fi
+done
+
+# Extract --flags from discover-dependencies.sh argument parser (case block only)
+dd_flags=$(sed -n '/while.*\$#.*gt.*0/,/esac/p' "$SKILL_DIR/scripts/discover-dependencies.sh" \
+    | grep -oE -- '--[a-z][-a-z]*\)' | sed 's/^--//; s/)$//' | sort -u | grep -v '^help$')
+for flag in $dd_flags; do
+    if grep -q -- "--$flag" "$SKILL_DIR/scripts/README.md"; then
+        pass "discover-dependencies --$flag → scripts/README.md ✓"
+    else
+        fail "discover-dependencies --$flag → scripts/README.md 未描述"
     fi
 done
 
@@ -410,8 +421,8 @@ echo "【22】文档→代码：scripts/README.md 声称的参数在代码中存
 readme_runner_flags=$(grep -oE '\| `--[a-z][-a-z]*' "$SKILL_DIR/scripts/README.md" | sed 's/^| `--//' | sort -u)
 for flag in $readme_runner_flags; do
     found=0
-    for script in experiment-runner.sh log-collector.sh monitor.sh; do
-        if grep -q "\-\-$flag" "$SKILL_DIR/scripts/$script" 2>/dev/null; then
+    for script in experiment-runner.sh log-collector.sh monitor.sh discover-dependencies.sh; do
+        if grep -q -- "--$flag" "$SKILL_DIR/scripts/$script" 2>/dev/null; then
             found=1
             break
         fi
@@ -513,6 +524,80 @@ if [[ $en_refs -eq $zh_refs ]]; then
     pass "参考文档中英文数量一致 ($en_refs 对)"
 else
     fail "参考文档中英文不一致 (EN=$en_refs, ZH=$zh_refs)"
+fi
+
+# ─── 25. Offline script tests ─────────────────────────────────────
+echo ""
+echo "【25】脚本离线测试(scripts/tests/,bash + jq,aws/kubectl 为桩)"
+for t in "$SKILL_DIR"/scripts/tests/test-*.sh; do
+    [[ -f "$t" ]] || continue
+    if out=$(bash "$t" 2>&1); then
+        pass "$(basename "$t") — $(echo "$out" | grep -E '结果' | tail -1 | sed 's/^ *//')"
+    else
+        fail "$(basename "$t") — $(echo "$out" | grep -E '❌' | head -3 | tr '\n' ' ')"
+    fi
+done
+
+# ─── 26. EN/ZH structure parity ───────────────────────────────────
+# Counting files in pairs (【9】【24】) did not catch a ZH guide that had silently
+# lost whole sections; compare the structure itself: headings, fenced blocks and
+# table rows outside fences must match between each EN file and its _zh twin.
+echo ""
+echo "【26】中英文结构对齐(标题 / 代码块 / 表格行)"
+if ! command -v python3 >/dev/null 2>&1; then
+    warn "python3 不可用 — 跳过结构对齐检查"
+else
+    while IFS=$'\t' read -r status name detail; do
+        if [[ "$status" == "OK" ]]; then pass "$name ↔ _zh 结构一致 ($detail)"; else fail "$name ↔ _zh 结构不一致: $detail"; fi
+    done < <(python3 - "$SKILL_DIR" <<'PY'
+import glob, os, re, sys
+root = sys.argv[1]
+def stats(p):
+    h = f = t = 0; fence = False
+    for line in open(p, encoding="utf-8"):
+        if line.lstrip().startswith("```"):
+            f += 1; fence = not fence; continue
+        if fence: continue
+        if re.match(r"#{1,6} ", line): h += 1
+        if line.lstrip().startswith("|"): t += 1
+    return h, f, t
+ens = sorted(glob.glob(root + "/references/*.md") + glob.glob(root + "/examples/*.md")) + \
+      [root + "/README.md", root + "/SKILL_EN.md", root + "/MCP_SETUP_GUIDE.md"]
+for en in ens:
+    if en.endswith("_zh.md"): continue
+    zh = root + "/SKILL_ZH.md" if en.endswith("SKILL_EN.md") else en[:-3] + "_zh.md"
+    if not os.path.exists(zh): continue
+    a, b = stats(en), stats(zh)
+    name = os.path.relpath(en, root)
+    if a == b: print(f"OK\t{name}\theadings={a[0]} fences={a[1]} table-rows={a[2]}")
+    else: print(f"DIFF\t{name}\tEN headings/fences/table-rows={a} ZH={b}")
+PY
+)
+fi
+
+# ─── 27. FIS action IDs against the official list ─────────────────
+echo ""
+echo "【27】FIS action ID 对照官方清单(references/fis-official-ids.txt)"
+OFFICIAL="$SKILL_DIR/references/fis-official-ids.txt"
+if [[ ! -f "$OFFICIAL" ]]; then
+    fail "references/fis-official-ids.txt 不存在"
+else
+    bad_ids=$( {
+        grep -rhoE '"actionId"[[:space:]]*:[[:space:]]*"aws:[a-z0-9-]+:[a-z0-9-]+"' \
+            "$SKILL_DIR/references/templates" "$SKILL_DIR/references/fis-templates" 2>/dev/null | grep -oE 'aws:[a-z0-9-]+:[a-z0-9-]+'
+        grep -hoE 'fis_action_id:[[:space:]]*"?aws:[a-z0-9-]+:[a-z0-9-]+' "$SKILL_DIR/references/fault-catalog.yaml" | grep -oE 'aws:[a-z0-9-]+:[a-z0-9-]+'
+        grep -hE '^[[:space:]]+- aws:[a-z0-9-]+:[a-z0-9-]+' "$SKILL_DIR/references/fault-catalog.yaml" | grep -oE 'aws:[a-z0-9-]+:[a-z0-9-]+'
+      } | sort -u | grep -vxF -f <(grep -v '^#' "$OFFICIAL") || true)
+    checked=$( {
+        grep -rhoE '"actionId"[[:space:]]*:[[:space:]]*"aws:[a-z0-9-]+:[a-z0-9-]+"' "$SKILL_DIR/references/templates" "$SKILL_DIR/references/fis-templates" 2>/dev/null
+        grep -hoE 'fis_action_id:[[:space:]]*"?aws:[a-z0-9-]+:[a-z0-9-]+' "$SKILL_DIR/references/fault-catalog.yaml"
+        grep -hE '^[[:space:]]+- aws:[a-z0-9-]+:[a-z0-9-]+' "$SKILL_DIR/references/fault-catalog.yaml"
+      } | wc -l | tr -d ' ')
+    if [[ -z "$bad_ids" ]]; then
+        pass "模板与 fault-catalog 中 $checked 处 action ID 全部在官方清单内"
+    else
+        for id in $bad_ids; do fail "不在官方清单内的 action ID: $id"; done
+    fi
 fi
 
 # ─── Summary ─────────────────────────────────────────────────────

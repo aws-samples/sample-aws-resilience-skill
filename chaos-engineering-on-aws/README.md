@@ -72,12 +72,13 @@ Two methods: **Static ServiceAccount Token** (recommended for production) or **A
 
 > 📋 Full structured catalog: [references/fault-catalog.yaml](references/fault-catalog.yaml)
 
-### Fault Catalog Summary: 42 Fault Actions
+### Fault Catalog Summary: 54 Fault Actions
 
 | Backend | Count | Coverage |
 |---------|-------|----------|
 | **AWS FIS** | 24 | EC2, RDS, Lambda, EBS, DynamoDB, S3, API Gateway, ECS, Network |
 | **Chaos Mesh** | 14 | Pod lifecycle, Network, HTTP, CPU/Memory stress, IO, DNS |
+| **FIS + SSM Automation** | 12 | Faults with no native FIS action, from the FIS Template Library: MSK broker reboot, ElastiCache primary reboot/failover, Redis connection failure, DB connection/lock/IO exhaustion, SQS/CloudFront impairment, Aurora global failover |
 | **FIS Scenario** | 4 | AZ Power Interruption, AZ App Slowdown, Cross-AZ Traffic, Cross-Region |
 
 ```
@@ -126,7 +127,9 @@ K8s Pod / Container Layer  →  Chaos Mesh (preferred)
 - **Composite experiments**: FIS native multi-action templates with `startAfter` orchestration (parallel, sequential, timed delays)
 - **Mixed-backend orchestration**: Run FIS + Chaos Mesh simultaneously with defined abort ordering
 - **Parameterized templates**: Reusable `{{placeholder}}` templates for standardized scenarios
-- **FIS Template Library integration**: 19-scenario index from [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) with 5 embedded ready-to-deploy templates
+- **FIS Template Library integration**: 27-scenario index from [aws-samples/fis-template-library](https://github.com/aws-samples/fis-template-library) (synced to ee74d58) with 8 embedded ready-to-deploy templates
+- **Resource–action compatibility gate**: the FIS action's target type is checked against the real resource before any template is generated
+- **Impact Target discovery**: `discover-dependencies.sh` finds the EKS workloads (all clusters in the Region) that reference the resources under test; `log-collector.sh --app-map` then collects exactly those
 - **3 advanced injection patterns**: SSM Automation orchestration (dynamic resource injection), Security Group manipulation, Resource Policy denial (progressive)
 - **Three-layer state management**: `state.json` v2 state machine + `dashboard.md` Markdown board + terminal ASCII dashboard
 - **Session interruption recovery**: Resume experiments after agent session interruption via `state.json` checkpoint
@@ -215,17 +218,20 @@ chaos-engineering-on-aws/
 ├── MCP_SETUP_GUIDE.md / _zh.md # MCP server setup guide
 ├── references/                 # Progressive-disclosure reference docs (loaded on demand)
 │   ├── workflow-guide.md / _zh.md  # Detailed 6-step workflow instructions
-│   ├── fault-catalog.yaml      # Unified fault type registry: 42 actions (24 FIS + 14 CM + 4 Scenario)
+│   ├── fault-catalog.yaml      # Unified fault type registry: 54 actions (24 FIS + 14 CM + 12 FIS-SSM + 4 Scenario)
 │   ├── scenario-library.md / _zh.md  # FIS Scenario Library JSON skeletons & requirements
-│   ├── fis-template-library-index.md / _zh.md  # 19-scenario index from aws-samples/fis-template-library
-│   ├── fis-templates/              # 5 embedded ready-to-deploy FIS templates
+│   ├── fis-template-library-index.md / _zh.md  # 27-scenario index from aws-samples/fis-template-library
+│   ├── fis-templates/              # 8 embedded ready-to-deploy FIS templates
 │   │   ├── database-connection-exhaustion/  # SSM Automation: dynamic EC2 load generator
 │   │   ├── redis-connection-failure/        # SSM Automation: Security Group manipulation
 │   │   ├── sqs-queue-impairment/           # SSM Automation: progressive policy denial
 │   │   ├── cloudfront-impairment/          # SSM Automation: S3 origin deny policy
-│   │   └── aurora-global-failover/         # SSM Automation: cross-region switchover
+│   │   ├── aurora-global-failover/         # SSM Automation: cross-region switchover
+│   │   ├── msk-broker-reboot/              # SSM Automation: MSK broker reboot
+│   │   ├── elasticache-redis-primary-node-reboot/    # SSM Automation: primary node reboot
+│   │   └── elasticache-redis-primary-node-failover/  # SSM Automation: TestFailover
 │   ├── templates/              # Parameterized FIS multi-action templates ({{placeholder}} format)
-│   │   ├── az-power-interruption.json       # AZ power interruption (4 actions, parallel)
+│   │   ├── az-power-interruption.json       # AZ power interruption (official 8 sub-actions, prunable)
 │   │   ├── cascade-db-to-app.json           # DB cascade fault (3 actions, serial with delay)
 │   │   └── progressive-network-degradation.json  # Progressive degradation (6 actions, 3 waves)
 │   ├── prerequisites-checklist.md / _zh.md  # Pre-flight checklist by architecture pattern
@@ -237,17 +243,47 @@ chaos-engineering-on-aws/
 ├── examples/                   # Experiment scenario examples (01-08, EN/ZH pairs)
 ├── scripts/
 │   ├── README.md               # Script usage guide (parameters, exit codes, examples)
+│   ├── discover-dependencies.sh  # Step 2 Impact Target discovery across all EKS clusters
 │   ├── experiment-runner.sh    # Experiment execution (FIS + Chaos Mesh, --one-shot for pod-kill)
-│   ├── log-collector.sh        # Pod log collection + 5-category error classification
+│   ├── log-collector.sh        # Pod log collection + 5-category error classification (--app-map)
 │   ├── monitor.sh              # CloudWatch metric collection (FIS mode + Chaos Mesh mode)
 │   ├── update-dashboard.sh     # Auto-generate output/dashboard.md from state.json
 │   ├── render-dashboard.sh     # Colored ASCII terminal dashboard (use with `watch -n 5 -c`)
 │   ├── setup-prerequisites.sh  # Optional pre-flight setup
-│   └── custom-metrics-sample.conf  # Custom metrics configuration example
-└── validate-skill.sh          # Static validation script (105 checks)
+│   ├── custom-metrics-sample.conf  # Custom metrics configuration example
+│   └── tests/                  # Offline tests (bash + jq, stubbed aws/kubectl)
+└── validate-skill.sh          # Validation: static checks, offline script tests, EN/ZH parity, FIS ID check (280+ checks)
 ```
 
 ## Recent Changes
+
+### v1.6.0 — 2026-11-09
+
+**Impact Target discovery (P0)**
+- `scripts/discover-dependencies.sh` — New: resolves the real endpoints of the resources under test (Aurora/RDS cluster and member endpoints, ElastiCache node endpoints, MSK brokers, OpenSearch, EC2 IP/DNS) and scans every EKS cluster in the Region in parallel, each through an isolated kubeconfig, for workloads that reference them: env values, ConfigMaps via keyRef/envFrom/volumes/projected volumes, ExternalName Services and their callers, and (opt-in) Secret key names — never values. Anchored matching with near misses reported separately; credentials masked in evidence. Writes `checkpoints/step2-dependencies.json` and `monitoring/app-map.json`. Ported from the dependency discovery in [aws-samples/sample-fis-skills](https://github.com/aws-samples/sample-fis-skills) `app-service-log-analysis`.
+- `scripts/log-collector.sh` — New `--app-map`: collects every verified/confirmed Impact Target across namespaces and clusters (Deployment, StatefulSet, DaemonSet, Job, bare Pod); each log line now carries `namespace` (and `cluster`).
+- `scripts/log-collector.sh` — Fix: without `--services`, the last deployment of the namespace was silently dropped (kubectl jsonpath output has no trailing newline).
+- `scripts/tests/` — New offline tests (bash + jq, stubbed aws/kubectl), run by `validate-skill.sh`.
+- `references/workflow-guide.md` — Step 2.2 Impact Target discovery; Step 5 launches log-collector with `--app-map`; Step 6 data completeness lists unscanned clusters.
+
+**Resource–action compatibility gate (P0)**
+- `references/workflow-guide.md` — Step 2.1: `aws fis get-action` target type vs. the real resource fields (`Engine`, `DBClusterIdentifier`, `InstanceLifecycle`, …); mismatch blocks Step 3 and is recorded in `step2-assessment.json`.
+
+**FIS correctness fixes (P0)** — checked against the official FIS actions reference and the four Scenario Library pages
+- Non-existent action IDs replaced: `aws:ec2:disrupt-network-connectivity` → `aws:network:disrupt-connectivity`; `aws:elasticache:interrupt-cluster-az-power` → `aws:elasticache:replicationgroup-interrupt-az-power`; `aws:memorydb:interrupt-cluster-az-power` (MemoryDB only has `multi-region-cluster-pause-replication`); `aws:kinesis:add-put-record-throttle` → `aws:kinesis:stream-provisioned-throughput-exception` / `stream-expired-iterator-exception`; `aws:directconnect:disrupt-connectivity` → `aws:directconnect:virtual-interface-disconnect`.
+- `references/scenario-library.md` / `_zh.md` — All four scenarios rewritten from the official Scenario Content JSON: sub-actions, per-target tags (the `IceQualified` tag value used before does not exist), permissions; AZ Application Slowdown and Cross-AZ Traffic Slowdown are pod/ECS/SSM latency and packet-loss scenarios, not NACL + Lambda. New: service-scoped sub-action pruning for AZ Power Interruption (never prunes the stop condition).
+- `references/templates/az-power-interruption.json` — Aligned to the official 8 sub-actions/targets, one target per sub-action so any pair can be pruned; keeps an alarm stop condition.
+- `references/fis-actions.md` / `_zh.md` — 20 missing official actions added.
+- Lambda actions: `AWS_FIS_CONFIGURATION_LOCATION` is the ARN of an S3 configuration folder (e.g. `arn:aws:s3:::bucket/FisConfigs/`) plus `AWS_LAMBDA_EXEC_WRAPPER=/opt/aws-fis/bootstrap`, per the [official guide](https://docs.aws.amazon.com/fis/latest/userguide/use-lambda-actions.html). The v1.4.0 note saying "experiment ARN" was wrong.
+
+**FIS Template Library sync to ee74d58 (P1)**
+- `references/fis-template-library-index.md` / `_zh.md` — 19 → 27 scenarios (new: agentcore-strands-agent-faults, database-blocking-locks, database-io-exhaustion, ecs-fargate-az-evacuation, ecs-fargate-az-impairment, eks-automode-az-impairment, elasticache-az-power-interruption, msk-broker-reboot) and updated facts for existing entries.
+- `references/fis-templates/` — 5 embedded templates resynced byte-for-byte with upstream fixes (SQS deny now scoped so cleanup can't be blocked, confused-deputy trust condition; DB connection exhaustion now cleans up on failure/cancel, IMDSv2); 3 new embedded templates: `msk-broker-reboot`, `elasticache-redis-primary-node-reboot`, `elasticache-redis-primary-node-failover` (upstream defects of the last one documented in its README).
+- `references/fault-catalog.yaml` — New `fis_ssm` section (12 SSM-based faults); Scenario sub-actions/tags corrected; 42 → 54 entries.
+
+**Chinese docs**
+- `references/workflow-guide_zh.md` — Re-translated in full; it had lost INSUFFICIENT_DATA handling, the Verdict Decision Tree, section-by-section report writing and other guardrails present in English.
+- `validate-skill.sh` — New EN/ZH structure parity check (headings, code blocks, tables) so this drift fails validation.
 
 ### v1.5.0 — 2026-04-16
 
@@ -295,7 +331,7 @@ chaos-engineering-on-aws/
 **Safety & Documentation (P1)**
 - `scripts/monitor.sh` — `OUTPUT_DIR` variable properly initialized (was undefined, causing monitor crash)
 - `references/fault-catalog.yaml` — `aws:fis:inject-api-throttle-error` limited to ec2/kinesis only (NOT dynamodb/s3/etc.)
-- `references/fault-catalog.yaml` — Lambda FIS actions: `AWS_FIS_CONFIGURATION_LOCATION` format clarified (must be experiment ARN, not S3 path)
+- `references/fault-catalog.yaml` — Lambda FIS actions: `AWS_FIS_CONFIGURATION_LOCATION` format clarified (must be experiment ARN, not S3 path) — **superseded in v1.6.0: this was wrong; the official format is an S3 folder ARN**
 - `references/fis-actions.md` — Added common mistake warning for Lambda env var format
 - `references/workflow-guide.md` — Verdict Decision Tree: 4-level data completeness → verdict mapping (PASSED/FAILED, OBSERVED, BLOCKED)
 - `references/report-templates.md` — Report Section 6.0.5: Data Completeness Check mandatory before verdict

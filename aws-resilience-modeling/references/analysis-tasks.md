@@ -2,7 +2,7 @@
 
 ## Task 1: System Component Mapping and Dependency Analysis
 
-**Tools Used**: Read-only API calls via MCP servers (`aws-api-mcp-server`) if available, Mermaid diagrams. Do not use Bash to execute any `aws` CLI commands to access AWS resources.
+**Tools Used**: Read-only API calls via the AWS MCP Server (`aws-mcp`, connected with a read-only profile) if available, Mermaid diagrams. Do not use Bash to execute any `aws` CLI commands to access AWS resources.
 
 **Output**:
 1. **System Architecture Overview** (Mermaid, showing Region/AZ/component hierarchy)

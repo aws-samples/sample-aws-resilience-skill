@@ -20,14 +20,14 @@ Input completeness check and missing data handling → [references/workflow-guid
 
 Full setup guide with examples: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
 
-| Server | Package | Required | Notes |
-|--------|---------|----------|-------|
-| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | Yes | ⚠️ Must set `ALLOW_WRITE_OPERATIONS=true` |
-| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | Yes | |
-| eks-mcp-server | `awslabs.eks-mcp-server` | If EKS | |
-| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | If Chaos Mesh installed | |
+| Server | How to connect | Required | Notes |
+|--------|----------------|----------|-------|
+| `aws-mcp` — AWS MCP Server (AWS-managed, preview) | `uvx mcp-proxy-for-aws@<pinned> https://aws-mcp.<region>.api.aws/mcp` | Yes | All AWS API calls (FIS, CloudWatch, EC2, RDS…). Uses your IAM permissions; do NOT pass `--read-only` (FIS needs writes). Replaces `awslabs.aws-api-mcp-server` |
+| `eks-mcp` — Amazon EKS MCP Server (AWS-managed, preview) | same proxy, `https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | If EKS | Read-only tools are enough (`AmazonEKSMCPReadOnlyAccess`) |
+| `awslabs.cloudwatch-mcp-server` | `uvx awslabs.cloudwatch-mcp-server@latest` | No | Only for its alarm/log-analysis tools; plain CloudWatch calls go through `aws-mcp` |
+| `chaosmesh-mcp` | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) (community, not AWS) | If Chaos Mesh installed | |
 
-Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavailable.
+Falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`) when MCP unavailable; the background scripts always use the CLI.
 
 ## Six-Step Workflow
 

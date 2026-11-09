@@ -60,7 +60,7 @@ Claude: [自动加载 aws-resilience-modeling skill]
 在开始分析前，请准备以下信息：
 
 ### MCP 服务器配置
-自动扫描 AWS 环境所需的 MCP 服务器详细配置指南，参见 [references/MCP_SETUP_GUIDE_zh.md](references/MCP_SETUP_GUIDE_zh.md)。
+自动扫描 AWS 环境所需的 MCP 服务器详细配置指南，参见 [references/MCP_SETUP_GUIDE_zh.md](references/MCP_SETUP_GUIDE_zh.md)。必需的 Server 现为 AWS 托管的 **AWS MCP Server**（`aws-mcp`，取代 `awslabs.aws-api-mcp-server`），并使用**只读 IAM profile** 连接；不要以 `--read-only` 启动其代理，该参数会隐藏 AWS API 工具。
 
 ### 1. 环境信息
 - AWS 账户 ID 和区域

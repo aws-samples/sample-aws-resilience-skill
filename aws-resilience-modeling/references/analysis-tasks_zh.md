@@ -2,7 +2,7 @@
 
 ## 任务 1: 系统组件映射与依赖分析
 
-**使用工具**：通过 MCP 服务器（`aws-api-mcp-server`）进行只读 API 调用（如可用）、Mermaid 图表。禁止通过 Bash 执行任何 `aws` CLI 命令访问 AWS 资源。
+**使用工具**：通过 AWS MCP Server（`aws-mcp`，以只读 profile 连接）进行只读 API 调用（如可用）、Mermaid 图表。禁止通过 Bash 执行任何 `aws` CLI 命令访问 AWS 资源。
 
 **输出内容**：
 1. **系统架构总览图**（Mermaid，展示 Region/AZ/组件层级）

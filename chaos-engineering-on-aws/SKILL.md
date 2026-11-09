@@ -1,7 +1,7 @@
 ---
 name: chaos-engineering-on-aws
 description: Run chaos engineering experiments on AWS using FIS (+ optional Chaos Mesh) with automated monitoring and rollback. Use when the user wants to validate system resilience through controlled fault injection, run chaos experiments on AWS infrastructure, test failure recovery, or execute Game Day exercises. Triggers on 混沌工程, chaos engineering, fault injection, FIS experiment, 韧性验证, resilience testing, Game Day.
-allowed-tools: Bash(aws *), Bash(kubectl *), Bash(bash *), Bash(cat *), Bash(jq *), Bash(nohup *), Read, Write, Grep, Glob, awslabs.aws-api-mcp-server, awslabs.cloudwatch-mcp-server, awslabs.eks-mcp-server, chaosmesh-mcp
+allowed-tools: Bash(aws *), Bash(kubectl *), Bash(bash *), Bash(cat *), Bash(jq *), Bash(nohup *), Read, Write, Grep, Glob, mcp__aws-mcp, mcp__eks-mcp, mcp__cloudwatch-mcp, mcp__chaosmesh-mcp
 model: sonnet
 ---
 

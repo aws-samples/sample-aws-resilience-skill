@@ -220,7 +220,7 @@ Download individual skill folders from the [GitHub repository](https://github.co
 
 - AWS account with read-only access (assessment) or experiment permissions (chaos engineering)
 - AWS CLI configured with appropriate credentials
-- Optional: MCP servers for enhanced automation (see `MCP_SETUP_GUIDE.md` in each skill folder)
+- Optional: MCP servers for enhanced automation — the AWS-managed [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) (replaces `awslabs.aws-api-mcp-server`) plus the managed EKS / ECS MCP Servers for container workloads, all connected through `mcp-proxy-for-aws`. Read-only skills get their read-only guarantee from the IAM profile, not from the proxy's `--read-only` flag (which hides the AWS API tools). See the `MCP_SETUP_GUIDE.md` in each skill folder
 
 ## Project Structure
 

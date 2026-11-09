@@ -36,9 +36,10 @@
 
 ### 可选 MCP 服务器
 
-| 服务器 | 包名 | 用途 |
-|--------|------|------|
-| eks-mcp-server | `awslabs.eks-mcp-server` | K8s 资源查询（kubectl 替代方案） |
+| 服务器 | 连接方式 | 用途 |
+|--------|----------|------|
+| `eks-mcp` — Amazon EKS MCP Server（AWS 托管，预览） | `uvx mcp-proxy-for-aws@<锁定版本> https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | K8s 资源查询（kubectl 替代方案），只用只读工具。本地替代：`awslabs.eks-mcp-server` |
+| `aws-mcp` — AWS MCP Server（AWS 托管，预览） | `uvx mcp-proxy-for-aws@<锁定版本> https://aws-mcp.<region>.api.aws/mcp` | EKS describe / 插件 / access entry 等 API 调用。使用只读 IAM profile；不要用代理的 `--read-only`（会隐藏 `aws___call_aws`） |
 
 MCP 不可用时，回退到 `kubectl` + `aws` CLI 直接调用。
 

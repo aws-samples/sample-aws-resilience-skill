@@ -33,29 +33,31 @@ git clone https://github.com/aws-samples/sample-aws-resilience-skill.git
 
 ## MCP Server Setup
 
+> `awslabs.aws-api-mcp-server` is superseded by the AWS-managed **AWS MCP Server** ([migration guide](https://github.com/awslabs/mcp/blob/main/src/aws-api-mcp-server/MIGRATION.md)). Remove the old entry, and the `ALLOW_WRITE_OPERATIONS` variable earlier versions of this README asked for: it never existed in that server.
+
 ### Required
 
-| Server | Package | Purpose |
-|--------|---------|---------|
-| aws-api-mcp-server | `awslabs.aws-api-mcp-server` | FIS experiment create/run/stop, resource validation |
-| cloudwatch-mcp-server | `awslabs.cloudwatch-mcp-server` | Metrics, alarms, stop conditions |
+| Server | How to connect | Purpose |
+|--------|----------------|---------|
+| `aws-mcp` — [AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/mcp-server.html) (AWS-managed, preview) | `uvx mcp-proxy-for-aws@<pinned> https://aws-mcp.<region>.api.aws/mcp --metadata AWS_REGION=<region>` | All AWS API calls: FIS create/run/stop, CloudWatch metrics and alarms, resource validation; AWS documentation lookup. Runs with your IAM permissions (no `--read-only`: FIS needs writes) |
 
 ### Optional
 
-| Server | Package | When |
-|--------|---------|------|
-| eks-mcp-server | `awslabs.eks-mcp-server` | EKS-based architectures |
-| chaosmesh-mcp | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) | Cluster has Chaos Mesh installed |
+| Server | How to connect | When |
+|--------|----------------|------|
+| `eks-mcp` — [Amazon EKS MCP Server](https://docs.aws.amazon.com/eks/latest/userguide/eks-mcp-introduction.html) (AWS-managed, preview) | same proxy, `https://eks-mcp.<region>.api.aws/mcp --service eks-mcp` | EKS-based architectures (open-source `awslabs.eks-mcp-server` as a local alternative) |
+| `awslabs.cloudwatch-mcp-server` | `uvx awslabs.cloudwatch-mcp-server@latest` | Only for its alarm-recommendation / log-analysis tools |
+| `chaosmesh-mcp` | [RadiumGu/Chaosmesh-MCP](https://github.com/RadiumGu/Chaosmesh-MCP) (community project, not AWS) | Cluster has Chaos Mesh installed |
 
 ### Configuration
 
-> Full setup guide with examples: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
+> Full setup guide with examples (Kiro, Claude Code, Cursor/VS Code), IAM and verification: [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)
 
-No MCP? The skill falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`).
+No MCP? The skill falls back to AWS CLI (`aws fis`, `aws cloudwatch`, `kubectl`); the background scripts always use the CLI.
 
 ### Chaos Mesh MCP: EKS Authentication
 
-Two methods: **Static ServiceAccount Token** (recommended for production) or **Admin kubeconfig** (quick testing). See [MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md) for detailed setup instructions.
+Two methods: **Static ServiceAccount Token** (recommended for production) or **Admin kubeconfig** (quick testing). See [MCP_SETUP_GUIDE.md § chaosmesh-mcp](MCP_SETUP_GUIDE.md#4-chaosmesh-mcp-optional-community) and the project's [EKS Authentication Methods](https://github.com/RadiumGu/Chaosmesh-MCP#eks-authentication-methods).
 
 ## Six-Step Workflow
 
@@ -256,6 +258,15 @@ chaos-engineering-on-aws/
 ```
 
 ## Recent Changes
+
+### v1.6.1 — 2026-11-09
+
+**MCP configuration (all three skills: chaos-engineering-on-aws, aws-resilience-modeling, eks-resilience-checker)**
+- Required server is now the AWS-managed **AWS MCP Server** (`aws-mcp`, via a pinned `mcp-proxy-for-aws`), replacing the superseded `awslabs.aws-api-mcp-server`; EKS uses the AWS-managed **Amazon EKS MCP Server** (`eks-mcp`); `cloudwatch-mcp-server` is optional.
+- Removed `ALLOW_WRITE_OPERATIONS=true`: that variable never existed in `aws-api-mcp-server` (its switch is `READ_OPERATIONS_ONLY`, default `false`).
+- Read-only skills enforce read-only through the IAM profile; the proxy's `--read-only` flag hides `aws___call_aws` / `aws___run_script` and must not be used for them.
+- `MCP_SETUP_GUIDE.md` / `_zh.md` rewritten (Kiro, Claude Code, Cursor/VS Code, IAM, multi-account, troubleshooting); FIS role examples use the `AWSFaultInjectionSimulator*Access` managed policies; read-only policy uses the valid `elasticloadbalancing:` prefix instead of `elbv2:`.
+- `validate-all-skills.sh` link check fixed: it mis-parsed links with anchors and never counted failures (pipe subshell).
 
 ### v1.6.0 — 2026-11-09
 

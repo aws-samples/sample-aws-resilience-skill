@@ -491,10 +491,10 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
 
 **脚本**：全部参数见 [scripts/README.md](../scripts/README.md)。
 
-> **MCP 写权限检查**：首次执行实验前，确认 MCP 能执行写操作。
+> **MCP 写权限检查**：首次执行实验前，确认 AWS MCP Server 能执行写操作。
 > 尝试一个无害的写操作（例如对现有模板执行 `fis:TagResource`）。
-> 如果 MCP 连接断开 → 在 aws-api-mcp-server 的 env 中配置 `ALLOW_WRITE_OPERATIONS=true` 并重启。
-> 或者所有 FIS 操作都改用 AWS CLI 兜底。
+> 写权限由 IAM（你的凭证）和代理共同决定：如果 `aws-mcp` 条目带了 `--read-only` 启动，具备写能力的工具会被隐藏，
+> 去掉该参数并重启 MCP 客户端即可。返回 `AccessDenied` → 修正 IAM 策略（或拒绝 `aws:ViaAWSMCPService` 的 SCP）。否则所有 FIS 操作都改用 AWS CLI 兜底。
 
 ### 阶段 0：基线采集（T-5min）
 采集稳态基线，保存为 `output/baseline-{timestamp}.json`。

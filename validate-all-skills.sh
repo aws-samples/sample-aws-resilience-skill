@@ -1,8 +1,10 @@
 #!/bin/bash
 # validate-all-skills.sh — 全量静态验证脚本
-# 用法: cd /home/ubuntu/tech/sample-aws-resilience-skill && bash validate-all-skills.sh
+# 用法: bash validate-all-skills.sh   (可在任意目录运行)
 
 set -uo pipefail
+# All paths below are relative to the repo root; resolve it from the script location.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 1
 PASS=0; FAIL=0; WARN=0
 SKILLS=("aws-resilience-modeling" "aws-rma-assessment" "chaos-engineering-on-aws" "eks-resilience-checker")
 
@@ -64,13 +66,23 @@ done
 
 echo ""
 # ──────────────────────────────────────────
-echo "【2】SKILL.md ↔ .kiro/skill.md 一致性"
+echo "【2】SKILL.md ↔ .kiro/skills 本地安装一致性"
 # ──────────────────────────────────────────
+# .kiro/ is gitignored: it is a LOCAL Kiro install (users copy skill folders into
+# .kiro/skills/, see README "Installation"), never part of a clone. Only compare
+# when such an install exists; a fresh checkout has nothing to compare.
+if [[ ! -d ".kiro/skills" ]]; then
+  echo "  ⏭  未发现 .kiro/skills/（本地 Kiro 安装目录，已被 .gitignore 排除）— 跳过"
+else
 for skill in "${SKILLS[@]}"; do
-  kiro=".kiro/skills/$skill/skill.md"
   src="$skill/SKILL.md"
-  if [[ ! -f "$kiro" ]]; then
-    fail ".kiro/skills/$skill/skill.md 不存在"
+  # Kiro reads SKILL.md; older local copies used skill.md
+  kiro=""
+  for cand in ".kiro/skills/$skill/SKILL.md" ".kiro/skills/$skill/skill.md"; do
+    [[ -f "$cand" ]] && { kiro="$cand"; break; }
+  done
+  if [[ -z "$kiro" ]]; then
+    fail ".kiro/skills/$skill/SKILL.md 不存在（本地安装缺少该 skill，重新复制 $skill/）"
     continue
   fi
   
@@ -82,6 +94,7 @@ for skill in "${SKILLS[@]}"; do
     fail "$skill — name 不一致: SKILL='$skill_name' vs kiro='$kiro_name'"
   fi
 done
+fi
 
 echo ""
 # ──────────────────────────────────────────

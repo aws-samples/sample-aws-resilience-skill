@@ -337,7 +337,7 @@ Download individual skill folders from the [GitHub repository](https://github.co
 │   └── scripts/
 │       └── generate-html-report.py    # HTML report renderer
 │
-├── .kiro/skills/                      # Kiro skill registration (auto-synced)
+├── validate-all-skills.sh             # Static checks for all skills (run from anywhere)
 ├── README.md                          # This file
 └── README_zh.md                       # Chinese version
 ```

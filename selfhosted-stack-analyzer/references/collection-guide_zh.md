@@ -158,7 +158,7 @@ aws ec2 describe-instances --region $R \
   --filters "Name=tag-key,Values=kubernetes.io/cluster/$C" --output json           > aws/ec2-instances.json
 ```
 
-MCP 等价：`awslabs.aws-api-mcp-server`（EC2/EKS Describe）、`awslabs.eks-mcp-server`（集群与工作负载）。
+MCP 等价：`aws-mcp`——AWS 托管的 AWS MCP Server（EC2/EKS Describe，取代 `awslabs.aws-api-mcp-server`）、`eks-mcp`——AWS 托管的 Amazon EKS MCP Server（集群与工作负载；本地替代为 `awslabs.eks-mcp-server`）。两者都经 `mcp-proxy-for-aws` 连接，配置见 [aws-resilience-modeling MCP 指南](../../aws-resilience-modeling/references/MCP_SETUP_GUIDE_zh.md)。采集只读：用只读 IAM profile 连接，不要给代理加 `--read-only`（会隐藏 `aws___call_aws`）。
 
 > **★★ EC2 Name tag 是组件识别的关键键（本客户强制要求）**
 > 本客户的自建组件**依靠 EC2 主机的 `Name` 标签来区分**（例如节点 Name tag 形如 `tikv-node-az1`、`kafka-broker-az2`、`redis-master-node`）。

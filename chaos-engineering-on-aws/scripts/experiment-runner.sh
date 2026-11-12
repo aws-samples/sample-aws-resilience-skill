@@ -3,12 +3,12 @@
 # Replaces agent-side polling to avoid context window exhaustion and hangs.
 #
 # Usage:
-#   # FIS experiment:
-#   ./experiment-runner.sh --mode fis --template-id <id> --region <region> \
+#   # FIS experiment (--yes only after the user approved this exact experiment):
+#   ./experiment-runner.sh --mode fis --template-id <id> --region <region> --yes \
 #     --timeout 600 --poll-interval 15 --output-dir output/
 #
 #   # Chaos Mesh experiment:
-#   ./experiment-runner.sh --mode chaosmesh --manifest chaos-experiment.yaml \
+#   ./experiment-runner.sh --mode chaosmesh --manifest chaos-experiment.yaml --yes \
 #     --namespace <ns> --timeout 600 --output-dir output/
 #
 #   # Monitor-only (experiment already running):
@@ -34,6 +34,12 @@ ONE_SHOT=false             # One-shot injection mode (pod-kill): complete on All
 POD_LABEL=""               # Pod label selector for --one-shot completion check
 DEPLOYMENT=""              # Deployment name for --one-shot replica count (optional)
 QUIET=false
+CONFIRMED=false            # --yes: user approved this injection (required to start one)
+
+# Set once this process has started an injection; the EXIT trap uses it to
+# stop the FIS experiment / delete the Chaos Mesh CR if the runner dies early.
+STARTED_FIS_ID=""
+APPLIED_MANIFEST=false
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -61,6 +67,8 @@ Common Options:
   --timeout SECONDS      Max wait time (default: 600)
   --poll-interval SECS   Poll interval (default: 15)
   --output-dir DIR       Output directory (default: ./output)
+  --yes                  Confirm the user approved this injection. Required to start
+                         a new FIS experiment or apply a manifest (not for --experiment-id).
   --quiet                Minimal output (for background use)
   -h, --help             Show this help
 EOF
@@ -82,6 +90,7 @@ while [[ $# -gt 0 ]]; do
         --one-shot)       ONE_SHOT=true;       shift ;;
         --pod-label)      POD_LABEL="$2";      shift 2 ;;
         --deployment)     DEPLOYMENT="$2";     shift 2 ;;
+        --yes)            CONFIRMED=true;      shift ;;
         --quiet)          QUIET=true;          shift ;;
         -h|--help)        usage ;;
         *)                echo "Unknown option: $1" >&2; usage ;;
@@ -94,6 +103,13 @@ done
 # for fixed-count pod-kill) without --pod-label, so fail fast instead.
 if [[ "$ONE_SHOT" == "true" && -z "$POD_LABEL" ]]; then
     echo "ERROR: --one-shot requires --pod-label (e.g. --pod-label app=petsite)" >&2
+    exit 1
+fi
+
+# Starting an injection needs explicit approval; monitor-only (--experiment-id) does not.
+if [[ "$CONFIRMED" != "true" ]] && { [[ "$MODE" == "fis" && -n "$TEMPLATE_ID" && -z "$EXPERIMENT_ID" ]] || [[ "$MODE" == "chaosmesh" ]]; }; then
+    echo "ERROR: refusing to inject without --yes. Show the user the target account/cluster," >&2
+    echo "       template, blast radius and stop conditions, and pass --yes only after they approve." >&2
     exit 1
 fi
 
@@ -139,7 +155,7 @@ update_state() {
         # mkdir is atomic — poor man's lock with ~5s timeout
         local tries=0
         until mkdir "$STATE_JSON.lockdir" 2>/dev/null; do
-            ((tries++))
+            tries=$((tries + 1))
             if (( tries >= 50 )); then
                 log "WARN: state lock timeout (mkdir fallback)"
                 return 1
@@ -152,6 +168,42 @@ update_state() {
 }
 
 # ---------------------------------------------------------------------------
+# Cleanup on abnormal exit (signal or unexpected error)
+# ---------------------------------------------------------------------------
+# Normal terminal paths leave nothing running, so this only acts when the
+# injection we started is still active. SIGKILL cannot be trapped.
+# Interruptible sleep: bash defers traps until a foreground `sleep` returns, which
+# would delay stopping the experiment by up to a poll interval after SIGTERM.
+isleep() { sleep "$1" & wait $! || true; }
+
+cleanup_on_exit() {
+    local rc=$?
+    if [[ -n "$STARTED_FIS_ID" ]]; then
+        local st
+        st=$(aws fis get-experiment --id "$STARTED_FIS_ID" --region "$REGION" \
+            --query 'experiment.state.status' --output text 2>/dev/null || echo "UNKNOWN")
+        case "$st" in
+            pending|initiating|running|UNKNOWN)
+                log "Runner exiting (rc=$rc) while experiment is $st — stopping $STARTED_FIS_ID"
+                aws fis stop-experiment --id "$STARTED_FIS_ID" --region "$REGION" >/dev/null 2>&1 || true
+                ;;
+        esac
+    fi
+    if [[ "$APPLIED_MANIFEST" == "true" ]]; then
+        local recovered
+        recovered=$(kubectl get -f "$MANIFEST" \
+            -o jsonpath='{.status.conditions[?(@.type=="AllRecovered")].status}' 2>/dev/null || echo "")
+        if [[ "$recovered" != "True" ]] && kubectl get -f "$MANIFEST" >/dev/null 2>&1; then
+            log "Runner exiting (rc=$rc) before recovery — deleting Chaos Mesh CR"
+            kubectl delete -f "$MANIFEST" --ignore-not-found >/dev/null 2>&1 || true
+        fi
+    fi
+}
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# ---------------------------------------------------------------------------
 # FIS Mode
 # ---------------------------------------------------------------------------
 run_fis() {
@@ -159,6 +211,9 @@ run_fis() {
 
     # Start new experiment if template-id provided
     if [[ -n "$TEMPLATE_ID" && -z "$EXPERIMENT_ID" ]]; then
+        local caller_account
+        caller_account=$(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "UNKNOWN")
+        log "Target account=$caller_account region=$REGION"
         log "Starting FIS experiment from template: $TEMPLATE_ID"
         local start_result
         start_result=$(aws fis start-experiment \
@@ -173,13 +228,14 @@ run_fis() {
             jq -n --arg err "$start_result" '{status:"ERROR",message:"Failed to start experiment",detail:$err}' > "$STATE_FILE"
             exit 1
         fi
+        STARTED_FIS_ID="$EXPERIMENT_ID"
         log "Experiment started: $EXPERIMENT_ID"
 
         # Save experiment ID for other scripts (monitor.sh)
         echo "$EXPERIMENT_ID" > "$OUTPUT_DIR/monitoring/experiment_id.txt"
 
         # Quick initial check — catch immediate failures (e.g., stop condition block)
-        sleep 3
+        isleep 3
         local init_status
         init_status=$(aws fis get-experiment --id "$EXPERIMENT_ID" --region "$REGION" \
             --query 'experiment.state.status' --output text 2>/dev/null || echo "UNKNOWN")
@@ -297,7 +353,7 @@ run_fis() {
                 ;;
         esac
 
-        sleep "$POLL_INTERVAL"
+        isleep "$POLL_INTERVAL"
     done
 }
 
@@ -308,8 +364,7 @@ run_chaosmesh() {
     [[ -z "$MANIFEST" ]] && { echo "ERROR: --manifest is required for chaosmesh mode" >&2; exit 1; }
     [[ ! -f "$MANIFEST" ]] && { echo "ERROR: Manifest not found: $MANIFEST" >&2; exit 1; }
 
-    local exp_ns="${NAMESPACE:-default}"
-
+    log "Target kube-context=$(kubectl config current-context 2>/dev/null || echo UNKNOWN)"
     log "Applying Chaos Mesh manifest: $MANIFEST"
     # `-o name` returns "<kind>.<group>/<name>" — more reliable than grepping
     # the YAML (metadata.name is not always the first `name:` in the file).
@@ -324,13 +379,22 @@ run_chaosmesh() {
         }
         exit 1
     fi
+    APPLIED_MANIFEST=true
     echo "$apply_out" >> "$LOG_FILE"
+
+    # Use the namespace the CR was actually created in; the manifest's own
+    # metadata.namespace wins over --namespace in kubectl apply.
+    local exp_ns
+    exp_ns=$(kubectl get -f "$MANIFEST" -o jsonpath='{.metadata.namespace}' 2>/dev/null || echo "")
+    exp_ns="${exp_ns:-${NAMESPACE:-default}}"
+    # Target pods may live in a different namespace than the CR (--namespace)
+    local pod_ns="${NAMESPACE:-$exp_ns}"
 
     # apply_out example: "podchaos.chaos-mesh.org/pod-kill-test"
     local kind exp_name
     kind="${apply_out%%/*}"      # full resource name incl. group works with kubectl get
     exp_name="${apply_out##*/}"
-    log "Applied: kind=$kind name=$exp_name ns=$exp_ns"
+    log "Applied: kind=$kind name=$exp_name ns=$exp_ns pod_ns=$pod_ns"
 
     local start_epoch
     start_epoch=$(date +%s)
@@ -390,20 +454,20 @@ run_chaosmesh() {
         if [[ "$ONE_SHOT" == "true" && "$phase" == "True" && -n "$POD_LABEL" ]]; then
             local ready_pods=0 desired_pods=0
             # Count Ready pods by label
-            ready_pods=$(kubectl get pods -n "$exp_ns" -l "$POD_LABEL" \
+            ready_pods=$(kubectl get pods -n "$pod_ns" -l "$POD_LABEL" \
                 --field-selector status.phase=Running \
                 -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' \
-                2>/dev/null | grep -c "True" || echo "0")
+                2>/dev/null | grep -c "True" || true)
             # Get desired replicas: use --deployment if given, else find by selector
             if [[ -n "$DEPLOYMENT" ]]; then
-                desired_pods=$(kubectl get deployment "$DEPLOYMENT" -n "$exp_ns" \
+                desired_pods=$(kubectl get deployment "$DEPLOYMENT" -n "$pod_ns" \
                     -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
             else
                 # Fallback: find deployment whose selector matches POD_LABEL
                 local lbl_key lbl_val
                 lbl_key="${POD_LABEL%%=*}"
                 lbl_val="${POD_LABEL#*=}"
-                desired_pods=$(kubectl get deployments -n "$exp_ns" -o json 2>/dev/null \
+                desired_pods=$(kubectl get deployments -n "$pod_ns" -o json 2>/dev/null \
                     | jq -r --arg k "$lbl_key" --arg v "$lbl_val" \
                       '.items[] | select(.spec.selector.matchLabels[$k]==$v) | .spec.replicas' \
                     2>/dev/null | head -1 || echo "0")
@@ -447,7 +511,7 @@ run_chaosmesh() {
             exit 0
         fi
 
-        sleep "$POLL_INTERVAL"
+        isleep "$POLL_INTERVAL"
     done
 }
 

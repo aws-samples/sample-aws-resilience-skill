@@ -265,7 +265,7 @@ For the Assessment Skill to recommend tools and actions for testable risks:
 | EKS node failure | FIS | `aws:eks:terminate-nodegroup-instances` |
 | ECS task failure | FIS | `aws:ecs:stop-task` |
 | EBS storage failure | FIS | `aws:ebs:pause-volume-io` |
-| ElastiCache AZ failure | FIS | `aws:elasticache:interrupt-cluster-az-power` |
+| ElastiCache AZ failure | FIS | `aws:elasticache:replicationgroup-interrupt-az-power` |
 | Spot instance interruption | FIS | `aws:ec2:send-spot-instance-interruptions` |
 | API throttling | FIS | `aws:fis:inject-api-throttle-error` |
 | S3 cross-region replication | FIS | `aws:s3:bucket-pause-replication` |
@@ -434,7 +434,7 @@ Architecture Pattern: Traditional EC2
 |---------|----------|--------------------------|
 | R-001 | Yes | FIS: `aws:ec2:terminate-instances` (EC2 failure) |
 | R-002 | Yes | FIS: `aws:rds:failover-db-cluster` (Aurora failover) |
-| R-003 | Yes | FIS: `aws:elasticache:interrupt-cluster-az-power` (Cache AZ failure) |
+| R-003 | Yes | FIS: `aws:elasticache:replicationgroup-interrupt-az-power` (Cache AZ failure) |
 | R-004 | Yes | FIS: `aws:network:disrupt-connectivity` (AZ network disruption) |
 
 ---

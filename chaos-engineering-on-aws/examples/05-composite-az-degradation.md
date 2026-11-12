@@ -41,7 +41,7 @@ EC2 stop and EBS pause start immediately (parallel). RDS failover starts 30 seco
 ## Prerequisites
 
 - [ ] Multi-AZ deployment with instances in at least 2 AZs
-- [ ] Target EC2 instances and EBS volumes tagged with `AzImpairmentPower: IceQualified`
+- [ ] Target EC2 instances and EBS volumes tagged per the official scenario: instances `AzImpairmentPower: StopInstances`, volumes `AzImpairmentPower: ApiPauseVolume`
 - [ ] RDS Aurora cluster with reader instance in another AZ
 - [ ] FIS IAM Role with required permissions (see below)
 - [ ] CloudWatch Alarm for stop condition
@@ -109,14 +109,16 @@ TEMPLATE_ID=$(aws fis create-experiment-template \
   --query 'experimentTemplate.id' --output text)
 echo "Template created: $TEMPLATE_ID"
 
-# 2. Run via experiment-runner.sh (same as single-action — no changes needed)
+# 2. Run via experiment-runner.sh — only after the user has explicitly approved the
+#    injection; --yes records that approval (without it the runner refuses to start)
 nohup bash scripts/experiment-runner.sh \
   --mode fis \
   --template-id "$TEMPLATE_ID" \
   --region ap-northeast-1 \
   --timeout 720 \
   --poll-interval 15 \
-  --output-dir output/ &
+  --output-dir output/ \
+  --yes &
 RUNNER_PID=$!
 
 # 3. Start monitoring

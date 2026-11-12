@@ -19,7 +19,7 @@
   "impact": "任一 broker 或其所在 AZ 故障即永久丢失该 topic 全部数据",
   "remediation": "将业务 topic 的 replication.factor 提升到 ≥3，并设置 min.insync.replicas=2",
   "fixImpact": {"downtime": 0, "slowness": 1, "additionalCost": 1, "needFullTest": 0},
-  "chaos_experiment_recommendation": {"fault_type": "az_network_disrupt", "priority": "P0"}
+  "chaos_experiment_recommendation": {"fault_type": "network_disrupt", "priority": "P0"}
 }
 ```
 

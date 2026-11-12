@@ -265,7 +265,7 @@ Assessment 的自由格式 Markdown 报告面向人类阅读，但混沌工程 S
 | EKS 节点故障 | FIS | `aws:eks:terminate-nodegroup-instances` |
 | ECS 任务故障 | FIS | `aws:ecs:stop-task` |
 | EBS 存储故障 | FIS | `aws:ebs:pause-volume-io` |
-| ElastiCache AZ 故障 | FIS | `aws:elasticache:interrupt-cluster-az-power` |
+| ElastiCache AZ 故障 | FIS | `aws:elasticache:replicationgroup-interrupt-az-power` |
 | Spot 实例中断 | FIS | `aws:ec2:send-spot-instance-interruptions` |
 | API 限流 | FIS | `aws:fis:inject-api-throttle-error` |
 | S3 跨区域复制 | FIS | `aws:s3:bucket-pause-replication` |
@@ -434,7 +434,7 @@ Assessment 完成后，对照以下清单确认输出完整性：
 |---------|--------|-----------|
 | R-001 | ✅ | FIS: `aws:ec2:terminate-instances`（EC2 故障） |
 | R-002 | ✅ | FIS: `aws:rds:failover-db-cluster`（Aurora 故障转移） |
-| R-003 | ✅ | FIS: `aws:elasticache:interrupt-cluster-az-power`（缓存 AZ 故障） |
+| R-003 | ✅ | FIS: `aws:elasticache:replicationgroup-interrupt-az-power`（缓存 AZ 故障） |
 | R-004 | ✅ | FIS: `aws:network:disrupt-connectivity`（AZ 网络中断） |
 
 ---

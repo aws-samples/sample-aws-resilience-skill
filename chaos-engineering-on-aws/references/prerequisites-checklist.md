@@ -325,9 +325,11 @@ When using FIS Scenario Library (composite scenarios), additional requirements a
 Scenario Library uses **mandatory tags** to identify target resources. Apply tags **before** creating the experiment:
 
 ```bash
-# For AZ Power Interruption / AZ Application Slowdown / Cross-AZ Traffic
-aws ec2 create-tags --resources <instance-id> <volume-id> \
-  --tags Key=AzImpairmentPower,Value=IceQualified
+# AZ Power Interruption: each target type has its own tag value (official Scenario Content)
+# Other scenarios: see scenario-library.md for their tags
+aws ec2 create-tags --resources <instance-id> --tags Key=AzImpairmentPower,Value=StopInstances
+aws ec2 create-tags --resources <volume-id>   --tags Key=AzImpairmentPower,Value=ApiPauseVolume
+aws ec2 create-tags --resources <subnet-id>   --tags Key=AzImpairmentPower,Value=DisruptSubnet
 
 # Verify tags
 aws ec2 describe-instances --instance-ids <id> \

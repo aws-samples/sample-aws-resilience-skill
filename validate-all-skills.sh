@@ -6,7 +6,26 @@ set -uo pipefail
 # All paths below are relative to the repo root; resolve it from the script location.
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 1
 PASS=0; FAIL=0; WARN=0
-SKILLS=("aws-resilience-modeling" "aws-rma-assessment" "chaos-engineering-on-aws" "eks-resilience-checker")
+# Auto-discover every skill folder (any top-level dir with a SKILL.md) so newly
+# added skills are validated too. Bash 3.2 compatible (no mapfile).
+SKILLS=()
+for f in */SKILL.md; do
+  [[ -f "$f" ]] && SKILLS+=("${f%/SKILL.md}")
+done
+# Bilingual router-pattern skills (SKILL.md + SKILL_EN.md + SKILL_ZH.md)
+is_bilingual() { [[ -f "$1/SKILL_EN.md" || -f "$1/SKILL_ZH.md" ]]; }
+
+# Repo files with the given extensions: git-tracked only (skips local reports and
+# experiment output), falling back to find outside a git checkout.
+list_files() {
+  local ext pats=() names=()
+  for ext in "$@"; do pats+=("*.$ext"); names+=(-o -name "*.$ext"); done
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git ls-files -- "${pats[@]}" | sort
+  else
+    find . \( "${names[@]:1}" \) ! -path './.git/*' ! -path './.kiro/*' ! -path '*/output/*' | sort
+  fi
+}
 
 pass() { echo "  ✅ $1"; ((PASS++)); }
 fail() { echo "  ❌ $1"; ((FAIL++)); }
@@ -42,26 +61,35 @@ for skill in "${SKILLS[@]}"; do
     fail "$f — 缺少 name 字段"
   fi
   
-  # description 字段
-  if grep -q '^description:' "$f" || grep -q '^description:' "$f"; then
+  # description 字段 + 长度（Agent Skills 规范上限 1024 字符）
+  if grep -q '^description:' "$f"; then
     pass "$f — 有 description 字段"
+    desc_len=$(python3 - "$f" <<'PY' 2>/dev/null
+import sys, yaml
+text = open(sys.argv[1], encoding="utf-8").read()
+fm = text.split("---", 2)[1] if text.startswith("---") else ""
+print(len(str((yaml.safe_load(fm) or {}).get("description", ""))))
+PY
+)
+    if [[ -z "$desc_len" ]]; then
+      warn "$f — 无法解析 frontmatter（需要 python3 + PyYAML）"
+    elif (( desc_len <= 1024 )); then
+      pass "$f — description ${desc_len} 字符 (≤1024)"
+    else
+      fail "$f — description ${desc_len} 字符 (>1024)"
+    fi
   else
     fail "$f — 缺少 description 字段"
   fi
   
-  # allowed-tools 字段
-  if grep -q '^allowed-tools:' "$f"; then
-    pass "$f — 有 allowed-tools 字段"
-  else
-    fail "$f — 缺少 allowed-tools 字段"
-  fi
-  
-  # model 字段
-  if grep -q '^model:' "$f"; then
-    pass "$f — 有 model 字段"
-  else
-    fail "$f — 缺少 model 字段"
-  fi
+  # allowed-tools / model：本仓库约定（非规范必需），缺失只告警
+  for field in allowed-tools model; do
+    if grep -q "^${field}:" "$f"; then
+      pass "$f — 有 $field 字段"
+    else
+      warn "$f — 缺少 $field 字段"
+    fi
+  done
 done
 
 echo ""
@@ -82,7 +110,12 @@ for skill in "${SKILLS[@]}"; do
     [[ -f "$cand" ]] && { kiro="$cand"; break; }
   done
   if [[ -z "$kiro" ]]; then
-    fail ".kiro/skills/$skill/SKILL.md 不存在（本地安装缺少该 skill，重新复制 $skill/）"
+    # Users may install only the skills they need — only a half-copied folder is an error
+    if [[ -d ".kiro/skills/$skill" ]]; then
+      fail ".kiro/skills/$skill/SKILL.md 不存在（本地安装不完整，重新复制 $skill/）"
+    else
+      echo "  ⏭  $skill — 未安装到 .kiro/skills/，跳过"
+    fi
     continue
   fi
   
@@ -102,6 +135,7 @@ echo "【3】SKILL_EN/ZH.md 行数检查（≤250 行）"
 # ──────────────────────────────────────────
 MAX_LINES=250
 for skill in "${SKILLS[@]}"; do
+  is_bilingual "$skill" || { echo "  ⏭  $skill — 单语言 skill，跳过"; continue; }
   for lang in EN ZH; do
     f="$skill/SKILL_${lang}.md"
     if [[ ! -f "$f" ]]; then
@@ -121,35 +155,38 @@ echo ""
 # ──────────────────────────────────────────
 echo "【4】内部链接检查（文件存在性）"
 # ──────────────────────────────────────────
+link_errors=0
 for skill in "${SKILLS[@]}"; do
   for f in "$skill"/SKILL_EN.md "$skill"/SKILL_ZH.md "$skill"/README.md "$skill"/README_zh.md; do
     [[ ! -f "$f" ]] && continue
     # Parse real Markdown links only ([text](target)), skip URLs and pure anchors,
-    # and strip "#anchor" before checking the file. Process substitution (not a
-    # pipe) so FAIL is counted in this shell.
+    # and strip "#anchor" before checking the file. Portable ERE (BSD grep has
+    # no -P); process substitution (not a pipe) so FAIL is counted in this shell.
     while read -r link; do
       path="${link%%#*}"
       [[ -z "$path" ]] && continue
       target="$skill/$path"
       if [[ ! -f "$target" && ! -d "$target" ]]; then
-        echo "  ❌ 断链: $f → $link"; ((FAIL++)) || true
+        fail "断链: $f → $link"; link_errors=$((link_errors + 1))
       fi
-    done < <(grep -oP '\[[^\]]*\]\(\K[^)\s]+(?=\))' "$f" 2>/dev/null | grep -vE '^(https?:|mailto:|#)')
+    done < <(grep -oE '\]\([^)[:space:]]+\)' "$f" 2>/dev/null \
+               | sed -E 's/^\]\(//; s/\)$//' | grep -vE '^(https?:|mailto:|#)')
   done
 done
-echo "  (无❌输出 = 全部通过)"
+(( link_errors == 0 )) && pass "所有内部链接有效"
 
 echo ""
 # ──────────────────────────────────────────
 echo "【5】JSON 语法检查"
 # ──────────────────────────────────────────
 json_errors=0
-find . -name '*.json' ! -path './.git/*' ! -path '*/output/*' | sort | while read f; do
-  if ! python3 -c "import json; json.load(open('$f'))" 2>/dev/null; then
-    echo "  ❌ JSON 错误: $f"
-    ((json_errors++)) || true
+# Process substitution (not a pipe): a `| while` subshell would drop the counter
+while IFS= read -r f; do
+  if ! python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$f" 2>/dev/null; then
+    fail "JSON 错误: $f"
+    json_errors=$((json_errors + 1))
   fi
-done
+done < <(list_files json)
 if (( json_errors == 0 )); then
   pass "所有 JSON 文件语法正确"
 fi
@@ -159,12 +196,22 @@ echo ""
 echo "【6】YAML 语法检查"
 # ──────────────────────────────────────────
 yaml_errors=0
-find . -name '*.yaml' -o -name '*.yml' | sort | while read f; do
-  if ! python3 -c "import yaml; list(yaml.safe_load_all(open('$f')))" 2>/dev/null; then
-    echo "  ❌ YAML 错误: $f"
-    ((yaml_errors++)) || true
-  fi
-done
+if ! python3 -c 'import yaml' 2>/dev/null; then
+  warn "未安装 PyYAML（pip install pyyaml）— 跳过 YAML 检查"
+  yaml_errors=-1
+else
+  while IFS= read -r f; do
+    # CloudFormation short-form intrinsics (!Ref, !Sub, ...) are valid YAML tags
+    if ! python3 -c '
+import sys, yaml
+class L(yaml.SafeLoader): pass
+L.add_multi_constructor("!", lambda loader, suffix, node: None)
+list(yaml.load_all(open(sys.argv[1], encoding="utf-8"), Loader=L))' "$f" 2>/dev/null; then
+      fail "YAML 错误: $f"
+      yaml_errors=$((yaml_errors + 1))
+    fi
+  done < <(list_files yaml yml)
+fi
 if (( yaml_errors == 0 )); then
   pass "所有 YAML 文件语法正确"
 fi
@@ -174,6 +221,7 @@ echo ""
 echo "【7】EN/ZH 对称性检查"
 # ──────────────────────────────────────────
 for skill in "${SKILLS[@]}"; do
+  is_bilingual "$skill" || { echo "  ⏭  $skill — 单语言 skill，跳过"; continue; }
   # SKILL 文件对称
   if [[ -f "$skill/SKILL_EN.md" && -f "$skill/SKILL_ZH.md" ]]; then
     pass "$skill — SKILL_EN/ZH 都存在"
@@ -230,8 +278,11 @@ for skill in "${SKILLS[@]}"; do
   tokens=$(( total_chars / 3 ))
   if (( tokens <= TOKEN_LIMIT )); then
     pass "$skill 初始加载 — ~${tokens} tokens (≤${TOKEN_LIMIT})"
-  else
+  elif is_bilingual "$skill"; then
     fail "$skill 初始加载 — ~${tokens} tokens (>${TOKEN_LIMIT})"
+  else
+    # Single-language skills keep the full workflow in SKILL.md (no router split)
+    warn "$skill 初始加载 — ~${tokens} tokens (>${TOKEN_LIMIT}，单语言 skill)"
   fi
 done
 
@@ -261,8 +312,37 @@ for skill in "${SKILLS[@]}"; do
 done
 
 echo ""
+# ──────────────────────────────────────────
+echo "【11】eks-resilience-checker EXP_MAP ↔ chaos fault-catalog 一致性"
+# ──────────────────────────────────────────
+# assess.sh recommends fault types that chaos-engineering-on-aws consumes; every
+# type|backend pair must exist in fault-catalog.yaml or the hand-off breaks.
+ASSESS="eks-resilience-checker/scripts/assess.sh"
+CATALOG="chaos-engineering-on-aws/references/fault-catalog.yaml"
+if [[ -f "$ASSESS" && -f "$CATALOG" ]] && python3 -c 'import yaml' 2>/dev/null; then
+  map_errors=0
+  while IFS='|' read -r check_id ftype backend; do
+    if python3 - "$CATALOG" "$ftype" "$backend" <<'PY'
+import sys, yaml
+cat = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+ok = any(e.get("type") == sys.argv[2] and e.get("backend") == sys.argv[3]
+         for entries in cat.values() if isinstance(entries, list) for e in entries)
+sys.exit(0 if ok else 1)
+PY
+    then :; else
+      fail "$ASSESS EXP_MAP[$check_id]: $ftype|$backend 不在 $CATALOG 中"
+      map_errors=$((map_errors + 1))
+    fi
+  done < <(sed -nE 's/^ *EXP_MAP\["([A-Z0-9]+)"\]="([a-z0-9_]+)\|P[0-9]\|([a-z-]+)\|.*/\1|\2|\3/p' "$ASSESS")
+  (( map_errors == 0 )) && pass "EXP_MAP 故障类型全部存在于 fault-catalog.yaml"
+else
+  echo "  ⏭  缺少 $ASSESS / $CATALOG 或 PyYAML — 跳过"
+fi
+
+echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "  结果: ✅ $PASS passed | ❌ $FAIL failed | ⚠️  $WARN warnings"
 echo "═══════════════════════════════════════════════════════════════"
 
-exit $FAIL
+# Exit status is 0/1: a raw count would wrap modulo 256 (256 failures → exit 0)
+(( FAIL == 0 ))

@@ -60,7 +60,7 @@ aws cloudwatch put-metric-alarm \
     "elasticache-rg": {
       "resourceType": "aws:elasticache:replicationgroup",
       "resourceTags": {
-        "AzImpairmentPower": "ElasticacheImpact"
+        "AzImpairmentPower": "DisruptElasticache"
       },
       "parameters": {
         "availabilityZoneIdentifier": "{target-az}"
@@ -133,7 +133,7 @@ No AWS managed policy exists for ElastiCache FIS actions. Attach an inline polic
 # Tag the replication group
 aws elasticache add-tags-to-resource \
   --resource-name "arn:aws:elasticache:{region}:{account}:replicationgroup:{rg-id}" \
-  --tags Key=AzImpairmentPower,Value=ElasticacheImpact
+  --tags Key=AzImpairmentPower,Value=DisruptElasticache
 
 # Check pre-experiment state
 aws elasticache describe-replication-groups \

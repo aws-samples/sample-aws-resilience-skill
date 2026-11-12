@@ -10,15 +10,15 @@
 | Check FAIL | Fault Type | Backend | Priority | Hypothesis |
 |------------|-----------|---------|----------|------------|
 | A1: Singleton Pod | pod_kill | chaosmesh | P0 | Killing singleton pod causes permanent service loss until manual intervention |
-| A2: Single Replica | pod_kill / fis_eks_pod_delete | chaosmesh/fis | P0 | Single-replica service has guaranteed downtime (~30-60s) on pod failure |
-| A3: No Anti-Affinity | fis_eks_terminate_node | fis | P1 | All replicas on same node = single point of failure |
-| A4: No Liveness Probe | pod_cpu_stress | chaosmesh | P1 | Zombie process won't be detected/restarted without probe |
+| A2: Single Replica | pod_kill | chaosmesh | P0 | Single-replica service has guaranteed downtime (~30-60s) on pod failure |
+| A3: No Anti-Affinity | eks_terminate_nodes | fis | P1 | All replicas on same node = single point of failure |
+| A4: No Liveness Probe | cpu_stress | chaosmesh | P1 | Zombie process won't be detected/restarted without probe |
 | A5: No Readiness Probe | network_delay | chaosmesh | P1 | Traffic still routes to degraded pod without readiness gate |
-| A6: No PDB | fis_eks_terminate_node | fis | P1 | Node drain evicts all replicas simultaneously |
-| A8: No HPA | pod_cpu_stress | chaosmesh | P2 | Cannot auto-scale under load spike |
-| D1: No Node Autoscaler | fis_ssm_cpu_stress | fis | P1 | Node resource exhaustion blocks new pod scheduling |
-| D2: Single AZ | fis_network_disrupt / fis_scenario_az_power_interruption | fis | P0 | AZ failure = total cluster outage |
-| D3: No Resource Limits | pod_memory_stress | chaosmesh | P1 | Noisy neighbor affects co-located pods |
+| A6: No PDB | eks_terminate_nodes | fis | P1 | Node drain evicts all replicas simultaneously |
+| A8: No HPA | cpu_stress | chaosmesh | P2 | Cannot auto-scale under load spike |
+| D1: No Node Autoscaler | cpu_stress | chaosmesh | P1 | Node resource exhaustion blocks new pod scheduling |
+| D2: Single AZ | network_disrupt / az_power_interruption | fis | P0 | AZ failure = total cluster outage |
+| D3: No Resource Limits | memory_stress | chaosmesh | P1 | Noisy neighbor affects co-located pods |
 
 ---
 
@@ -51,7 +51,7 @@ Singleton pods (pods without a controller like Deployment or ReplicaSet) have no
 
 ---
 
-### A2: Single Replica → pod_kill / fis_eks_pod_delete
+### A2: Single Replica → pod_kill
 
 **优先级**: P0
 
@@ -60,7 +60,7 @@ A Deployment or StatefulSet with `replicas: 1` has a controller that will recrea
 
 **假设**:
 > **Steady State**: The service handles requests at normal throughput with p99 latency < 500ms and zero 5xx errors.
-> **Turbulent Action**: Delete the single pod via `pod_kill` (ChaosMesh) or `fis_eks_pod_delete` (FIS).
+> **Turbulent Action**: Delete the single pod via `pod_kill` (Chaos Mesh).
 > **Expected Outcome**: Service is unavailable for 30-60 seconds. The controller recreates the pod. Recovery time depends on image pull + startup + readiness probe.
 
 **建议持续时间**: 5 minutes (including recovery observation)
@@ -79,7 +79,7 @@ A Deployment or StatefulSet with `replicas: 1` has a controller that will recrea
 
 ---
 
-### A3: No Anti-Affinity → fis_eks_terminate_node
+### A3: No Anti-Affinity → eks_terminate_nodes
 
 **优先级**: P1
 
@@ -88,7 +88,7 @@ Without pod anti-affinity rules, the Kubernetes scheduler may place all replicas
 
 **假设**:
 > **Steady State**: The multi-replica service processes requests across all pods with balanced load distribution.
-> **Turbulent Action**: Terminate the EC2 instance hosting the application pods using `fis_eks_terminate_node`.
+> **Turbulent Action**: Terminate the EC2 instance hosting the application pods using `eks_terminate_nodes`.
 > **Expected Outcome**: If anti-affinity is missing and all pods are on the terminated node, service experiences complete outage until pods are rescheduled to surviving nodes. If pods happen to be spread, service continues but this is luck-dependent, not guaranteed.
 
 **建议持续时间**: 10 minutes (node termination + pod rescheduling + stabilization)
@@ -108,7 +108,7 @@ Without pod anti-affinity rules, the Kubernetes scheduler may place all replicas
 
 ---
 
-### A4: No Liveness Probe → pod_cpu_stress
+### A4: No Liveness Probe → cpu_stress
 
 **优先级**: P1
 
@@ -117,7 +117,7 @@ Without a liveness probe, Kubernetes has no mechanism to detect that a container
 
 **假设**:
 > **Steady State**: Application serves requests with p99 latency < 500ms and CPU usage < 50%.
-> **Turbulent Action**: Inject CPU stress into the target pod using `pod_cpu_stress` (90% CPU for 2 minutes).
+> **Turbulent Action**: Inject CPU stress into the target pod using `cpu_stress` (90% CPU for 2 minutes).
 > **Expected Outcome**: The pod becomes unresponsive. Without a liveness probe, Kubernetes does NOT restart the container. The pod stays in `Running` state but cannot serve traffic. Service degradation persists until manual intervention.
 
 **建议持续时间**: 5 minutes (2 min stress + 3 min observation)
@@ -167,7 +167,7 @@ Without a readiness probe, Kubernetes considers a pod "ready" to receive traffic
 
 ---
 
-### A6: No PDB → fis_eks_terminate_node
+### A6: No PDB → eks_terminate_nodes
 
 **优先级**: P1
 
@@ -176,7 +176,7 @@ Without a PodDisruptionBudget (PDB), voluntary disruptions like node drains (dur
 
 **假设**:
 > **Steady State**: The multi-replica service serves traffic with zero downtime. All replicas are healthy.
-> **Turbulent Action**: Terminate a worker node using `fis_eks_terminate_node`, which triggers pod eviction.
+> **Turbulent Action**: Terminate a worker node using `eks_terminate_nodes`, which triggers pod eviction.
 > **Expected Outcome**: Without PDB, the drain process evicts pods as fast as possible with no availability guarantee. If multiple replicas are on the same node, all are evicted simultaneously, causing a service outage until rescheduling completes.
 
 **建议持续时间**: 10 minutes (drain + reschedule + stabilization)
@@ -196,7 +196,7 @@ Without a PodDisruptionBudget (PDB), voluntary disruptions like node drains (dur
 
 ---
 
-### A8: No HPA → pod_cpu_stress
+### A8: No HPA → cpu_stress
 
 **优先级**: P2
 
@@ -205,7 +205,7 @@ Without a Horizontal Pod Autoscaler (HPA), the application cannot automatically 
 
 **假设**:
 > **Steady State**: Application serves requests with p99 latency < 500ms at normal load. Replica count is stable.
-> **Turbulent Action**: Inject CPU stress (80% CPU) on all existing pods simultaneously using `pod_cpu_stress`.
+> **Turbulent Action**: Inject CPU stress (80% CPU) on all existing pods simultaneously using `cpu_stress`.
 > **Expected Outcome**: All pods become CPU-saturated. Without HPA, no additional replicas are created. Latency increases significantly (5-10x). Throughput drops. Service remains in degraded state for the duration of the stress.
 
 **建议持续时间**: 5 minutes stress + 5 minutes recovery observation
@@ -226,7 +226,7 @@ Without a Horizontal Pod Autoscaler (HPA), the application cannot automatically 
 
 ---
 
-### D1: No Node Autoscaler → fis_ssm_cpu_stress
+### D1: No Node Autoscaler → cpu_stress
 
 **优先级**: P1
 
@@ -235,7 +235,7 @@ Without a node autoscaler (Cluster Autoscaler or Karpenter), the cluster has a f
 
 **假设**:
 > **Steady State**: Cluster has sufficient capacity. All pods are `Running`. No `Pending` pods exist.
-> **Turbulent Action**: Inject CPU stress on all worker nodes using `fis_ssm_cpu_stress` (90% CPU), then trigger a workload that requires new pod scheduling.
+> **Turbulent Action**: Inject CPU stress on all worker nodes using `cpu_stress` (Chaos Mesh StressChaos on pods spread across every node, 90% CPU), then trigger a workload that requires new pod scheduling.
 > **Expected Outcome**: Existing nodes are fully utilized. New pods enter `Pending` state. Without node autoscaler, no new EC2 instances are launched. Pods remain `Pending` indefinitely until stress is removed or manual node scaling occurs.
 
 **建议持续时间**: 10 minutes (stress + scheduling attempt + observation)
@@ -257,7 +257,7 @@ Without a node autoscaler (Cluster Autoscaler or Karpenter), the cluster has a f
 
 ---
 
-### D2: Single AZ → fis_network_disrupt / fis_scenario_az_power_interruption
+### D2: Single AZ → network_disrupt / az_power_interruption
 
 **优先级**: P0
 
@@ -266,7 +266,7 @@ If all worker nodes are in a single Availability Zone, an AZ-level failure (netw
 
 **假设**:
 > **Steady State**: Application serves traffic normally. All nodes and pods are healthy across available AZs.
-> **Turbulent Action**: Disrupt network connectivity to the AZ hosting all nodes using `fis_network_disrupt`, or simulate a complete AZ power interruption using `fis_scenario_az_power_interruption`.
+> **Turbulent Action**: Disrupt network connectivity to the AZ hosting all nodes using `network_disrupt`, or simulate a complete AZ power interruption using `az_power_interruption`.
 > **Expected Outcome**: All nodes in the affected AZ become `NotReady`. All pods on those nodes are evicted after the node `NotReady` toleration timeout (default 5 minutes). If single-AZ, the entire cluster workload is lost. No failover is possible because there are no nodes in other AZs.
 
 **建议持续时间**: 15 minutes (disruption + eviction timeout + recovery observation)
@@ -289,7 +289,7 @@ If all worker nodes are in a single Availability Zone, an AZ-level failure (netw
 
 ---
 
-### D3: No Resource Limits → pod_memory_stress
+### D3: No Resource Limits → memory_stress
 
 **优先级**: P1
 
@@ -298,7 +298,7 @@ Without resource limits, a single container can consume unbounded CPU and memory
 
 **假设**:
 > **Steady State**: Multiple pods on the same node each serve their traffic normally. Memory usage is within expected ranges.
-> **Turbulent Action**: Inject memory stress into one pod (consuming 1-2 GB additional memory) using `pod_memory_stress`.
+> **Turbulent Action**: Inject memory stress into one pod (consuming 1-2 GB additional memory) using `memory_stress`.
 > **Expected Outcome**: The stressed pod's memory usage grows without constraint. Node memory pressure increases. The kubelet begins evicting pods based on QoS class. Co-located pods (especially BestEffort class, which have no resource specs) are evicted first. Services running on the same node experience disruption unrelated to their own behavior.
 
 **建议持续时间**: 5 minutes

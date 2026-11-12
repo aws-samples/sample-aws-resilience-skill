@@ -77,7 +77,7 @@ Script parameters: [scripts/README.md](scripts/README.md)
 2. **Mandatory stop conditions**: Every FIS experiment binds a CloudWatch Alarm. Stop condition alarms **must** use `--treat-missing-data notBreaching` to prevent false triggers during experiment startup
 3. **Progressive**: Staging → Production, single fault → cascading
 4. **Reversible**: All experiments require rollback plans
-5. **Human confirmation**: Production requires double confirmation
+5. **Human confirmation**: STOP before every injection in every environment — show account/region (or kube-context), targets, blast radius and stop conditions; pass `--yes` to the runner only after explicit approval. Production additionally requires double confirmation
 6. **Monitoring first**: 🔴 Not Ready → Block
 
 Anti-patterns to detect: skip staging, no hypothesis, no stop condition, no observability, full-scale first attempt.

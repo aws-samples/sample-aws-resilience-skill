@@ -9,7 +9,7 @@
     "app-subnets": {
       "resourceType": "aws:ec2:subnet",
       "resourceTags": {
-        "AzImpairmentPower": "IceQualified"
+        "AzImpairmentPower": "DisruptSubnet"
       },
       "filters": [
         {

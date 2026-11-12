@@ -427,6 +427,11 @@ Alarms bound to low-traffic resources (e.g., Lambda, infrequently-used APIs) oft
    This makes alarms report OK when data is missing, which is correct for chaos stop
    conditions — no data means no errors.
 
+   > ⚠️ Only do this for alarms this skill created (`chaos-*` / `fis-stop-*`).
+   > `put-metric-alarm` replaces the alarm's whole configuration, so never run it
+   > against a pre-existing customer alarm — with the user's approval, create a
+   > dedicated `fis-stop-<experiment>` alarm on the same metric instead.
+
 2. **Generate traffic to warm up the alarm** (if alarm already exists and you don't want to modify it):
    ```bash
    # Lambda example: invoke a few times to produce data points
@@ -440,6 +445,8 @@ Alarms bound to low-traffic resources (e.g., Lambda, infrequently-used APIs) oft
    ```
 
 3. **Temporarily remove the alarm as Stop Condition** (last resort):
+   - Only with the user's explicit approval, and only if at least one other working
+     stop condition remains bound — never run an experiment without one.
    - Remove from FIS template, run experiment, add back after.
    - ⚠️ Only for non-production environments.
 
@@ -469,9 +476,13 @@ Monitoring:
 □ Stop Condition Alarms ready **and in OK state**
   - Check: `aws cloudwatch describe-alarms --alarm-names <names> --query 'MetricAlarms[].StateValue'`
   - If any alarm shows `INSUFFICIENT_DATA`:
-    → Auto-fix: `aws cloudwatch put-metric-alarm ... --treat-missing-data notBreaching`
+    → Do NOT modify the existing alarm: `put-metric-alarm` replaces its whole
+      configuration (actions, thresholds, periods) and it may be a production alarm
+    → Warn the user and offer, **only with explicit approval**, to create a
+      dedicated `fis-stop-<experiment>` alarm on the same metric with
+      `--treat-missing-data notBreaching` (see 3.8 "Handling INSUFFICIENT_DATA State")
     → Re-check state after 60 seconds
-    → If still not OK: warn user, suggest traffic warmup or temporary removal
+    → If still not OK: warn user, suggest traffic warmup; do not start the experiment
 □ output/monitoring/metric-queries.json exists (generated in Step 3)
 
 Safety:
@@ -488,7 +499,7 @@ Team:
 □ On-call personnel in position
 ```
 
-Automatic remediation: FIS Role missing → generate creation command; Alarm missing → generate `put-metric-alarm`; Monitoring 🔴 → Block.
+Automatic remediation: FIS Role missing → generate creation command; Alarm missing → generate a `put-metric-alarm` command for a new dedicated `fis-stop-*` alarm and run it only after user approval (never modify existing alarms); Monitoring 🔴 → Block.
 
 **Output**: `output/checkpoints/step4-validation.json`
 
@@ -530,17 +541,22 @@ Launch all background processes, then `wait`:
 > injection window are essential for error classification and MTTR calculation
 > in the report (Section 4: Log Analysis).
 
+> 🛑 **STOP — approval before every injection (all environments)**: show the user the target
+> account + region (or kube-context), the template/manifest, targets and blast radius, and the
+> stop-condition alarms. Pass `--yes` to `experiment-runner.sh` only after the user explicitly
+> approves in this conversation; the runner refuses to inject without it.
+
 ```bash
 # FIS experiment:
 nohup bash scripts/experiment-runner.sh --mode fis --template-id "$TEMPLATE_ID" \
-    --region "$REGION" --state-exp-id "EXP-001" --output-dir output/ &
+    --region "$REGION" --state-exp-id "EXP-001" --output-dir output/ --yes &
 RUNNER_PID=$!
 
 # Chaos Mesh experiment (one-shot actions like pod-kill):
 nohup bash scripts/experiment-runner.sh --mode chaosmesh \
     --manifest output/templates/pod-kill.yaml --namespace "$NAMESPACE" \
     --one-shot --pod-label "app=petsite" --deployment "petsite-deployment" \
-    --state-exp-id "EXP-001" --output-dir output/ &
+    --state-exp-id "EXP-001" --output-dir output/ --yes &
 RUNNER_PID=$!
 
 # Monitor — FIS: experiment-runner writes the ID; monitor stops when FIS completes

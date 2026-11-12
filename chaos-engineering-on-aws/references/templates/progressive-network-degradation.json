@@ -4,7 +4,7 @@
     "app-subnets": {
       "resourceType": "aws:ec2:subnet",
       "resourceTags": {
-        "AzImpairmentPower": "IceQualified"
+        "AzImpairmentPower": "DisruptSubnet"
       },
       "filters": [
         {
@@ -58,7 +58,7 @@
       "parameters": {
         "duration": "PT3M",
         "invocationPercentage": "50",
-        "delayMilliseconds": "2000"
+        "startupDelayMilliseconds": "2000"
       },
       "targets": {
         "Functions": "lambda-functions"

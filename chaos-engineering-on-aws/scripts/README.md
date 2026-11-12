@@ -13,19 +13,22 @@ bash scripts/experiment-runner.sh --mode <fis|chaosmesh> [options]
 | `--mode` | Yes | — | `fis` or `chaosmesh` |
 | `--template-id` | FIS mode | — | FIS experiment template ID |
 | `--manifest` | CM mode | — | Chaos Mesh YAML manifest path |
-| `--namespace` | CM mode | `default` | Kubernetes namespace |
+| `--namespace` | CM mode | `default` | Namespace of the target pods/deployment. The CR is tracked in the namespace it was created in (manifest `metadata.namespace`) |
 | `--region` | FIS mode | `$AWS_DEFAULT_REGION` | AWS region |
 | `--timeout` | No | `600` | Max seconds before auto-stop |
 | `--poll-interval` | No | `15` | Seconds between status checks |
 | `--output-dir` | No | `output/` | Output directory for state files |
 | `--state-exp-id` | No | — | Experiment ID in state.json (e.g., EXP-001) for dashboard/recovery updates |
 | `--experiment-id` | No | — | Existing FIS experiment ID (monitor-only mode: skip creation, just poll status) |
+| `--yes` | To inject | false | Confirms the user approved this injection. Required to start a FIS experiment or apply a manifest; not needed with `--experiment-id` |
 | `--quiet` | No | false | Minimal output (for background use) |
 | `--one-shot` | No | false | One-shot injection mode (pod-kill): complete when AllInjected=True + pods Ready |
 | `--pod-label` | No | — | Pod label selector for `--one-shot` completion check (e.g., `app=petsite`) |
 | `--deployment` | No | — | Deployment name for `--one-shot` replica count (e.g., `petsite-deployment`). If omitted, auto-discovers via selector match |
 
-**Exit codes**: 0=completed, 1=failed, 2=timeout
+**Exit codes**: 0=completed, 1=failed, 2=timeout, 130/143=interrupted
+
+**Abnormal exit cleanup**: on SIGINT/SIGTERM/SIGHUP or an unexpected error, the runner stops the FIS experiment it started (or deletes the Chaos Mesh CR if not yet recovered). To abort a background (`nohup ... &`) run use `kill <PID>` (SIGTERM): background jobs ignore SIGINT. SIGKILL cannot be trapped — stop the experiment manually in that case.
 
 **Output files**:
 - `output/checkpoints/step5-experiment.json` — experiment status

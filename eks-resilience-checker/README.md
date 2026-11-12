@@ -154,7 +154,7 @@ When the account has many EKS clusters, use `multi-cluster-assess.sh` to orchest
 `multi-cluster-assess.sh` handles this by:
 - Running clusters sequentially or in small bounded batches (default concurrency: 2)
 - Sleeping between clusters/batches (default: 5s) to stay under account-level throttling limits
-- Switching kubeconfig context (`aws eks update-kubeconfig`) before each cluster automatically
+- Giving each cluster its own isolated kubeconfig file (`aws eks update-kubeconfig --kubeconfig ...`), so parallel runs never assess the wrong cluster
 - Setting `AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS=10` so transient throttling is retried instead of silently degrading results
 - Producing a cross-cluster rollup report sorted by compliance score, so you know which cluster to fix first
 
@@ -181,7 +181,7 @@ chmod +x multi-cluster-assess.sh
 | `--output-dir` | No | `./output` | Base directory; each cluster gets its own `output/<cluster-name>/` subfolder |
 | `--concurrency` | No | `2` | Max clusters assessed in parallel |
 | `--delay` | No | `5` | Seconds to sleep between clusters/batches |
-| `--skip-kubeconfig-update` | No | off | Skip the automatic `aws eks update-kubeconfig` call (use if kubeconfig is pre-provisioned for all clusters) |
+| `--skip-kubeconfig-update` | No | off | Skip the automatic `aws eks update-kubeconfig` call (use if kubeconfig is pre-provisioned for all clusters; each cluster's context is matched by name or EKS ARN and extracted into an isolated per-cluster kubeconfig) |
 
 Output layout:
 

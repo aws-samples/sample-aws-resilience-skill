@@ -422,6 +422,10 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
    这样告警在缺少数据时报告 OK，这对混沌实验的停止条件是正确的——没有数据就意味着
    没有错误。
 
+   > ⚠️ 仅对本 skill 创建的告警（`chaos-*` / `fis-stop-*`）这样做。
+   > `put-metric-alarm` 会覆盖告警的全部配置，切勿对客户已有的告警执行——
+   > 应在用户批准后，基于同一指标新建专用的 `fis-stop-<experiment>` 告警。
+
 2. **制造流量预热告警**（告警已存在且你不想修改它时）：
    ```bash
    # Lambda 示例：调用几次以产生数据点
@@ -435,6 +439,8 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
    ```
 
 3. **临时把该告警从 Stop Condition 中移除**（最后手段）：
+   - 仅在用户明确批准、且仍有至少一个可用的停止条件绑定时才可这样做——
+     绝不能在没有停止条件的情况下运行实验。
    - 从 FIS 模板中移除，运行实验，结束后再加回来。
    - ⚠️ 仅限非生产环境。
 
@@ -464,9 +470,12 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
 □ Stop Condition Alarm 已就绪**且处于 OK 状态**
   - 检查：`aws cloudwatch describe-alarms --alarm-names <names> --query 'MetricAlarms[].StateValue'`
   - 如果有告警显示 `INSUFFICIENT_DATA`：
-    → 自动修复：`aws cloudwatch put-metric-alarm ... --treat-missing-data notBreaching`
+    → 不要修改现有告警：`put-metric-alarm` 会覆盖其全部配置（动作、阈值、周期），
+      而它可能是生产告警
+    → 警告用户，并**仅在用户明确批准后**，基于同一指标新建专用的
+      `fis-stop-<experiment>` 告警，设置 `--treat-missing-data notBreaching`（见 3.8 “处理 INSUFFICIENT_DATA 状态”）
     → 60 秒后重新检查状态
-    → 仍不是 OK：警告用户，建议流量预热或临时移除
+    → 仍不是 OK：警告用户，建议流量预热；不要启动实验
 □ output/monitoring/metric-queries.json 存在（步骤 3 生成）
 
 安全：
@@ -483,7 +492,7 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
 □ 值班人员已就位
 ```
 
-自动补救：FIS Role 缺失 → 生成创建命令；Alarm 缺失 → 生成 `put-metric-alarm`；监控 🔴 → 阻断。
+自动补救：FIS Role 缺失 → 生成创建命令；Alarm 缺失 → 为新的专用 `fis-stop-*` 告警生成 `put-metric-alarm` 命令，经用户批准后才执行（绝不修改现有告警）；监控 🔴 → 阻断。
 
 **输出**：`output/checkpoints/step4-validation.json`
 
@@ -523,17 +532,21 @@ FIS 要求实验启动前所有 Stop Condition 告警都处于 `OK` 状态。
 > 即使是很短的实验也不要跳过 log-collector。注入窗口期间的 Pod 日志
 > 是报告中错误分类和 MTTR 计算的必要数据（Section 4: Log Analysis）。
 
+> 🛑 **STOP — 每次注入前都必须获得批准（所有环境）**：向用户展示目标账号 + region（或 kube-context）、
+> 模板/manifest、目标与爆炸半径、停止条件告警。只有用户在本次对话中明确批准后，才给
+> `experiment-runner.sh` 传 `--yes`；不带 `--yes` 时 runner 会拒绝注入。
+
 ```bash
 # FIS 实验：
 nohup bash scripts/experiment-runner.sh --mode fis --template-id "$TEMPLATE_ID" \
-    --region "$REGION" --state-exp-id "EXP-001" --output-dir output/ &
+    --region "$REGION" --state-exp-id "EXP-001" --output-dir output/ --yes &
 RUNNER_PID=$!
 
 # Chaos Mesh 实验（pod-kill 等一次性 action）：
 nohup bash scripts/experiment-runner.sh --mode chaosmesh \
     --manifest output/templates/pod-kill.yaml --namespace "$NAMESPACE" \
     --one-shot --pod-label "app=petsite" --deployment "petsite-deployment" \
-    --state-exp-id "EXP-001" --output-dir output/ &
+    --state-exp-id "EXP-001" --output-dir output/ --yes &
 RUNNER_PID=$!
 
 # Monitor — FIS：experiment-runner 写出实验 ID；FIS 实验结束时 monitor 自动停止

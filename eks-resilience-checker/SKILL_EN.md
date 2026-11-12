@@ -185,9 +185,9 @@ Map FAIL items to chaos experiments. See [fail-to-experiment-mapping.md](referen
 |------------|-----------|----------|------------|
 | A1: Singleton Pod | pod_kill | P0 | Permanent loss until manual restart |
 | A2: Single Replica | pod_kill | P0 | Service downtime ~30-60s |
-| A3: No Anti-Affinity | node_terminate | P1 | Node loss may kill all replicas |
+| A3: No Anti-Affinity | eks_terminate_nodes | P1 | Node loss may kill all replicas |
 | D1: No Node Autoscaler | cpu_stress | P1 | Resource exhaustion blocks scheduling |
-| D2: Single AZ | az_network_disrupt | P0 | Complete cluster unavailability |
+| D2: Single AZ | network_disrupt | P0 | Complete cluster unavailability |
 
 For each FAIL with a mapping, generate experiment recommendation entries in `assessment.json`. Sort by priority (P0 > P1 > P2).
 

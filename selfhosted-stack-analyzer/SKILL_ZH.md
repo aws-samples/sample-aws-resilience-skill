@@ -207,14 +207,14 @@ python3 scripts/generate-html-report.py analysis-output/weakness-report-{date}.m
 ```
 
 **示例**：
-- `开始采集 926093770964，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
+- `开始采集 123456789012，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
 - `开始采集 prod-profile，us-east-1 的系统环境，就进入采集阶段，并开始分析`
-- `Start collecting the environment for account 926093770964, region ap-northeast-1, then run the analysis`
+- `Start collecting the environment for account 123456789012, region ap-northeast-1, then run the analysis`
 
 **AI 收到这句话后必须执行的完整流程**（不在中途逐项确认，除非缺关键信息或发现证据不足）：
 
 1. **解析参数**：从句子中提取 `<账号/Profile>` 和 `<region>`。
-   - `<账号/Profile>` 可以是 AWS Account ID（如 `926093770964`）、`AWS_PROFILE` 名称，或"当前登录账号"（若用户未指定，用 `aws sts get-caller-identity` 确认当前账号并告知用户，不擅自换账号）。
+   - `<账号/Profile>` 可以是 AWS Account ID（如 `123456789012`）、`AWS_PROFILE` 名称，或"当前登录账号"（若用户未指定，用 `aws sts get-caller-identity` 确认当前账号并告知用户，不擅自换账号）。
    - 若账号或 region 缺失/含糊，**必须先追问**，不能猜测账号信息。
 
 2. **自动判定承载底座**（不追问用户，AI 自己查）：

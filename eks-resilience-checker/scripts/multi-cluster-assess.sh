@@ -26,7 +26,8 @@ fi
 # This wrapper:
 #   1. Discovers clusters (via --discover) or takes an explicit --clusters list
 #   2. Runs assess.sh against each cluster SEQUENTIALLY by default (or with a
-#      small bounded concurrency), switching kubeconfig context per cluster
+#      small bounded concurrency), each with its own isolated KUBECONFIG file
+#      so concurrent runs never share (or race on) the current-context
 #   3. Adds inter-cluster delay + adaptive AWS SDK retries to absorb throttling
 #   4. Aggregates all assessment.json summaries into one rollup report,
 #      sorted by compliance score, so the customer can prioritize which
@@ -44,6 +45,7 @@ OUTPUT_DIR="./output"
 CONCURRENCY=2
 DELAY_SECONDS=5
 SKIP_KUBECONFIG_UPDATE=0
+KUBECONFIG_DIR=""
 
 usage() {
   cat <<'USAGE'
@@ -57,7 +59,8 @@ Options:
   --output-dir DIR        Base output directory; each cluster gets its own subfolder (default: ./output)
   --concurrency N         Max clusters to assess in parallel (default: 2)
   --delay SECONDS         Delay between cluster runs, or between batches if concurrency>1 (default: 5)
-  --skip-kubeconfig-update  Do not run `aws eks update-kubeconfig` per cluster (use if kubeconfig is pre-provisioned)
+  --skip-kubeconfig-update  Do not run `aws eks update-kubeconfig` per cluster (use if kubeconfig is pre-provisioned);
+                          each cluster's context is then extracted from the existing kubeconfig by name/ARN
   -h, --help              Show this help
 
 Examples:
@@ -104,10 +107,34 @@ run_one_cluster() {
 
   log "=== [$cluster] starting assessment ==="
 
+  # Per-cluster kubeconfig: assess.sh uses the current-context, so a shared
+  # ~/.kube/config would let parallel runs assess the wrong cluster.
+  local kcfg="$KUBECONFIG_DIR/$cluster.kubeconfig"
   if [[ "$SKIP_KUBECONFIG_UPDATE" -eq 0 ]]; then
-    if ! aws eks update-kubeconfig --name "$cluster" --region "$REGION" >"$cluster_out/kubeconfig-update.log" 2>&1; then
+    if ! aws eks update-kubeconfig --name "$cluster" --region "$REGION" \
+        --kubeconfig "$kcfg" >"$cluster_out/kubeconfig-update.log" 2>&1; then
       log "=== [$cluster] FAILED: could not update kubeconfig — see $cluster_out/kubeconfig-update.log ==="
       echo '{"cluster_name":"'"$cluster"'","error":"kubeconfig_update_failed"}' > "$cluster_out/assessment.json"
+      return 1
+    fi
+  else
+    # Pick the pre-provisioned context for this cluster: an EKS ARN in --region
+    # first, else an exact plain-name context. Refuse if the match is ambiguous
+    # (e.g. same cluster name in two accounts) rather than guess.
+    local ctx matches
+    matches=$(kubectl config get-contexts -o name 2>/dev/null \
+      | grep -E "^arn:aws[a-z-]*:eks:${REGION}:[0-9]+:cluster/${cluster}\$" || true)
+    [[ -n "$matches" ]] || matches=$(kubectl config get-contexts -o name 2>/dev/null \
+      | grep -xF "$cluster" || true)
+    if [[ $(printf '%s\n' "$matches" | grep -c .) -gt 1 ]]; then
+      log "=== [$cluster] FAILED: multiple kubeconfig contexts match — run without --skip-kubeconfig-update ==="
+      echo '{"cluster_name":"'"$cluster"'","error":"kubeconfig_context_ambiguous"}' > "$cluster_out/assessment.json"
+      return 1
+    fi
+    ctx="$matches"
+    if [[ -z "$ctx" ]] || ! kubectl config view --minify --flatten --context "$ctx" >"$kcfg" 2>"$cluster_out/kubeconfig-update.log"; then
+      log "=== [$cluster] FAILED: no kubeconfig context found for this cluster (--skip-kubeconfig-update) ==="
+      echo '{"cluster_name":"'"$cluster"'","error":"kubeconfig_context_not_found"}' > "$cluster_out/assessment.json"
       return 1
     fi
   fi
@@ -117,7 +144,7 @@ run_one_cluster() {
 
   # Adaptive retry absorbs transient EKS API throttling instead of failing silently
   local rc=0
-  AWS_RETRY_MODE=adaptive AWS_MAX_ATTEMPTS=10 "$ASSESS_SH" "${args[@]}" >"$cluster_out/assess.log" 2>&1 || rc=$?
+  KUBECONFIG="$kcfg" AWS_RETRY_MODE=adaptive AWS_MAX_ATTEMPTS=10 "$ASSESS_SH" "${args[@]}" >"$cluster_out/assess.log" 2>&1 || rc=$?
 
   if [[ $rc -eq 2 ]]; then
     log "=== [$cluster] SCRIPT ERROR (exit 2) — see $cluster_out/assess.log ==="
@@ -267,6 +294,9 @@ main() {
   fi
 
   mkdir -p "$OUTPUT_DIR"
+  # Private temp dir for per-cluster kubeconfigs (may hold flattened credentials)
+  KUBECONFIG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/multi-cluster-kcfg.XXXXXX")
+  trap 'rm -rf "$KUBECONFIG_DIR"' EXIT
 
   if [[ "$CONCURRENCY" -le 1 ]]; then
     run_all_sequential

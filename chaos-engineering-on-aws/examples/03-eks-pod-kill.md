@@ -73,7 +73,7 @@ kubectl get pods -n production -l app=web-frontend
 nohup bash scripts/experiment-runner.sh --mode chaosmesh \
     --manifest examples/pod-kill-web-frontend.yaml --namespace production \
     --one-shot --pod-label "app=web-frontend" --deployment "web-frontend" \
-    --state-exp-id "EXP-001" --output-dir output/ &
+    --state-exp-id "EXP-001" --output-dir output/ --yes &
 RUNNER_PID=$!
 
 # Monitor (omit EXPERIMENT_ID for Chaos Mesh):

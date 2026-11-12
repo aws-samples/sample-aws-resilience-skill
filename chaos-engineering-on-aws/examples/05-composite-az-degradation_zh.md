@@ -41,7 +41,7 @@ EC2 停止和 EBS 暂停同时启动（并行），RDS failover 延迟 30 秒后
 ## 前置条件
 
 - [ ] 多 AZ 部署，至少 2 个 AZ 有实例
-- [ ] 目标 EC2 实例和 EBS 卷已打标签 `AzImpairmentPower: IceQualified`
+- [ ] 目标 EC2 实例和 EBS 卷已按官方场景打标签：实例 `AzImpairmentPower: StopInstances`，卷 `AzImpairmentPower: ApiPauseVolume`
 - [ ] RDS Aurora 集群在其他 AZ 有 Reader 实例
 - [ ] FIS IAM Role 已创建（权限见下方）
 - [ ] CloudWatch Alarm 已配置（用于 stop condition）
@@ -109,14 +109,16 @@ TEMPLATE_ID=$(aws fis create-experiment-template \
   --query 'experimentTemplate.id' --output text)
 echo "模板已创建: $TEMPLATE_ID"
 
-# 2. 通过 experiment-runner.sh 运行（与单 action 实验完全相同）
+# 2. 通过 experiment-runner.sh 运行——仅在用户明确批准注入后执行；
+#    --yes 表示已获批准（不带 --yes 时 runner 会拒绝启动）
 nohup bash scripts/experiment-runner.sh \
   --mode fis \
   --template-id "$TEMPLATE_ID" \
   --region ap-northeast-1 \
   --timeout 720 \
   --poll-interval 15 \
-  --output-dir output/ &
+  --output-dir output/ \
+  --yes &
 RUNNER_PID=$!
 
 # 3. 启动监控

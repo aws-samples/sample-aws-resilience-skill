@@ -24,7 +24,7 @@ def generate_html_report(assessment_data, output_file=None):
 
     # 1. 读取HTML模板
     script_dir = Path(__file__).parent
-    template_path = script_dir / 'html-report-template.html'
+    template_path = script_dir.parent / 'assets' / 'html-report-template.html'
 
     if not template_path.exists():
         raise FileNotFoundError(f"HTML模板文件不存在: {template_path}")

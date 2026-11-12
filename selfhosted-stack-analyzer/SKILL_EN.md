@@ -131,8 +131,8 @@ then proceed to collection and start the analysis.
 ```
 
 **Examples**:
-- `Start collecting the environment for account 926093770964, region ap-northeast-1, then proceed to collection and start the analysis.`
-- `开始采集 926093770964，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
+- `Start collecting the environment for account 123456789012, region ap-northeast-1, then proceed to collection and start the analysis.`
+- `开始采集 123456789012，ap-northeast-1 的系统环境，就进入采集阶段，并开始分析`
 
 **On receiving this sentence, the agent MUST run the full pipeline below without pausing for per-step confirmation**, except when account/region is missing or ambiguous, or when critical (★) evidence is missing after collection:
 

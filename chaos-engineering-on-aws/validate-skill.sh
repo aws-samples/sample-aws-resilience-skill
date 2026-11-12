@@ -2,6 +2,13 @@
 # validate-skill.sh — Static integrity validation for the chaos-engineering-on-aws skill
 set -uo pipefail
 
+# Requires Bash 4.0+ (associative arrays). macOS ships Bash 3.2 — `brew install bash`.
+if [[ -z "${BASH_VERSINFO:-}" || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    echo "ERROR: validate-skill.sh requires Bash 4.0 or newer (found ${BASH_VERSION:-unknown})." >&2
+    echo "       e.g. brew install bash && /opt/homebrew/bin/bash $0" >&2
+    exit 2
+fi
+
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PASS=0
 FAIL=0

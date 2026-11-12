@@ -77,15 +77,15 @@ Step 4: Validate or Refute
 |--------------------|----------|----------------|-------------------------|
 | **Instance Failure** | Terminate EC2 instances | `aws:ec2:terminate-instances` | Auto Scaling automatically replaces |
 | | Stop EC2 instances | `aws:ec2:stop-instances` | Health check fails, traffic shifts |
-| **Network Failure** | Network latency | `aws:ec2:api-network-latency` | Request timeout, retry mechanism triggers |
-| | Packet loss | `aws:ec2:api-packet-loss` | Circuit breaker opens, service degrades |
+| **Network Failure** | Network latency | `aws:ssm:send-command` + `AWSFIS-Run-Network-Latency` | Request timeout, retry mechanism triggers |
+| | Packet loss | `aws:ssm:send-command` + `AWSFIS-Run-Network-Packet-Loss` | Circuit breaker opens, service degrades |
 | **AZ Failure** | Simulate AZ unavailability | Combined experiment (terminate all AZ instances) | Traffic shifts to other AZs |
 | **Database** | RDS failover | `aws:rds:failover-db-cluster` | Application auto-reconnects, brief interruption |
 | **Containers** | ECS task termination | `aws:ecs:stop-task` | ECS restarts task |
 | | EKS Pod deletion | `aws:eks:pod-delete` | Deployment rebuilds Pod |
-| **Resource Exhaustion** | CPU stress | `aws:ec2:cpu-stress` | Auto Scaling scales out |
-| | Memory stress | `aws:ec2:memory-stress` | OOM kill, container restarts |
-| | Disk full | `aws:ec2:disk-fill` | Alert triggers, cleanup process starts |
+| **Resource Exhaustion** | CPU stress | `aws:ssm:send-command` + `AWSFIS-Run-CPU-Stress` | Auto Scaling scales out |
+| | Memory stress | `aws:ssm:send-command` + `AWSFIS-Run-Memory-Stress` | OOM kill, container restarts |
+| | Disk full | `aws:ssm:send-command` + `AWSFIS-Run-Disk-Fill` | Alert triggers, cleanup process starts |
 
 ### 3.5 AWS FIS Experiment Template Examples
 
@@ -136,7 +136,7 @@ Step 4: Validate or Refute
 
 ```json
 {
-  "description": "Inject 200ms latency to 50% of API calls",
+  "description": "Inject 200ms network latency on 50% of API-tier instances (SSM)",
   "targets": {
     "api-gw-targets": {
       "resourceType": "aws:ec2:instance",
@@ -148,12 +148,11 @@ Step 4: Validate or Refute
   },
   "actions": {
     "inject-latency": {
-      "actionId": "aws:ec2:api-network-latency",
+      "actionId": "aws:ssm:send-command",
       "parameters": {
-        "duration": "PT10M",
-        "latencyMs": "200",
-        "jitterMs": "50",
-        "apiList": "ec2,rds,dynamodb"
+        "documentArn": "arn:aws:ssm:us-east-1::document/AWSFIS-Run-Network-Latency",
+        "documentParameters": "{\"DurationSeconds\":\"600\",\"DelayMilliseconds\":\"200\",\"Interface\":\"eth0\",\"InstallDependencies\":\"True\"}",
+        "duration": "PT11M"
       },
       "targets": {
         "Instances": "api-gw-targets"
@@ -187,9 +186,6 @@ Step 4: Validate or Refute
   "actions": {
     "failover-cluster": {
       "actionId": "aws:rds:failover-db-cluster",
-      "parameters": {
-        "targetInstance": "production-db-instance-2"
-      },
       "targets": {
         "Clusters": "rds-cluster"
       }

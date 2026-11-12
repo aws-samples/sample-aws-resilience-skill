@@ -693,14 +693,14 @@ generate_experiment_recommendations() {
   declare -A EXP_MAP
   EXP_MAP["A1"]="pod_kill|P0|chaosmesh|Killing an unmanaged pod will cause permanent loss until manual restart"
   EXP_MAP["A2"]="pod_kill|P0|chaosmesh|Killing the single-replica pod will cause service unavailability until K8s recreates the pod (~30-60s)"
-  EXP_MAP["A3"]="fis_eks_terminate_node|P1|fis|Terminating a node may kill all replicas if co-located on same node"
-  EXP_MAP["A4"]="pod_cpu_stress|P1|chaosmesh|A hung process won't be detected or restarted without liveness probe"
+  EXP_MAP["A3"]="eks_terminate_nodes|P1|fis|Terminating a node may kill all replicas if co-located on same node"
+  EXP_MAP["A4"]="cpu_stress|P1|chaosmesh|A hung process won't be detected or restarted without liveness probe"
   EXP_MAP["A5"]="network_delay|P1|chaosmesh|Traffic continues routing to unhealthy pods without readiness probe"
-  EXP_MAP["A6"]="fis_eks_terminate_node|P1|fis|Node drain may evict all replicas simultaneously without PDB"
-  EXP_MAP["A8"]="pod_cpu_stress|P2|chaosmesh|Under load, workload cannot scale out automatically without HPA"
-  EXP_MAP["D1"]="fis_ssm_cpu_stress|P1|fis|Resource exhaustion prevents new pod scheduling without node autoscaler"
-  EXP_MAP["D2"]="fis_network_disrupt|P0|fis|Single AZ failure causes complete cluster unavailability"
-  EXP_MAP["D3"]="pod_memory_stress|P1|chaosmesh|One container can consume all node memory (noisy neighbor) without limits"
+  EXP_MAP["A6"]="eks_terminate_nodes|P1|fis|Node drain may evict all replicas simultaneously without PDB"
+  EXP_MAP["A8"]="cpu_stress|P2|chaosmesh|Under load, workload cannot scale out automatically without HPA"
+  EXP_MAP["D1"]="cpu_stress|P1|chaosmesh|Resource exhaustion prevents new pod scheduling without node autoscaler"
+  EXP_MAP["D2"]="network_disrupt|P0|fis|Single AZ failure causes complete cluster unavailability"
+  EXP_MAP["D3"]="memory_stress|P1|chaosmesh|One container can consume all node memory (noisy neighbor) without limits"
 
   local recs="["
   local first=1

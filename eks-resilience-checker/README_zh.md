@@ -153,7 +153,7 @@ chmod +x assess.sh
 `multi-cluster-assess.sh` 通过以下方式规避这个问题：
 - 串行或小批量并发跑各集群（默认并发数：2）
 - 每个集群/批次之间 sleep（默认 5 秒），避免触发账号级限流
-- 每次切换集群前自动执行 `aws eks update-kubeconfig`
+- 为每个集群生成独立的 kubeconfig 文件（`aws eks update-kubeconfig --kubeconfig ...`），并行运行时不会评估错集群
 - 设置 `AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS=10`，让偶发限流走自动重试退避，而不是静默降级结果
 - 生成跨集群汇总报告，按合规分数排序，帮你判断优先修复哪个集群
 
@@ -180,7 +180,7 @@ chmod +x multi-cluster-assess.sh
 | `--output-dir` | 否 | `./output` | 基础输出目录；每个集群独立子目录 `output/<cluster-name>/` |
 | `--concurrency` | 否 | `2` | 最大并行评估的集群数 |
 | `--delay` | 否 | `5` | 集群/批次之间的 sleep 秒数 |
-| `--skip-kubeconfig-update` | 否 | 关闭 | 跳过自动 `aws eks update-kubeconfig` 调用（若 kubeconfig 已预先配置好所有集群时使用） |
+| `--skip-kubeconfig-update` | 否 | 关闭 | 跳过自动 `aws eks update-kubeconfig` 调用（若 kubeconfig 已预先配置好所有集群时使用；按集群名或 EKS ARN 匹配 context，并提取为每个集群独立的 kubeconfig） |
 
 输出目录结构：
 

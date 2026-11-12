@@ -180,9 +180,9 @@ Markdown 报告：表头 → 摘要表 → 按类别的结果 → 实验建议�
 |-----------|---------|--------|------|
 | A1: 单例 Pod | pod_kill | P0 | 手动重启前永久丢失 |
 | A2: 单副本 | pod_kill | P0 | 服务中断 ~30-60s |
-| A3: 无反亲和 | node_terminate | P1 | 节点故障可能杀死所有副本 |
+| A3: 无反亲和 | eks_terminate_nodes | P1 | 节点故障可能杀死所有副本 |
 | D1: 无节点自动扩展 | cpu_stress | P1 | 资源耗尽阻止调度 |
-| D2: 单 AZ | az_network_disrupt | P0 | 集群完全不可用 |
+| D2: 单 AZ | network_disrupt | P0 | 集群完全不可用 |
 
 为每个有映射的 FAIL 生成实验建议，写入 `assessment.json`。按优先级排序（P0 > P1 > P2）。
 

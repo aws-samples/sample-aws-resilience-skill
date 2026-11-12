@@ -325,9 +325,11 @@ helm install chaos-mesh chaos-mesh/chaos-mesh \
 Scenario Library 使用**强制标签**识别目标资源。创建实验**前**必须打标：
 
 ```bash
-# AZ Power Interruption / AZ Application Slowdown / Cross-AZ Traffic
-aws ec2 create-tags --resources <instance-id> <volume-id> \
-  --tags Key=AzImpairmentPower,Value=IceQualified
+# AZ Power Interruption：每种 target 使用不同的标签值（官方 Scenario Content）
+# 其他场景的标签见 scenario-library_zh.md
+aws ec2 create-tags --resources <instance-id> --tags Key=AzImpairmentPower,Value=StopInstances
+aws ec2 create-tags --resources <volume-id>   --tags Key=AzImpairmentPower,Value=ApiPauseVolume
+aws ec2 create-tags --resources <subnet-id>   --tags Key=AzImpairmentPower,Value=DisruptSubnet
 
 # 验证标签
 aws ec2 describe-instances --instance-ids <id> \

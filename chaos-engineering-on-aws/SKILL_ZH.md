@@ -77,7 +77,7 @@
 2. **强制停止条件**：每个 FIS 实验绑定 CloudWatch Alarm。Stop condition alarm **必须**设置 `--treat-missing-data notBreaching`，防止实验启动时误触发
 3. **渐进式**：Staging → Production，单故障 → 级联
 4. **可逆**：所有实验有回滚方案
-5. **人工确认**：生产环境双重确认
+5. **人工确认**：所有环境每次注入前都必须停下来——展示账号/region（或 kube-context）、目标、爆炸半径和停止条件，用户明确批准后才给 runner 传 `--yes`；生产环境额外要求双重确认
 6. **监控前置**：🔴 未就绪 → 阻断
 
 反模式检测：跳过 Staging、无假设、无停止条件、无可观测性、首次全量注入。

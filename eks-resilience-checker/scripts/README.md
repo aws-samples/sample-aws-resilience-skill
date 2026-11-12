@@ -84,7 +84,7 @@ Why not just loop over `assess.sh` yourself: EKS control-plane APIs (`describe-c
 | `--output-dir` | No | `./output` | Base directory; each cluster gets `output/<cluster-name>/` |
 | `--concurrency` | No | `2` | Max clusters assessed in parallel (values above ~5 risk throttling) |
 | `--delay` | No | `5` | Seconds to sleep between clusters/batches |
-| `--skip-kubeconfig-update` | No | off | Skip automatic `aws eks update-kubeconfig` per cluster |
+| `--skip-kubeconfig-update` | No | off | Skip automatic `aws eks update-kubeconfig` per cluster; the matching context (name or EKS ARN) is extracted from the existing kubeconfig |
 
 ## Output Files
 

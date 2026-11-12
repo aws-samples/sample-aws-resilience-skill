@@ -138,7 +138,16 @@ TRUST_EOF
       ],
       "Resource": "*",
       "Condition": {
-        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": "IceQualified" }
+        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": ["StopInstances", "IceAsg"] }
+      }
+    },
+    {
+      "Sid": "EKSNodeTermination",
+      "Effect": "Allow",
+      "Action": "ec2:TerminateInstances",
+      "Resource": "*",
+      "Condition": {
+        "Null": { "aws:ResourceTag/eks:nodegroup-name": "false" }
       }
     },
     {
@@ -177,7 +186,7 @@ TRUST_EOF
       ],
       "Resource": "*",
       "Condition": {
-        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": "IceQualified" }
+        "StringEquals": { "aws:ResourceTag/AzImpairmentPower": "ApiPauseVolume" }
       }
     },
     {
@@ -256,7 +265,7 @@ POLICY_EOF
       dry "Would create IAM Role: $FIS_ROLE_NAME"
       dry "Trust policy: fis.amazonaws.com with account condition $ACCOUNT_ID"
       dry "Would attach inline policy with EC2, EKS, RDS, Lambda, Network, EBS, ElastiCache, CloudWatch permissions"
-      dry "Destructive EC2/EBS actions are scoped to resources tagged AzImpairmentPower=IceQualified"
+      dry "Destructive EC2/EBS actions are scoped to AzImpairmentPower-tagged resources (EKS managed nodes: terminate only)"
     else
       info "Creating IAM Role: $FIS_ROLE_NAME"
       # IAM is a global service — no --region needed
@@ -273,7 +282,7 @@ POLICY_EOF
 
       info "FIS Role created: arn:aws:iam::${ACCOUNT_ID}:role/${FIS_ROLE_NAME}"
       info "⚠️  Destructive EC2/EBS actions require target resources to be tagged"
-      info "    AzImpairmentPower=IceQualified (use --tag-resources). Review and"
+      info "    with AzImpairmentPower (use --tag-resources). Review and"
       info "    narrow down other permissions based on your specific experiments."
     fi
   fi
@@ -343,13 +352,22 @@ if [[ -n "$TAG_RESOURCES" ]]; then
 
   for RESOURCE_ID in "${RESOURCE_IDS[@]}"; do
     RESOURCE_ID=$(echo "$RESOURCE_ID" | xargs)  # trim whitespace
+    # Tag values follow the official AZ Power Interruption scenario (one per target type)
+    case "$RESOURCE_ID" in
+      i-*)      TAG_VALUE="StopInstances" ;;
+      vol-*)    TAG_VALUE="ApiPauseVolume" ;;
+      subnet-*) TAG_VALUE="DisruptSubnet" ;;
+      *)
+        warn "Skipping $RESOURCE_ID: only instance (i-), volume (vol-) and subnet (subnet-) IDs are supported"
+        continue ;;
+    esac
     if $DRY_RUN; then
-      dry "Would tag $RESOURCE_ID with AzImpairmentPower=IceQualified"
+      dry "Would tag $RESOURCE_ID with AzImpairmentPower=$TAG_VALUE"
     else
-      info "Tagging $RESOURCE_ID with AzImpairmentPower=IceQualified"
+      info "Tagging $RESOURCE_ID with AzImpairmentPower=$TAG_VALUE"
       aws ec2 create-tags \
         --resources "$RESOURCE_ID" \
-        --tags Key=AzImpairmentPower,Value=IceQualified \
+        --tags "Key=AzImpairmentPower,Value=$TAG_VALUE" \
         --region "$REGION"
     fi
   done

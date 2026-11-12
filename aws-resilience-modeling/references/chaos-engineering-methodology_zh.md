@@ -77,15 +77,15 @@
 |---------|------|-------------|-------------|
 | **实例故障** | 终止 EC2 实例 | `aws:ec2:terminate-instances` | Auto Scaling 自动替换 |
 | | 停止 EC2 实例 | `aws:ec2:stop-instances` | 健康检查失败，流量转移 |
-| **网络故障** | 网络延迟 | `aws:ec2:api-network-latency` | 请求超时，重试机制触发 |
-| | 网络丢包 | `aws:ec2:api-packet-loss` | 断路器打开，降级服务 |
+| **网络故障** | 网络延迟 | `aws:ssm:send-command` + `AWSFIS-Run-Network-Latency` | 请求超时，重试机制触发 |
+| | 网络丢包 | `aws:ssm:send-command` + `AWSFIS-Run-Network-Packet-Loss` | 断路器打开，降级服务 |
 | **AZ 故障** | 模拟 AZ 不可用 | 组合实验（终止所有 AZ 实例） | 流量转移到其他 AZ |
 | **数据库** | RDS 故障转移 | `aws:rds:failover-db-cluster` | 应用自动重连，短暂中断 |
 | **容器** | ECS 任务终止 | `aws:ecs:stop-task` | ECS 重启任务 |
 | | EKS Pod 删除 | `aws:eks:pod-delete` | Deployment 重建 Pod |
-| **资源耗尽** | CPU 压力 | `aws:ec2:cpu-stress` | Auto Scaling 扩容 |
-| | 内存压力 | `aws:ec2:memory-stress` | OOM kill，容器重启 |
-| | 磁盘满 | `aws:ec2:disk-fill` | 告警触发，清理流程启动 |
+| **资源耗尽** | CPU 压力 | `aws:ssm:send-command` + `AWSFIS-Run-CPU-Stress` | Auto Scaling 扩容 |
+| | 内存压力 | `aws:ssm:send-command` + `AWSFIS-Run-Memory-Stress` | OOM kill，容器重启 |
+| | 磁盘满 | `aws:ssm:send-command` + `AWSFIS-Run-Disk-Fill` | 告警触发，清理流程启动 |
 
 ### 3.5 AWS FIS 实验模板示例
 
@@ -136,7 +136,7 @@
 
 ```json
 {
-  "description": "Inject 200ms latency to 50% of API calls",
+  "description": "Inject 200ms network latency on 50% of API-tier instances (SSM)",
   "targets": {
     "api-gw-targets": {
       "resourceType": "aws:ec2:instance",
@@ -148,12 +148,11 @@
   },
   "actions": {
     "inject-latency": {
-      "actionId": "aws:ec2:api-network-latency",
+      "actionId": "aws:ssm:send-command",
       "parameters": {
-        "duration": "PT10M",
-        "latencyMs": "200",
-        "jitterMs": "50",
-        "apiList": "ec2,rds,dynamodb"
+        "documentArn": "arn:aws:ssm:us-east-1::document/AWSFIS-Run-Network-Latency",
+        "documentParameters": "{\"DurationSeconds\":\"600\",\"DelayMilliseconds\":\"200\",\"Interface\":\"eth0\",\"InstallDependencies\":\"True\"}",
+        "duration": "PT11M"
       },
       "targets": {
         "Instances": "api-gw-targets"
@@ -187,9 +186,6 @@
   "actions": {
     "failover-cluster": {
       "actionId": "aws:rds:failover-db-cluster",
-      "parameters": {
-        "targetInstance": "production-db-instance-2"
-      },
       "targets": {
         "Clusters": "rds-cluster"
       }

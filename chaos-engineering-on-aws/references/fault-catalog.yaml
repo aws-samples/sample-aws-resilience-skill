@@ -444,11 +444,11 @@ fis:
     description: "Inject delay into Lambda invocations"
     default_params:
       duration: "PT5M"
-      delayMilliseconds: "2000"
+      startupDelayMilliseconds: "2000"
       invocationPercentage: "100"
     safe_first_run_params:
       duration: "PT2M"
-      delayMilliseconds: "500"
+      startupDelayMilliseconds: "500"
       invocationPercentage: "10"
     prerequisites:
       - "S3 bucket in the Region you start the experiment from (one bucket per Region; can be shared across experiments and accounts) with a config folder, e.g. FisConfigs/"
